@@ -1,0 +1,9 @@
+# Godot import/shader cache — regenerated on open
+game/.godot/
+game/export/
+# macOS
+.DS_Store
+# Claude Code personal permission grants (machine-local)
+.claude/settings.local.json
+# stray temp files
+*.tmp

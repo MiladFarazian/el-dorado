@@ -1,0 +1,12 @@
+{
+  "id": "bat",
+  "name": "BAT",
+  "type": "melee",
+  "slot": 4,
+  "_contract": "type=melee: combat.gd consumes NO fire/aim input and builds no gun rig while this is current — melee.gd (Fighting agent) owns the swing, the prop in the hand, and every number below. combat.gd reads id/name/type/slot only.",
+  "_poll": "combat.get(\"current_weapon_id\") == \"bat\", or listen to combat.weapon_changed(id).",
+  "reach": 1.7,
+  "damage": 30,
+  "swing_interval": 0.65,
+  "knockdown": true
+}

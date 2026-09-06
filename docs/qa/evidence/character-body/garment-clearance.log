@@ -1,0 +1,24 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+VOX_DIV=3.00 REPROJ=0
+
+RIM LIFT — build 1.07 girth 1.07
+piece         vox   bake  verts   tris  design     min    mean     max  excess   over/back verdict
+placket       2.7    571   5363  10724    3.0     2.4     2.9     4.2     1.2     0/2035  ok
+collar_pts    2.5   1110  11771  23672    2.0     0.9     3.0     6.1     2.4     0/5102  ok
+collar_vee    2.7    727   3217   6432    4.0     2.7     4.1     6.0     2.0     0/1056  ok
+hood          9.0    147   2090   4068   20.0    17.4    20.1    24.0     4.0     0/752   volume
+pocket_l      2.5    354   2557   5128    3.0     2.5     3.1     4.8     1.5     0/1049  ok
+pocket_r      2.5    352   2571   5144    3.0     2.5     3.1     5.1     1.9     0/1075  ok
+yoke          2.5   3437    984   1876    2.0     0.9     2.5     4.1     2.1     0/167   ok
+tie           4.0    254   2340   4676   14.0    13.4    13.9    15.7     1.7     0/834   volume
+lanyard       2.7   1376   3582   7172   28.0    25.4    27.6    30.3     2.6     0/1144  ok
+vest          4.7   3986  29163  58128   14.0    12.8    14.1    21.5     7.5    24/12640 volume
+apron         3.3   3725  28633  57388   14.0    11.7    13.9    27.9    13.9     2/12209 OVER 5 mm at (-0.038,1.125,-0.148)
+belt          4.0    742   9120  18176    4.0     3.7     4.4    26.6    22.6     2/3600  OVER 5 mm at (0.171,1.056,0.002)
+buckle        3.3    124   1012   2020   18.0    17.8    18.2    19.6     1.6     0/344   ok
+duty          5.3    889   7362  14656    3.0     1.5     6.2    19.6    13.6   104/2943  volume
+epaulet       3.0   1188   5446  10928    3.0     2.0     2.8     5.3     2.3     0/2195  ok
+badge         2.7    317   2354   4700    5.0     4.6     5.0     6.5     1.5     0/788   ok
+hem           3.7    902  11445  22752    5.0     2.4     4.9     7.0     2.6     0/4325  ok
+  FLAT-TRIM VERTEX TALLY: 4 of 52258 over 5 mm (0.008%)  penetrating: 0   garment bake: 20200 ms

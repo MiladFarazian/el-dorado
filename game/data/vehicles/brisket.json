@@ -1,0 +1,53 @@
+{
+  "name": "Baron Brisket",
+  "body_style": "pickup",
+  "_identity": "THREE TONS OF OPINION, ARRIVING LATE. All-wheel drive and 30000 N of shove make it the hardest launcher in the fleet -- and then drag 1.9 and top_speed 47 strangle it by about 41 m/s, because it is a brick with a lift kit. The rack is slow (steer_speed 4.2) and short (28 deg), the springs are soft for the mass (0.36 of critical), so it takes a full beat to lean, sets, and only then turns; brakes 38000 against 3050 kg is a long, nose-diving stop. handbrake_grip_mult 0.40 means it will not even slide properly -- it plows. Measured M16: hardest launch in the fleet (3.30 s to 20 m/s) and the longest stop by 6 m (41.9 m from 30 m/s), turning a 10.6 m circle against the cruiser's 7.7. The rollover threat is still the joke.",
+  "_tuning_math": "corner mass = 3050/4 = 762.5 kg; static load = 762.5*9.81 = 7480.1 N; spring_rate 47000 N/m -> static compression = 7480.1/47000 = 0.1591 m = 28.9% of suspension_rest 0.55 (soft end of the 20-30% target: the lift kit has to WALLOW, not hold); critical damping = 2*sqrt(47000*762.5) = 11973 N*s/m; damping 4300 = 0.359 * critical, so the body pitches, rolls, and takes two beats to stop doing it. THE JOKE, INTACT: hardpoint -0.50 + 0.55 m of travel + 0.46 m tires put the body centre ~1.35 m above ground, and com_height 0.03 leaves the CoM right there at 1.381 m. Static rollover threshold = half-track / CoM height = 1.025/1.381 = ~0.74 g, and tire_friction 1.22 still supplies up to ~1.22 g -- the tires can always out-pull the geometry. Wide track and lazy damping delay it; physics wins anyway. Lateral forces act 0.53 m below the CoM, so it leans HARD out of every corner and lifts the inside wheels if thrown. Straight line: AWD grip = 1.22*3050*9.81 = 36505 N against 30000 N of engine, so it is ENGINE-limited at ~9.8 m/s^2 -- it out-drags everything and then loses the same race at 40 m/s.",
+  "color": [
+    0.16,
+    0.17,
+    0.2
+  ],
+  "rim_color": [
+    0.32,
+    0.32,
+    0.35
+  ],
+  "rim_style": "alloy",
+  "plate_text": "BRISKET",
+  "mass": 3050,
+  "hull": 140,
+  "body_size": [
+    2.35,
+    1.9,
+    5.8
+  ],
+  "com_height": 0.03,
+  "com_forward": 0.2,
+  "wheelbase_front": 1.72,
+  "wheelbase_rear": 1.88,
+  "track_width": 2.05,
+  "hardpoint_height": -0.5,
+  "wheel_radius": 0.46,
+  "wheel_width": 0.42,
+  "suspension_rest": 0.55,
+  "spring_rate": 47000,
+  "damping": 4300,
+  "lateral_stiffness": 13000,
+  "tire_friction": 1.22,
+  "handbrake_grip_mult": 0.4,
+  "max_engine_force": 30000,
+  "reverse_force": 13000,
+  "reverse_top_speed": 13,
+  "brake_force": 38000,
+  "top_speed": 47,
+  "max_steer_deg": 28,
+  "steer_speed": 4.2,
+  "steer_falloff": 0.034,
+  "drag": 1.9,
+  "downforce": 2.0,
+  "rolling_resistance": 360,
+  "angular_damp": 0.42,
+  "drive": "all",
+  "apply_forces_at_hub": true
+}

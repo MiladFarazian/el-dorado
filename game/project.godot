@@ -1,0 +1,45 @@
+; EL DORADO GRANDE — Godot project (Milestone 1: greybox driving slice)
+config_version=5
+
+[application]
+
+config/name="El Dorado Grande"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7")
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
+window/size/window_width_override=1280
+window/size/window_height_override=720
+
+[physics]
+
+common/physics_ticks_per_second=60
+
+[rendering]
+
+; M23 LIGHT PIPELINE. These mirror the defaults in
+; scripts/world/render_pipeline.gd so an editor run and a `godot --` run agree.
+; The KIT is the source of truth: it re-applies all of this to the root viewport
+; and the RenderingServer at boot, which is what makes `--env-legacy` able to
+; restore the pre-M23 state (msaa 8x, 4096 shadow atlas, Soft Low) from the same
+; tree without reading this file at all.
+;
+; msaa_3d 1 = 2x (was 3 = 8x). MSAA is a geometry-edge tool and does nothing for
+; the SDFGI/SSR specular shimmer this pass introduced; TAA does. See
+; docs/tech/rendering/light-pipeline.md for the measurement that chose this.
+anti_aliasing/quality/msaa_3d=1
+anti_aliasing/quality/use_taa=true
+; D-025: shadows now run to 900 m over 4 cascades. A 900 m cascade set in a
+; 4096 atlas is mush; 8192 at 16 bits is 128 MB and is what buys the aerial.
+lights_and_shadows/directional_shadow/size=8192
+; PCSS needs a real filter to sample with, or light_angular_distance = 0.53 deg
+; reads as jitter instead of a penumbra.
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=4
+; Froxel grid for volumetric fog (engine default 64). 96 is where the shafts
+; down the avenues stop being blocky.
+environment/volumetric_fog/volume_size=96
+environment/volumetric_fog/volume_depth=96

@@ -1,0 +1,56 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+SKINNED BODY — bake audit
+  w0.97 g0.93 verts=12111 tris=20350 area=1.613 m2 | boundary_edges=0 nonmanifold=2
+           winding_agrees=100.0%  weightsum=[1.0000..1.0000]  aabb=0.003..1.662 y
+           x=-0.279..0.277  z=-0.133..0.120
+           bake=634 ms
+  w1.07 g0.93 verts=12510 tris=21160 area=1.673 m2 | boundary_edges=0 nonmanifold=2
+           winding_agrees=100.0%  weightsum=[1.0000..1.0000]  aabb=0.003..1.662 y
+           x=-0.297..0.298  z=-0.134..0.127
+           bake=667 ms
+  w0.97 g1.07 verts=12523 tris=21008 area=1.693 m2 | boundary_edges=0 nonmanifold=18
+           winding_agrees=100.0%  weightsum=[1.0000..1.0000]  aabb=0.002..1.661 y
+           x=-0.279..0.279  z=-0.128..0.140
+           bake=676 ms
+  w1.07 g1.07 verts=13247 tris=22290 area=1.772 m2 | boundary_edges=0 nonmanifold=8
+           winding_agrees=100.0%  weightsum=[1.0000..1.0000]  aabb=0.002..1.661 y
+           x=-0.298..0.298  z=-0.141..0.153
+           bake=724 ms
+  w0.97 g1.22 verts=13115 tris=21836 area=1.751 m2 | boundary_edges=0 nonmanifold=6
+           winding_agrees=99.9%  weightsum=[1.0000..1.0000]  aabb=0.003..1.662 y
+           x=-0.277..0.277  z=-0.159..0.171
+           bake=710 ms
+  w1.07 g1.22 verts=13697 tris=22928 area=1.850 m2 | boundary_edges=0 nonmanifold=16
+           winding_agrees=100.0%  weightsum=[1.0000..1.0000]  aabb=0.003..1.661 y
+           x=-0.298..0.298  z=-0.175..0.188
+           bake=766 ms
+ALL SIX BUCKETS baked in 4972 ms
+
+ASSEMBLED CHARACTER — parts, tris, build time
+name        path      nodes  meshInst   tris  build_ms
+SKIN MICRO: skin 256^2 in 117 ms
+ped_0      old         125      113   20780   217.74
+SKIN MICRO: cloth 256^2 in 99 ms
+ped_0      new          58       44   91736 21338.98
+ped_1      old          85       73   19172    95.33
+ped_1      new          28       14   75838 21466.57
+ped_2      old         100       88   20084    97.58
+ped_2      new          44       30   58102    90.13
+ped_3      old         141      129   22776   101.75
+ped_3      new          66       52  101344   111.28
+ped_4      old         124      112   21032    99.23
+ped_4      new          58       44   79590   100.28
+ped_5      old          95       83   19292    95.91
+ped_5      new          28       14   91602   103.50
+ped_6      old          94       82   20160    97.65
+ped_6      new          39       25   65992 22076.21
+ped_7      old          90       78   19424    94.17
+ped_7      new          28       14   86712 21401.08
+cop        old         110       98   20088   100.45
+cop        new          33       19  109738   124.47
+book       old         128      116   21720    98.84
+book       new          34       20  101842   108.73
+MEAN old  meshInst=97.2 tris=20453 build=109.86 ms
+MEAN new  meshInst=27.6 tris=86250 build=8692.12 ms
+SKIN BAKE | meshes=8 total=85753 ms

@@ -1,0 +1,15 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+RENDER: tier=budget sdfgi=on c3 cell0.75 r16 l16 ssr=on s12 volfog=on 48x48 aa=off+taa sky=custom(m16)+scatter shadow=450m/pcss0.53deg grade=lut32 exposure=tod
+DOWNTOWN TYPES: 108 towers = corp 22 / deco 13 / slab 25 / brick 21 / deck 14 / signblock 10 / site 3 — 5344 instances in 17 MultiMeshes + 142 signs
+HOSPITAL NIGHT: 14 lights (mast 6, canopy 4, wash 3, door 1), 8 pools, 0 shadow maps, 3 draw calls, built in 0.1 ms
+POOLS: arterial=536 (42 intersection box washes, D-070) soft=312 inst=8 (3 draw calls, 0 lights, 0 per-frame work)
+SUBURB NIGHT: 492 lights (porch 245, flood 67, tv 24, head 156), 0 shadow maps, built in 1.1 ms
+SKIN MICRO: skin 256^2 in 118 ms
+SKIN MICRO: cloth 256^2 in 99 ms
+SKIN LIB: async bake queued for bucket 0_0
+SKIN LIB: async bake queued for bucket 0_1
+SKIN LIB: async bake queued for bucket 0_2
+SKIN LIB: async bake queued for bucket 1_0
+SKIN LIB: async bake queued for bucket 1_2
+SURFACES: materials=792 shaders=7 normalmapped=51 roughmapped=47 standard=750 shadermat=42 geom=7458 std_nm=13 std_rm=5

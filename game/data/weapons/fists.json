@@ -1,0 +1,12 @@
+{
+  "id": "fists",
+  "name": "FISTS",
+  "type": "melee",
+  "slot": 0,
+  "_contract": "SLOT 0, and the ONLY weapon you can never lose. type=melee means combat.gd consumes NO fire/aim input while this is current: LMB/RMB pass straight through to melee.gd, no gun rig is built, is_aiming is forced false and aim_friction is written back to 1.0 so no stale sticky-aim survives the switch. combat.gd reads id/name/type/slot from this file and NOTHING else — every number below belongs to melee.gd (Fighting agent).",
+  "_poll": "combat.get(\"current_weapon_id\") == \"fists\", or listen to combat.weapon_changed(id).",
+  "reach": 1.1,
+  "damage": 12,
+  "swing_interval": 0.45,
+  "knockdown": false
+}
