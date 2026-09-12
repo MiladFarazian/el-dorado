@@ -41,6 +41,12 @@ func _run() -> void:
 		["profile", Vector3(-0.7, 1.68, -0.04), Vector3(0, 1.66, 0)],
 		["full", Vector3(-1.2, 1.1, -3.4), Vector3(0, 0.94, 0)],
 		["back", Vector3(0.9, 1.2, 3.2), Vector3(0, 0.95, 0)],
+		["front", Vector3(0, 1.0, -3.1), Vector3(0, 0.94, 0)],
+		["body_side", Vector3(-3.1, 1.0, 0), Vector3(0, 0.94, 0)],
+		["torso", Vector3(-0.65, 1.30, -1.15), Vector3(0, 1.28, 0)],
+		["hand", Vector3(-0.62, 0.84, -0.62), Vector3(-0.25, 0.82, 0)],
+		["collar", Vector3(0.18, 1.60, -0.52), Vector3(0, 1.49, 0)],
+		["collar_normals", Vector3(0.18, 1.60, -0.52), Vector3(0, 1.49, 0)],
 		["gait", Vector3(-1.2, 1.1, -3.4), Vector3(0, 0.94, 0)],
 		["normals", Vector3(0, 1.68, -0.65), Vector3(0, 1.66, 0)],
 	]
@@ -48,8 +54,10 @@ func _run() -> void:
 		if shot[0] == "gait":
 			for i in 24:
 				SKIN.animate(rig, 3.0, 1.0 / 60.0, true, true)
-		if shot[0] == "normals":
+		if shot[0] == "normals" or shot[0] == "collar_normals":
 			root.debug_draw = Viewport.DEBUG_DRAW_NORMAL_BUFFER
+		else:
+			root.debug_draw = Viewport.DEBUG_DRAW_DISABLED
 		camera.position = shot[1]
 		camera.look_at(shot[2])
 		for i in 3:

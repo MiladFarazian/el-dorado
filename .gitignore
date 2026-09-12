@@ -7,3 +7,7 @@ game/export/
 .claude/settings.local.json
 # stray temp files
 *.tmp
+# local tooling venv (gdtoolkit)
+.venv/
+# gate artefacts: plates, null control, GPU traces (large, machine-local)
+game/.gate/

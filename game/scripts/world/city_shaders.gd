@@ -850,6 +850,7 @@ static func skin_material(c: Color, rough: float, vertex_color: bool) -> ShaderM
 	m.set_shader_parameter("skin_color", c)
 	m.set_shader_parameter("skin_roughness", rough)
 	m.set_shader_parameter("use_vertex_color", vertex_color)
+	m.set_shader_parameter("micro_bump", 0.22)
 	m.set_shader_parameter("micro_tex", TEX.skin_micro_texture())
 	return m
 

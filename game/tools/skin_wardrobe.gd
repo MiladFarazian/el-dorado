@@ -354,7 +354,7 @@ func _gait_drift() -> void:
 	# through a 40 mm spatial hash — the brute-force version was 1,611 x 13,000
 	# distance tests and took minutes.
 	var cell := 0.04
-	var hash_ := {}
+	var hash_ := {}  # gdlint:ignore=function-variable-name
 	for j in bv.size():
 		var k := Vector3i(int(floor(bv[j].x / cell)), int(floor(bv[j].y / cell)),
 			int(floor(bv[j].z / cell)))
@@ -428,7 +428,7 @@ func _gait_drift() -> void:
 				mx = d; wloc = gv[e[0]]
 			acc += d
 		worst = maxf(worst, mx)
-		var sorted_ := Array(ds)
+		var sorted_ := Array(ds)  # gdlint:ignore=function-variable-name
 		sorted_.sort()
 		var p99: float = sorted_[int(float(sorted_.size()) * 0.99)]
 		print("  phase %.2f rad  el_1 z=%+.4f  mean %6.3f  p99 %6.3f  "

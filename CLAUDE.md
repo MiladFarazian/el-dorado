@@ -112,6 +112,10 @@ artifacts instead of paying for a third pass. Therefore:
   stderr to the terminal and leaves a permanently clean log that *looks* compliant — the
   D-075 failure in a disguise that passes inspection. The producer committed it while
   gating cycle 5. Details in `docs/qa/quality-bar.md` §5.
+- **Check the machine before quoting §4b: `ps -Ao %cpu,comm | sort -rn | head`.** On 2026-09-08
+  Docker Desktop's Linux VM (a Parkway container) held ~90% of a core all afternoon and every
+  station read +1–3 ms p95, including the committed tree; the fix was a same-day A/B via
+  `git stash`, not a code change. Load average above ~2 on this machine means no ruling.
 - **Frame-time numbers taken while other agents are booting Godot are CONTENDED and may
   not be quoted as pass/fail.** Bar §4b demands a quiet machine. During a fix wave, a
   mission may only report *relative* cost from an interleaved A/B on one tree (a
@@ -133,8 +137,10 @@ artifacts instead of paying for a third pass. Therefore:
 - **A null control is not optional.** Before trusting any two-plate differential, diff two
   plates of the *same* configuration. Cycle 5's "five vantages where the beacon subtracts
   light" appeared identically in the null control — it was traffic drifting between
-  boots, never the beacon. The harness noise floor on this machine is ~11–12k touched
-  pixels across 59 vantages; a signal below that is not a signal.
+  boots, never the beacon. The harness noise floor on a QUIET machine is ~11–12k touched
+  pixels across 59 vantages; at load average 8 (2026-09-12) two identical sweeps differed by
+  801k. Never quote the number — pass the null control (`game/.gate/null/B`) to
+  `plates_diff.py --null` and let the per-vantage 3× rule decide.
 
 **WORKING MODEL SINCE 2026-09-06 (Milad: "the fan on my computer was going crazy").**
 The main session (Fable) **makes the code changes itself.** Haiku/Sonnet subagents do only
@@ -170,7 +176,39 @@ Standing rules the loop exists to enforce:
   the right before/after instrument for people, 25 s) and `tools/session_test.gd --
   --session-test` (headless; 34 session-flow checks, prints `SESSION TEST: PASS`). Both are
   part of the gate for character and session work.
+- **Character modules since 2026-09-08:** `character_hands.gd` (Codex; hands are their own
+  3 mm field meshes on the forearm joints, not part of the 18 mm body field) and
+  `_tailored_piece` in `skinned_character.gd` (collar, placket, pockets are fabric grids
+  projected onto the body, not shells — `skin_rim.gd` skips them). The review tool has a
+  `collar` close-up and a `collar_normals` view.
 - Milad's input is welcome at any time but is never required to continue.
+
+## Tooling (D-055, 2026-09-12) — one command per question
+- **`game/tools/gate.sh`** — THE gate. Quick: machine load, parse (one boot, every script), lint,
+  smoke ×2, boot 900, session harness. `--full` adds the warm garment cache, the 59-plate sweep
+  under its watchdog, a plate diff against `GATE_PREV_PLATES` (with `GATE_NULL` as the null
+  control), and perf — which it REFUSES under load (`CONTENDED`). Writes `GATE.md` + logs to
+  `$GATE_OUT`. Use it instead of hand-writing chains: every chain written by hand this month had
+  a bug in it (redirect order, a crop loop, a missing copy).
+- **`game/tools/parse_all.gd`** — every `.gd` compiled in one headless boot, 4 s, exit 1 on any
+  failure. Also the pre-commit hook (`.git/hooks/pre-commit`, machine-local; re-create it from
+  D-055 on a fresh clone). It found a tool that had not parsed for weeks.
+- **`gdlint`** (gdtoolkit in `.venv/`, `.gdlintrc` = substance only: names, unused args, duplicated
+  loads, returns). Zero findings is the bar; deliberate exceptions carry a bare
+  `# gdlint:ignore=<rule>` at the end of the line, explanation on the line above.
+- **`game/tools/plates_diff.py BEFORE AFTER [--null CTRL] --report out.md`** — per-vantage
+  meanAbs and px>16 with the noise floor built in; a vantage is flagged only when it exceeds
+  4,000 px AND 3× its null-control change. The null control lives in
+  `docs/qa/evidence/null-control/`; regenerate it after any change to traffic or spawning.
+- **`game/tools/gpu_trace.sh STATION`** — the GPU column the harness never had: boots the perf
+  station, attaches Instruments' Metal System Trace for 12 s of measured frames, and prints
+  GPU wall/busy per frame plus the vertex/fragment/compute mix (`tools/gpu_frame.py`).
+  Instruments adds overhead: read splits and mixes, not absolutes against §4b.
+- **`game/tools/character_review.gd`** (matched-view people plates), **`session_test.gd`**,
+  **`--shot-debug=normals`**: see the toggles above.
+- **Not adopted, and why:** Blender/Substance pipelines (asset files are out of canon), RenderDoc
+  (no Metal), a Godot editor MCP server (a second Godot process; the CLI tools already answer
+  the questions), gdformat (it would rewrite every file's style in one commit).
 
 ## Working conventions
 - Ambition is tiered (see `docs/tech/engine-evaluation.md`): greybox driving slice → stylized vertical-slice district → systemic open city. Don't build tier-2 features before tier-1 acceptance.

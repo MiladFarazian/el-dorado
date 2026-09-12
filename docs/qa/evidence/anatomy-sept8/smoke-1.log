@@ -1,0 +1,5 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+RENDER: tier=budget sdfgi=on c3 cell0.75 r16 l16 ssr=on s12 volfog=on 48x48 aa=off+taa sky=custom(m16)+scatter shadow=450m/pcss0.53deg grade=lut32 exposure=tod
+DOWNTOWN TYPES: 108 towers = corp 22 / deco 13 / slab 25 / brick 21 / deck 14 / signblock 10 / site 3 — 5344 instances in 17 MultiMeshes + 142 signs
+SMOKE PASS | pos=(193.000000, 1.097957, 517.465332) moved=40.5m speed=16.7m/s

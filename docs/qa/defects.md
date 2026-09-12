@@ -96,6 +96,17 @@ Bar: `docs/qa/quality-bar.md`.
 >   (`docs/qa/character-design.md`). Gated by Codex (boot, smoke ×2) and re-gated here
 >   (D-053 gate), but no QA Director ruling. Their evidence folders are under
 >   `docs/qa/evidence/`.
+> - **D-116 [S4] `tools/skin_rim.gd` cannot grade the tailored pieces** — collar, placket and
+>   both pockets ship as explicit fabric meshes (D-054), not shells; the tool now prints
+>   TAILORED and skips them. A clearance measure for fabric grids (distance of each vertex to
+>   the body along its normal) does not exist yet.
+> - **D-117 [S3] The surface beard read as a flat patch** (codex9/review/cast.png: a bandage
+>   moustache on a dark head, a mask beard on a light one) — PRODUCER-CLAIMED FIXED: per-vertex
+>   hair/skin stubble mix, feather widened from 7% to 22% of the patch. QA to rule at `cast`.
+> - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
+>   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
+> - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,
+>   finished v18) — neither tabs nor turtleneck. QA to rule at the new `collar` review view.
 > - **D-106 [ruling needed] The audio-at-quit leak is 10, not ≤6, in WINDOWED runs.**
 >   `--verbose` on a windowed `--hudshot` exit lists exactly 5 `AudioStreamWAV` + 5
 >   `AudioStreamPlaybackWAV` and nothing else (`gate7/verbose_leaks.txt`) — the same

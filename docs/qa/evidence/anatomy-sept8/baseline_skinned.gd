@@ -224,7 +224,7 @@ static var _bake_n := 0
 static var _no_disk := false               # tools set this to force a real bake
 ## Bump when the field, the mesher or the vertex format changes, so a stale
 ## user:// bake can never outlive the code that made it.
-const CACHE_VER := 18   # 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
+const CACHE_VER := 13   # 13: body pass r2 (shoulder slope, torso top, hands); 12: the body pass (D-053: girdle, arms, hands, legs, waist); 11: lower collar stand and exposed neck; invalidate old garment shells.
 
 
 # ============================== PUBLIC API ===================================
@@ -362,13 +362,6 @@ static func build(root: Node3D, cfg: Dictionary, feet_y: float) -> Dictionary:
 	hcfg["skinned_body"] = true
 	FACTORY._build_head(joints[B_HEAD], hcfg)
 
-	var hand_material := FACTORY._skin(cfg["skin"], float(cfg.get("skin_rough", 0.72)))
-	if bool(cfg.get("gloves", false)):
-		hand_material = FACTORY._m(Color(0.20, 0.16, 0.12), 0.9)
-	for side in 2:
-		_build_hand(
-			joints[B_EL0 if side == 0 else B_EL1], -1.0 if side == 0 else 1.0, hand_material)
-
 	# ---- the sync. Callers never learn the skeleton exists.
 	var sync := SkinSync.new()
 	sync.name = "SkinSync"
@@ -397,43 +390,6 @@ static func random_config(rng: RandomNumberGenerator) -> Dictionary:
 
 static func cop_config(rng: RandomNumberGenerator) -> Dictionary:
 	return FACTORY.cop_config(rng)
-
-
-static var _hand_mesh_cache: Dictionary = {}
-const HAND_VOX := 0.004   # D-054: was 0.003 (Codex); see _build_hand
-
-static func _build_hand(parent: Node3D, side: float, material: Material) -> void:
-	if not _hand_mesh_cache.has(side):
-		var prims: Array = []
-		for p in preload("res://scripts/world/character_hands.gd").parts(side):
-			prims.append(_cap(p[0], p[1], p[2], p[3], p[4], p[5], B_EL0, 0))
-		# D-054: 3 mm gave 10,516 triangles per hand — a character's two hands
-		# carried as many triangles as its body, and hospital_door_night went
-		# from 16.67 to 17.79 ms p95 across seventeen of them. 4 mm keeps four
-		# fingers and a thumb; the triangle count is measured by the probe below.
-		var grid := _field_grid(prims, _flatten(prims), HAND_VOX)
-		var surface := _polygonise(grid.f, grid.lo, grid.nx, grid.ny, grid.nz, grid.syz, HAND_VOX)
-		var indices: PackedInt32Array = surface.idx
-		# The field mesher emits outward cross products; Godot fronts are clockwise.
-		for i in range(0, indices.size(), 3):
-			var temp := indices[i + 1]
-			indices[i + 1] = indices[i + 2]
-			indices[i + 2] = temp
-		var arrays := []
-		arrays.resize(Mesh.ARRAY_MAX)
-		arrays[Mesh.ARRAY_VERTEX] = surface.verts
-		arrays[Mesh.ARRAY_NORMAL] = surface.normals
-		arrays[Mesh.ARRAY_INDEX] = indices
-		var importer := ImporterMesh.new()
-		importer.add_surface(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		importer.generate_lods(25.0, 60.0, [])
-		_hand_mesh_cache[side] = importer.get_mesh()
-	var hand := MeshInstance3D.new()
-	hand.name = "Hand"
-	hand.mesh = _hand_mesh_cache[side]
-	hand.material_override = material
-	hand.position = Vector3(side * 0.050, -0.260, -0.004)
-	parent.add_child(hand)
 
 
 static func book_config() -> Dictionary:
@@ -518,11 +474,11 @@ static func _prims(w: float, g: float) -> Array:
 		# heel -> instep -> toe: three short masses, so a foot has a shape
 		out.append(_cap(Vector3(hx, 0.072, 0.018), Vector3(hx, 0.046, 0.052),
 			0.040, 0.033, Vector3(0.95, 1.0, 1.0), 0.018, kb, 0))
-		out.append(_cap(Vector3(hx, 0.058, 0.000), Vector3(hx, 0.040, -0.154),
-			0.049, 0.038, Vector3(1.0, 0.80, 1.0), 0.020, kb, 0))
+		out.append(_cap(Vector3(hx, 0.058, 0.000), Vector3(hx, 0.036, -0.098),
+			0.045, 0.030, Vector3(1.0, 0.80, 1.0), 0.020, kb, 0))
 		# sole slab: low k so the welt stays a line and not a fillet
-		out.append(_cap(Vector3(hx, 0.018, -0.150), Vector3(hx, 0.018, 0.060),
-			0.051, 0.044, Vector3(1.0, 0.36, 1.0), 0.010, kb, 0))
+		out.append(_cap(Vector3(hx, 0.018, -0.088), Vector3(hx, 0.018, 0.060),
+			0.046, 0.042, Vector3(1.0, 0.36, 1.0), 0.010, kb, 0))
 
 	# ---------- pelvis ----------
 	# widest at the trochanter and tapering BOTH ways. The factory learned in
@@ -566,10 +522,10 @@ static func _prims(w: float, g: float) -> Array:
 		0.086 * w * belly, 0.082 * w * belly, Vector3(1, 0.90, 0.50), 0.036,
 		B_TORSO, 0))
 	# pec swell forward, scapula plane aft — the side view lives or dies here
-	out.append(_cap(Vector3(-0.067 * w, 1.336, -0.084), Vector3(0.067 * w, 1.336, -0.084),
-		0.079 * w, 0.079 * w, Vector3(1, 0.96, 0.55), 0.038, B_TORSO, 0))
+	out.append(_cap(Vector3(-0.062 * w, 1.336, -0.072), Vector3(0.062 * w, 1.336, -0.072),
+		0.072 * w, 0.072 * w, Vector3(1, 0.82, 0.46), 0.038, B_TORSO, 0))
 	out.append(_cap(Vector3(-0.056 * w, 1.330, 0.070), Vector3(0.056 * w, 1.330, 0.070),
-		0.086 * w, 0.086 * w, Vector3(1, 1.10, 0.48), 0.038, B_TORSO, 0))
+		0.086 * w, 0.086 * w, Vector3(1, 1.10, 0.38), 0.038, B_TORSO, 0))
 
 	# ---------- shoulder girdle: ONE mass, acromion to acromion ----------
 	# This is M21's swept girdle written the way it always wanted to be. The
@@ -644,7 +600,21 @@ static func _prims(w: float, g: float) -> Array:
 		out.append(_cap(Vector3(sx + ax * 0.048, 0.938, -0.003),
 			Vector3(sx + ax * 0.050, 0.908, -0.004),
 			0.031 * lg, 0.030 * lg, Vector3(1, 1, 0.75), 0.006, eb, 0))   # M25: a wrist is 55 x 40
-		# Hands are attached at forearm joints with their own finer mesh.
+		# hand: a flattened palm and a finger mass, not a marble
+		# M25: the hand ran 0.892..0.788 — 10 cm, half a hand. Palm 0.900..0.815,
+		# fingers 0.815..0.735 (tips at mid-thigh), the thumb on the FRONT edge
+		# because a hanging hand faces its palm at the thigh. 18 mm voxels cannot
+		# hold separate fingers; this is a hand-shaped paddle, not a mitt.
+		out.append(_cap(Vector3(sx + ax * 0.052, 0.900, -0.006),
+			Vector3(sx + ax * 0.056, 0.815, -0.010),
+			0.040, 0.042, Vector3(1.05, 1.0, 0.70), 0.016, eb, 0))
+		out.append(_cap(Vector3(sx + ax * 0.056, 0.815, -0.012),   # r2: tips 2 voxels thick —
+			Vector3(sx + ax * 0.054, 0.735, -0.020),                 # thinner came out ragged
+			0.040, 0.030, Vector3(1.0, 1.0, 0.75), 0.014, eb, 0))
+		# thumb
+		out.append(_cap(Vector3(sx + ax * 0.050, 0.880, -0.030),
+			Vector3(sx + ax * 0.046, 0.830, -0.058),
+			0.016, 0.012, Vector3.ONE, 0.012, eb, 0))
 	return out
 
 
@@ -1809,8 +1779,7 @@ const VOX_G_MIN := 0.0025
 ## Cells across the thinnest part of a piece. 3.0 is the floor at which surface
 ## nets can resolve two faces and a rim; measured against 1.0/1.5/2.0/3.0/4.0 in
 ## skin6/vox_sweep.txt.
-# UPPER-case statics: tunables the tools set at run time, not constants.
-static var VOX_DIV := 3.0  # gdlint:ignore=class-variable-name
+static var VOX_DIV := 3.0
 ## Snap the meshed vertices onto the piece's ANALYTIC isosurface after Taubin.
 ## The in-grid Newton step in `_polygonise` cannot do this job for a garment: it
 ## samples the same grid that is too coarse, and it refuses to act at all where
@@ -1828,7 +1797,7 @@ static var VOX_DIV := 3.0  # gdlint:ignore=class-variable-name
 ##   voxdiv 3.0, reproj 3 -> 0 of 46,442 over 5 mm, 0 penetrating, 66.5 s
 ## Kept as a measured lever rather than deleted, because the next agent to meet
 ## a garment that will not resolve at any affordable cell size wants it.
-static var REPROJ := 0  # gdlint:ignore=class-variable-name
+static var REPROJ := 0
 
 const P_PLACKET := 0
 const P_COLLAR_PTS := 1
@@ -1864,7 +1833,7 @@ static var _bake_out: Array = []
 ## Bake the 17 pieces on WorkerThreadPool. A lever, not a constant, because the
 ## honest way to report what threading bought is to run both arms in ONE process
 ## back to back so machine contention hits them equally (`skin_rim -- --lib`).
-static var THREADED := true  # gdlint:ignore=class-variable-name
+static var THREADED := true
 # ---- ASYNC BAKE (M23, D-036 S2) ----------------------------------------------
 # ONE dedicated background Thread bakes cold buckets sequentially from a mutex-
 # guarded queue and drops finished arrays into `_bake_done`; a persistent
@@ -2026,145 +1995,8 @@ static func _bake_lib_arrays(cw: float, cg: float) -> Array:
 	out.resize(PIECE_N)
 	for p in PIECE_N:
 		var parts: Array = pieces[p]
-		if p in [P_PLACKET, P_COLLAR_PTS, P_POCKET_L, P_POCKET_R]:
-			out[p] = _tailored_piece(p, _flatten(prims), cw)
-		else:
-			out[p] = [] if parts.is_empty() else _bake_piece(parts, bg, dg, cw, dgt)
+		out[p] = [] if parts.is_empty() else _bake_piece(parts, bg, dg, cw, dgt)
 	return out
-
-
-## Fabric cut lines are explicit edges, independent of the field's voxel size.
-static func _tailored_piece(piece: int, field: PackedFloat32Array, w: float) -> Array:
-	var vertices := PackedVector3Array()
-	var indices := PackedInt32Array()
-	var zone := Z_G_PLACKET
-	var owner := B_TORSO
-	if piece == P_COLLAR_PTS:
-		zone = Z_G_COLLAR
-		owner = B_COLLAR
-		# Open-front stand. The centre gap removes the continuous turtleneck ring.
-		for row in 5:
-			var y := lerpf(1.494, 1.523, float(row) / 4.0)
-			for col in 65:
-				var angle := lerpf(0.30, TAU - 0.30, float(col) / 64.0)
-				var direction := Vector3(sin(angle), 0, -cos(angle))
-				var lo := 0.0
-				var hi := 0.18
-				for iteration in 16:
-					var radius := (lo + hi) * 0.5
-					if _field(field, Vector3(0, y, 0.012) + direction * radius) < 0:
-						lo = radius
-					else:
-						hi = radius
-				vertices.append(Vector3(0, y, 0.012) + direction * (hi + 0.0045))
-		_fabric_grid(indices, 0, 65, 5, false)
-		# Triangular fold-over leaves, with the tip defined by the pattern.
-		for side: float in [-1.0, 1.0]:
-			var base := vertices.size()
-			for row in 13:
-				var v := float(row) / 12.0
-				for col in 9:
-					var u := float(col) / 8.0
-					var a := Vector2(side * 0.014, 1.514).lerp(Vector2(side * 0.050, 1.443), v)
-					var b := Vector2(side * 0.074, 1.500).lerp(Vector2(side * 0.050, 1.443), v)
-					var xy := a.lerp(b, u)
-					# 6.5 mm, not the stand's 4.5: the leaf lies OVER the stand where
-					# they overlap, so the two sheets no longer fight for depth at the
-					# junction (the jagged inner edges in codex9/review/collar.png).
-					vertices.append(_fabric_front(field, xy, 0.0065))
-			_fabric_grid(indices, base, 9, 13, side > 0)
-	else:
-		var x0 := -0.013
-		var x1 := 0.013
-		var y0 := 1.09
-		var y1 := 1.470
-		if piece != P_PLACKET:
-			zone = Z_G_POCKET
-			var cx := -0.086 if piece == P_POCKET_L else 0.086
-			x0 = cx - 0.034
-			x1 = cx + 0.034
-			y0 = 1.283
-			y1 = 1.371
-		var relief := 0.0050 if piece == P_PLACKET else 0.0040
-		for row in 25:
-			var v := float(row) / 24.0
-			for col in 9:
-				var u := float(col) / 8.0
-				var y := lerpf(y0, y1, v)
-				if piece != P_PLACKET:
-					y += 0.012 * absf(u * 2 - 1) * pow(1.0 - v, 3)
-				vertices.append(_fabric_front(field, Vector2(lerpf(x0, x1, u), y), relief))
-		_fabric_grid(indices, 0, 9, 25, false)
-		if piece != P_PLACKET:
-			# A flap: 22 mm over the pocket's top, proud at its free edge (8 mm) and
-			# tucked at its seam (4.5) — the ledge a pocket needs to read at all.
-			var base := vertices.size()
-			for row in 5:
-				var v := float(row) / 4.0
-				for col in 9:
-					var u := float(col) / 8.0
-					var y := lerpf(y1 - 0.004, y1 + 0.022, v)
-					vertices.append(_fabric_front(field, Vector2(lerpf(x0 - 0.002, x1 + 0.002, u), y),
-						lerpf(0.0080, 0.0045, v)))
-			_fabric_grid(indices, base, 9, 5, false)
-	return _fabric_arrays(vertices, indices, zone, owner, w, field)
-
-
-static func _fabric_front(field: PackedFloat32Array, xy: Vector2, relief: float) -> Vector3:
-	var lo := -0.30
-	var hi := 0.0
-	for i in 18:
-		var z := (lo + hi) * 0.5
-		if _field(field, Vector3(xy.x, xy.y, z)) > 0:
-			lo = z
-		else:
-			hi = z
-	return Vector3(xy.x, xy.y, hi - relief)
-
-
-static func _fabric_grid(indices: PackedInt32Array, base: int, cols: int, rows: int, flip: bool) -> void:
-	for row in rows - 1:
-		for col in cols - 1:
-			var a := base + row * cols + col
-			var b := a + 1
-			var c := a + cols
-			var d := c + 1
-			if flip:
-				indices.append_array(PackedInt32Array([a, c, d, a, d, b]))
-			else:
-				indices.append_array(PackedInt32Array([a, d, c, a, b, d]))
-
-
-static func _fabric_arrays(vertices: PackedVector3Array, indices: PackedInt32Array,
-		zone: int, bone: int, w: float, field: PackedFloat32Array) -> Array:
-	var normals := PackedVector3Array()
-	var uv := PackedVector2Array()
-	var micro := PackedVector2Array()
-	var owners := PackedInt32Array()
-	var neighbors := PackedInt32Array()
-	var starts := PackedInt32Array()
-	starts.resize(vertices.size() + 1)
-	for p in vertices:
-		var epsilon := 0.001
-		var n := Vector3(
-			_field(field, p + Vector3(epsilon, 0, 0)) - _field(field, p - Vector3(epsilon, 0, 0)),
-			_field(field, p + Vector3(0, epsilon, 0)) - _field(field, p - Vector3(0, epsilon, 0)),
-			_field(field, p + Vector3(0, 0, epsilon)) - _field(field, p - Vector3(0, 0, epsilon)))
-		normals.append(n.normalized())
-		uv.append(_zone_uv(zone, p))
-		micro.append(_micro_uv(bone, p))
-		owners.append(bone)
-	var weights := _weights(vertices, owners, neighbors, starts, w)
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_NORMAL] = normals
-	arrays[Mesh.ARRAY_TEX_UV] = uv
-	arrays[Mesh.ARRAY_TEX_UV2] = micro
-	arrays[Mesh.ARRAY_INDEX] = indices
-	arrays[Mesh.ARRAY_BONES] = weights[0]
-	arrays[Mesh.ARRAY_WEIGHTS] = weights[1]
-	return arrays
 
 
 ## Main thread: arrays -> lib dict + ArrayMesh, disk cache, memory cache.
@@ -2759,7 +2591,7 @@ static func _bake_piece(parts: Array, bg: Dictionary, dg: PackedFloat32Array,
 		w: float, dgt := PackedFloat32Array()) -> Array:
 	if parts.is_empty():
 		return []
-	var VG := _piece_vox(parts)  # gdlint:ignore=function-variable-name
+	var VG := _piece_vox(parts)
 	var lo := Vector3(1e9, 1e9, 1e9)
 	var hi := Vector3(-1e9, -1e9, -1e9)
 	var cmax := 0.0
@@ -3154,7 +2986,7 @@ static func _palette_spec(cfg: Dictionary) -> Array:
 	# (collar7/r3 showcase: a red tee with a red neck). Above the neckline the
 	# paint is skin for those; the collared styles keep cloth, which the band
 	# shell (P_COLLAR_PTS, 1.525..1.578) hides anyway.
-	var collar_bands: Array = [[1.523, 1.576, skin, sk_r, 0.0]]
+	var collar_bands: Array = [[1.542, 1.576, skin, sk_r, 0.0]]
 	if neck == 0 or neck == 4 or neck == 5:
 		collar_bands.append([1.500, 1.576, skin, sk_r, 0.0])
 	pal[Z_COLLAR] = [shirt.darkened(0.06), 0.90, 0.0, collar_bands]

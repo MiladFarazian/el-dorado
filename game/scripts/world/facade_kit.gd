@@ -287,8 +287,9 @@ static func _mm(parent: Node3D, mesh: Mesh, xf: Array[Transform3D],
 ## instead of inventing a fifth opinion about when dusk is.
 class NightDriver extends Node:
 	const GLOW := preload("res://scripts/systems/streetlight_glow.gd")
-	const SHADERS := preload("res://scripts/world/city_shaders.gd")
-	const TEXK := preload("res://scripts/world/city_textures.gd")
+	# inner classes preload their own kits (M23); the outer preload is not visible here
+	const SHADERS := preload("res://scripts/world/city_shaders.gd")  # gdlint:ignore=duplicated-load
+	const TEXK := preload("res://scripts/world/city_textures.gd")  # gdlint:ignore=duplicated-load
 	var _sky: Node = null
 	var _lvl := -1.0
 

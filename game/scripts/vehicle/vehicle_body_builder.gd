@@ -1650,7 +1650,7 @@ static func _fuel_door(p: Node3D, f: Dictionary, z: float, y: float) -> void:
 	p.add_child(mi)
 
 
-static func _exhaust(p: Node3D, s: Vector3, xs: Array, z: float, y: float,
+static func _exhaust(p: Node3D, _s: Vector3, xs: Array, z: float, y: float,
 		r: float) -> void:
 	for x: float in xs:
 		_cyl(p, r, 0.13, Vector3(x, y, z), _m("chrome", CHROME, 0.19, 0.95), false, D_FINE, true)

@@ -95,7 +95,7 @@ func _stage() -> void:
 	for n in _main.get_children():
 		if n is CanvasLayer:
 			(n as CanvasLayer).visible = false
-	var sysd := _main.get("systems")
+	var sysd: Variant = _main.get("systems")
 	if sysd is Dictionary:
 		for sys: Node in (sysd as Dictionary).values():
 			for c in sys.get_children():
@@ -140,7 +140,7 @@ func _stage() -> void:
 
 
 func _shoot(s: Array) -> void:
-	var sysd := _main.get("systems")
+	var sysd: Variant = _main.get("systems")
 	if sysd is Dictionary:
 		var sky: Variant = (sysd as Dictionary).get("sky_weather")
 		if sky is Node and is_instance_valid(sky):

@@ -5,7 +5,10 @@ extends Node
 ## Parks a free camera at hand-picked vantages, hides every HUD layer, saves
 ## PNGs to the scratchpad, and quits. Delete after the art review.
 
-const OUT_DIR := "/private/tmp/claude-501/-Users-miladfarazian-Documents-Projects-gta-clone/318bd236-7d38-47d4-81c8-06f13bf519a8/scratchpad/shots"
+## D-055: plates go to game/.gate/shots — gitignored, stable across sessions and agents.
+## (Before this they went to one Claude session's scratchpad path, which Codex and the next
+## session could not find.) Override with --shot-out=/abs/dir.
+static var OUT_DIR := ProjectSettings.globalize_path("res://.gate/shots")  # gdlint:ignore=class-variable-name
 
 var main_ref: Node = null
 var _cam: Camera3D = null
@@ -158,6 +161,9 @@ func setup(main: Node) -> void:
 		push_error("SHOT: --shot needs a rendering window; --headless deadlocks the capture.")
 		set_process(false)
 		return
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with("--shot-out="):
+			OUT_DIR = a.get_slice("=", 1)
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
 	DisplayServer.window_set_size(Vector2i(1600, 900))   # D-053: plates are 1600x900 regardless of the game window override
 	# M24: `--shot-debug=normals|unshaded|lighting|overdraw` draws the whole
@@ -213,10 +219,35 @@ func _take(shot: Array) -> void:
 	_settle_and_save(str(shot[0]))
 
 
+var _token := 0   # D-054 watchdog: which vantage the pending coroutine belongs to
+
+
+## WATCHDOG (D-054). One sweep on 2026-09-08 sat 13 minutes after `plaza` at
+## 0.4% CPU with no error line — an await that never came back, once in three
+## runs. A wedged sweep wedges the whole gate chain, so a vantage that has not
+## saved in 12 s is reported with the engine's state and skipped; the stale
+## coroutine, if it ever resumes, finds its token expired and does nothing.
+func _watchdog(shot_name: String, tok: int) -> void:
+	await get_tree().create_timer(12.0, true).timeout
+	if tok != _token or not _busy:
+		return
+	print("SHOT STALL at %s: paused=%s max_fps=%d frames_drawn=%d process_frames=%d — skipping"
+		% [shot_name, get_tree().paused, Engine.max_fps, Engine.get_frames_drawn(),
+			Engine.get_process_frames()])
+	_token += 1
+	_idx += 1
+	_busy = false
+
+
 func _settle_and_save(shot_name: String) -> void:
+	_token += 1
+	var tok := _token
+	_watchdog(shot_name, tok)
 	for i in 8:  # let sky restyle + streaming settle
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+	if tok != _token:
+		return   # the watchdog moved on without us
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(OUT_DIR + "/" + shot_name + ".png")
 	if shot_name == "face":
@@ -225,5 +256,6 @@ func _settle_and_save(shot_name: String) -> void:
 			var to_sun: Vector3 = -(sun_node as DirectionalLight3D).global_transform.basis.z
 			print("SHOT sun: toward-sun dir=%s elev=%.1f deg" % [to_sun, rad_to_deg(asin(to_sun.y))])
 	print("SHOT saved: " + shot_name)
+	_token += 1   # retire the watchdog for this vantage
 	_idx += 1
 	_busy = false

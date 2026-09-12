@@ -78,6 +78,12 @@ func _report(cw: float, cg: float, only: String) -> void:
 		var parts: Array = pieces[p]
 		if parts.is_empty():
 			continue
+		if p in [SKIN.P_PLACKET, SKIN.P_COLLAR_PTS, SKIN.P_POCKET_L, SKIN.P_POCKET_R]:
+			# These ship as tailored fabric meshes (_tailored_piece), not shells;
+			# baking their old shell parts here would grade geometry nobody sees.
+			print("%-11s   ---  TAILORED (explicit fabric mesh; not a shell, not graded here)"
+				% SKIN.PIECE_NAME[p])
+			continue
 		var t0 := Time.get_ticks_usec()
 		var arr := SKIN._bake_piece(parts, bg, dg, cw, dgt)
 		var ms := (Time.get_ticks_usec() - t0) / 1000.0

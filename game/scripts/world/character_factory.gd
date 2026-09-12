@@ -773,13 +773,13 @@ static var _face_carry := PackedVector2Array([
 static var _face_target := PackedVector2Array([
 	Vector2(0.0250, -0.0640), Vector2(0.0300, -0.0748), Vector2(0.0365, -0.0812),
 	Vector2(0.0410, -0.0828),
-	Vector2(0.0455, -0.0836), Vector2(0.0495, -0.0846), Vector2(0.0530, -0.0858),
-	Vector2(0.0562, -0.0878), Vector2(0.0590, -0.0886), Vector2(0.0618, -0.0884),
-	Vector2(0.0645, -0.0880), Vector2(0.0668, -0.0884), Vector2(0.0690, -0.0886),
-	Vector2(0.0715, -0.0884), Vector2(0.0742, -0.0888), Vector2(0.0768, -0.0880),
-	Vector2(0.0795, -0.0868), Vector2(0.0825, -0.0862), Vector2(0.0855, -0.0854),
-	Vector2(0.0880, -0.0854), Vector2(0.0900, -0.0905), Vector2(0.0925, -0.0970),
-	Vector2(0.0955, -0.1016), Vector2(0.0985, -0.1030), Vector2(0.1010, -0.1014),
+	Vector2(0.0455, -0.0824), Vector2(0.0495, -0.0824), Vector2(0.0530, -0.0827),
+	Vector2(0.0562, -0.0839), Vector2(0.0590, -0.0840), Vector2(0.0618, -0.0830),
+	Vector2(0.0645, -0.0819), Vector2(0.0668, -0.0817), Vector2(0.0690, -0.0814),
+	Vector2(0.0715, -0.0805), Vector2(0.0742, -0.0814), Vector2(0.0768, -0.0812),
+	Vector2(0.0795, -0.0807), Vector2(0.0825, -0.0809), Vector2(0.0855, -0.0809),
+	Vector2(0.0880, -0.0815), Vector2(0.0900, -0.0871), Vector2(0.0925, -0.0943),
+	Vector2(0.0955, -0.0997), Vector2(0.0985, -0.1018), Vector2(0.1010, -0.1009),
 	Vector2(0.1060, -0.0990), Vector2(0.1140, -0.0956), Vector2(0.1220, -0.0924),
 	Vector2(0.1300, -0.0894), Vector2(0.1380, -0.0872), Vector2(0.1440, -0.0850),
 	Vector2(0.1500, -0.0846)])
@@ -905,7 +905,7 @@ static func _face_relief(theta: float, x: float, y: float, jaw: float,
 		* _bmp((y - 0.1455) / 0.0150) * fw                    # supraorbital ridge (M23: 4.2 -> 6.5 mm)
 	d += 0.0045 * brow * _bmp(ax / 0.0190) \
 		* _bmp((y - 0.1490) / 0.0150) * fw                    # glabella (3.2 -> 4.5)
-	d -= 0.0075 * _bmp((ax - 0.0420) / 0.0330) \
+	d -= 0.0075 * _bmp((ax - 0.0340) / 0.0280) \
 		* _bmp((y - 0.1285) / 0.0190) * fw                    # orbit (M23: 3.2 -> 7.5 mm — a socket, not a dip)
 	d += 0.0055 * _bmp((at - 0.74) / 0.52) * _bmp((y - 0.1010) / 0.0280)   # cheekbone (3.0 -> 5.5)
 	d += 0.0026 * _bmp((at - 1.62) / 0.72) * _bmp((y - 0.0820) / 0.0420) * jaw
@@ -938,7 +938,7 @@ static func _face_tint(x: float, y: float, theta: float, asym: float,
 	t = t.lerp(Color(1.12, 0.72, 0.68),
 		fw * _bmp(x / 0.0258) * _bmp((y - (ys - 0.0084)) / 0.0106))
 	t = t.lerp(Color(0.24, 0.17, 0.16),
-		fw * _bmp(x / 0.0286) * _bmp((y - ys) / 0.0046))
+		fw * _bmp(x / 0.0260) * _bmp((y - ys) / 0.0022))
 	t = t.lerp(Color(0.16, 0.12, 0.11),
 		fw * _bmp((absf(x) - 0.0090) / 0.0052) * _bmp((y - 0.0893) / 0.0058))
 	return t
@@ -1312,7 +1312,7 @@ static func _build_shoe(knee: Node3D, style: int, shoe: Material,
 
 # ------------------------------ torso ----------------------------------------
 static func _build_torso(vis: Node3D, rig: Dictionary, cfg: Dictionary,
-		w: float, g: float, masses: Array) -> Node3D:
+		_w: float, _g: float, masses: Array) -> Node3D:
 	var pants := _m(cfg["pants"], 0.88)
 	var shirt := _m(cfg["shirt"], 0.92)
 
@@ -1372,7 +1372,7 @@ static func _brow_strip(head: Node3D, face: Array, side: float, asym: float, mat
 	var rows: Array[Vector3] = []
 	for i in 21:
 		var t := float(i) / 20.0
-		var x := side * lerpf(0.020, 0.065, t)
+		var x := side * lerpf(0.014, 0.058, t)
 		var y := 0.149 + 0.004 * sin(t * PI) - 0.004 * t + 0.0018 * asym * side
 		var half := 0.0028 * pow(sin(PI * clampf(t, 0.025, 0.975)), 0.45)
 		for edge in [-1.0, 1.0]:
@@ -1443,13 +1443,13 @@ static func _fitted_eye(head: Node3D, face: Array, side: float, cfg: Dictionary)
 		var radius := float(row) / 16.0
 		for j in 64:
 			var theta := TAU * float(j) / 64.0
-			var dx := cos(theta) * radius * 0.015
-			var dy := sin(theta) * pow(absf(sin(theta)), 0.35) * radius * 0.0055
-			var x := side * 0.040 + dx
+			var dx := cos(theta) * radius * 0.0145
+			var dy := sin(theta) * pow(absf(sin(theta)), 0.35) * radius * (0.0040 if sin(theta) > 0.0 else 0.0047)
+			var x := side * 0.034 + dx
 			var y := 0.127 + dy + side * dx * 0.065
 			var z := _surface(face, x, y, true) - 0.0008 - 0.001 * (1.0 - radius * radius)
 			points.append(Vector3(x, y, z))
-			var color := Color(0.78, 0.79, 0.75)
+			var color := Color(0.60, 0.59, 0.54)
 			var radial := Vector2(dx, dy).length()
 			if radial < 0.0058:   # M25: iris 10.6 -> 11.6 mm, pupil 4.8 -> 4.2 — a daylight eye
 				color = iris.lightened(0.10 + 0.06 * sin(theta * 19.0))
@@ -1474,6 +1474,84 @@ static func _fitted_eye(head: Node3D, face: Array, side: float, cfg: Dictionary)
 	material.vertex_color_use_as_albedo = true
 	material.roughness = 0.38
 	_put(head, st.commit(), Vector3.ZERO, material, Vector3.ONE, Vector3.ZERO)
+
+
+static func _eyelid(head: Node3D, face: Array, side: float, cfg: Dictionary) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var vertices: Array[Vector3] = []
+	for i in 25:
+		var t := float(i) / 24.0 * 2.0 - 1.0
+		var arch := pow(maxf(0, 1.0 - t * t), 0.675)
+		var dx := t * 0.0145
+		var x := side * 0.034 + dx
+		var inner_y := 0.127 + arch * 0.004 + side * dx * 0.065
+		for row in 3:
+			var y := inner_y + arch * float(row) * 0.0025
+			var depth := 0.0010 + (0.0015 if row == 1 else 0.0) * arch
+			vertices.append(Vector3(x, y, _surface(face, x, y, true) - depth))
+	for i in 24:
+		for row in 2:
+			var a := i * 3 + row
+			_t3(st, vertices[a], vertices[a + 4], vertices[a + 1])
+			_t3(st, vertices[a], vertices[a + 3], vertices[a + 4])
+	st.generate_normals()
+	_put(head, st.commit(), Vector3.ZERO, _skin(cfg.skin, float(cfg.get("skin_rough", 0.72))), Vector3.ONE, Vector3.ZERO)
+
+
+static func _beard_surface(head: Node3D, cfg: Dictionary, jaw_patch: bool) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var points: Array[Vector3] = []
+	var colors: Array[Color] = []
+	var params := _face_params(cfg)
+	var skin: Color = cfg.skin
+	var hair: Color = cfg.hair
+	var full := int(cfg.get("whiskers", 0)) == Whiskers.FULL
+	for row in 17:
+		var v := float(row) / 16.0
+		for col in 49:
+			var u := float(col) / 48.0
+			var x: float
+			var y: float
+			var z: float
+			var feather := clampf(minf(minf(u, 1-u) * 4.5, minf(v, 1-v) * 4.5), 0.0, 1.0)
+			if jaw_patch:
+				var angle := lerpf(-1.65 if full else -0.38, 1.65 if full else 0.38, u)
+				var upper := 0.049 + (0.070 if full else 0.0) * pow(absf(sin(angle)), 2)
+				y = lerpf(0.027, upper, v)
+				var r := _head_r0(angle, y, params[0])
+				r += _face_relief(angle, r * sin(angle), y, params[0], params[1], params[2], params[3])
+				# D-054: the sheet SINKS under the skin toward its boundary (+1.0 mm
+				# at the core, -0.6 mm at the edge). A skin-coloured edge 1 mm above
+				# the face still drew a shading seam around the patch; a buried one
+				# has no edge to draw.
+				r += lerpf(-0.0006, 0.0010, feather)
+				x = r * sin(angle)
+				z = HEAD_AXIS_Z - r * cos(angle)
+			else:
+				x = lerpf(-0.028, 0.028, u)
+				var half := 0.0045 * (1.0 - 0.55 * pow(absf(u * 2 - 1), 2.0))   # a moustache tapers to its ends
+				var mid := 0.0760 - 0.004 * absf(u * 2 - 1)
+				y = lerpf(mid - half, mid + half, v)
+				z = _head_front(x, y, params[0], params[1], params[2], params[3]) \
+					- lerpf(-0.0006, 0.0010, feather)
+			points.append(Vector3(x, y, z))
+			# D-054: the first surface beard was one flat tone with a 7% feather and
+			# read as a patch stuck on (codex9/review/cast.png: a bandage moustache).
+			# Hair on skin is stubble — a per-vertex mix of hair and skin — with a
+			# wide feather at the edge.
+			var edge := minf(minf(u, 1-u) * 4.5, minf(v, 1-v) * 4.5)
+			var grain := absf(fmod(sin(u * 97.3 + v * 57.1) * 43758.5453, 1.0))
+			var tone := hair.darkened(0.10).lerp(skin, 0.10 + 0.34 * grain)
+			colors.append(skin.lerp(tone, clampf(edge, 0, 1)))
+	for row in 16:
+		for col in 48:
+			var a := row * 49 + col
+			_ctri(st, points, colors, a, a + 50, a + 49)
+			_ctri(st, points, colors, a, a + 1, a + 50)
+	st.generate_normals()
+	_put(head, st.commit(), Vector3.ZERO, _mvc(Color.WHITE, 0.94), Vector3.ONE, Vector3.ZERO)
 
 
 static func _build_head(head: Node3D, cfg: Dictionary) -> void:
@@ -1522,39 +1600,12 @@ static func _build_head(head: Node3D, cfg: Dictionary) -> void:
 	# Eyes share the face's surface evaluator, including per-person proportions.
 	for side: float in [-1.0, 1.0]:
 		_fitted_eye(head, face, side, cfg)
+		_eyelid(head, face, side, cfg)
 
-	# ---- facial hair: laid ON the shell, in the HAIR colour ------------------
-	# The M19 beard was three axis-aligned boxes and a ball placed against the
-	# old jaw ellipsoid; against the new surface every one of them either floats
-	# or sinks. Laid chains follow whatever the face actually does, and a chain
-	# of small balls has no rim to lift (the M18 lesson that fixed the eyebrow).
-	var bmat := _m(beard_c, 0.92)
-	if whisk == Whiskers.MUSTACHE or whisk == Whiskers.GOATEE \
-			or whisk == Whiskers.FULL:
-		for k in 7:                                   # moustache over the philtrum
-			var t := float(k) / 6.0 - 0.5
-			_lay_ball(head, face, t * 0.048, 0.0805 - 0.0040 * absf(t) * 2.0,
-				Vector3(0.016, 0.0125, 0.0075), bmat, 0.0016, 0.0, 4, 8, FACE_CULL)
-	if whisk == Whiskers.GOATEE or whisk == Whiskers.FULL:
-		for k in 5:                                              # chin patch
-			var t := float(k) / 4.0 - 0.5
-			_lay_ball(head, face, t * 0.040, 0.0470 - 0.0060 * absf(t) * 2.0,
-				Vector3(0.022, 0.0300, 0.0080), bmat, 0.0020, 0.0, 4, 8, FACE_CULL)
-	if whisk == Whiskers.FULL:
-		# the jaw perimeter: sideburn down to the chin, both sides
-		for k in 7:
-			var t := float(k) / 6.0
-			var by := lerpf(0.1060, 0.0430, t)
-			var bxx := 0.0570 - 0.0230 * t * t
-			for s: float in [-1.0, 1.0]:
-				_lay_ball(head, face, s * bxx, by,
-					Vector3(0.030, 0.030, 0.0085), bmat, 0.0022, 0.0, 4, 8)
-		for k in 4:                                    # under the jaw / cheeks
-			var t := float(k) / 3.0
-			_lay_ball(head, face, 0.0, lerpf(0.0620, 0.0330, t),
-				Vector3(0.060, 0.026, 0.0090), bmat, 0.0022, 0.0, 4, 10)
-	elif whisk == Whiskers.STUBBLE:
-		pass   # stubble is a tint baked into the shell (see `_face_tint`)
+	if whisk in [Whiskers.MUSTACHE, Whiskers.GOATEE, Whiskers.FULL]:
+		_beard_surface(head, cfg, false)
+	if whisk in [Whiskers.GOATEE, Whiskers.FULL]:
+		_beard_surface(head, cfg, true)
 
 	_build_hair(head, cfg, hair, hair_c, face)
 	_build_hat(head, cfg)

@@ -1,0 +1,11 @@
+# gdlint (gdtoolkit 4) — substance over style. This codebase orders class bodies by
+# narrative, tabs-with-continuation-spaces is deliberate, and comment-heavy files run
+# long; those rules are off. What stays: names, unused arguments, duplicated loads,
+# expression-not-assigned, comparison-with-itself, unnecessary passes, max-returns.
+disable:
+  - class-definitions-order
+  - max-line-length
+  - mixed-tabs-and-spaces
+  - max-file-lines
+  - max-public-methods
+max-returns: 12
