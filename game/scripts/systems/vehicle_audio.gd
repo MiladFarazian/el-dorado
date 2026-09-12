@@ -68,6 +68,14 @@ const IMPACT_PEAK_DB := -4.0
 const IMPACT_COOLDOWN := 0.3
 const IMPACT_UNIT_SIZE := 12.0
 const IMPACT_MAX_DIST := 120.0
+# --- Horn (D-056): the ambience horn's 370 + 466 Hz pair, up close, held on H.
+const HORN_SAMPLES := 11025                # 0.5 s loop
+const HORN_TONES: Array[float] = [370.0, 466.0]
+const HORN_GAIN := 0.32
+const HORN_DB := -7.0
+const HORN_UNIT_SIZE := 14.0
+const HORN_MAX_DIST := 180.0
+const HORN_PED_RADIUS := 16.0              # walkers ahead of the grille bolt
 
 # ============================== STATE ========================================
 var main_ref: Node = null
@@ -77,6 +85,8 @@ var _engine_stream: AudioStreamWAV = null
 var _skid_stream: AudioStreamWAV = null
 var _siren_stream: AudioStreamWAV = null
 var _impact_stream: AudioStreamWAV = null
+var _horn_stream: AudioStreamWAV = null
+var _horn: AudioStreamPlayer3D = null
 var _engine: AudioStreamPlayer3D = null
 var _skid: AudioStreamPlayer3D = null
 var _impact: AudioStreamPlayer3D = null
@@ -99,6 +109,7 @@ func setup(main: Node) -> void:
 	_skid_stream = _build_skid_loop()
 	_siren_stream = _build_siren_loop()
 	_impact_stream = _build_impact_shot()
+	_horn_stream = _build_horn_loop()
 
 
 func on_vehicle_changed(_vehicle: Node) -> void:
@@ -110,13 +121,14 @@ func on_vehicle_changed(_vehicle: Node) -> void:
 	# unstopped engine loop would idle at that spot forever (audible across the
 	# map, and leaked at quit). Silence and free them explicitly, then recreate
 	# lazily on the new body.
-	for p: Variant in [_engine, _skid, _impact]:
+	for p: Variant in [_engine, _skid, _impact, _horn]:
 		if p is AudioStreamPlayer3D and is_instance_valid(p):
 			(p as AudioStreamPlayer3D).stop()
 			(p as AudioStreamPlayer3D).queue_free()
 	_engine = null
 	_skid = null
 	_impact = null
+	_horn = null
 	_engine_pitch = IDLE_PITCH
 	_skid_level = 0.0
 	_prev_vehicle_id = 0
@@ -138,6 +150,7 @@ func _physics_process(delta: float) -> void:
 	_update_engine(veh, delta)
 	_update_skid(veh, delta)
 	_update_impact(veh)
+	_update_horn(veh)
 
 
 # ============================== RUNTIME ======================================
@@ -159,6 +172,26 @@ func _ensure_players(veh: RigidBody3D) -> void:
 		_skid = _make_player(veh, _skid_stream, SKID_UNIT_SIZE, SKID_MAX_DIST, SKID_PEAK_DB)
 	if _impact == null or not is_instance_valid(_impact) or _impact.get_parent() != veh:
 		_impact = _make_player(veh, _impact_stream, IMPACT_UNIT_SIZE, IMPACT_MAX_DIST, IMPACT_PEAK_DB)
+	if _horn == null or not is_instance_valid(_horn) or _horn.get_parent() != veh:
+		_horn = _make_player(veh, _horn_stream, HORN_UNIT_SIZE, HORN_MAX_DIST, HORN_DB)
+
+
+## H, held: the loop plays; the press edge tells the walkers ahead to move.
+func _update_horn(veh: RigidBody3D) -> void:
+	if _horn == null or not is_instance_valid(_horn):
+		return
+	var want: bool = veh.get("player_controlled") == true and main_ref.get("on_foot") != true \
+		and InputMap.has_action("horn") and Input.is_action_pressed("horn")
+	if want and not _horn.playing:
+		_horn.play()
+	elif not want and _horn.playing:
+		_horn.stop()
+	if want and Input.is_action_just_pressed("horn"):
+		var sys: Variant = main_ref.get("systems")
+		if sys is Dictionary and (sys as Dictionary).has("pedestrians"):
+			var peds: Variant = (sys as Dictionary)["pedestrians"]
+			if peds is Node and (peds as Node).has_method("honk_at"):
+				(peds as Node).call("honk_at", veh, HORN_PED_RADIUS)
 
 
 func _make_player(parent: Node, stream: AudioStreamWAV, unit: float, max_dist: float, db: float) -> AudioStreamPlayer3D:
@@ -236,7 +269,7 @@ func _update_impact(veh: RigidBody3D) -> void:
 ## 4.7.1 (constant 2-object warning) — stop everything on teardown so headless
 ## runs exit clean.
 func _exit_tree() -> void:
-	for p: Variant in [_engine, _skid, _impact]:
+	for p: Variant in [_engine, _skid, _impact, _horn]:
 		if p is AudioStreamPlayer3D and is_instance_valid(p):
 			(p as AudioStreamPlayer3D).stop()
 	if is_inside_tree():
@@ -316,6 +349,25 @@ func _build_siren_loop() -> AudioStreamWAV:
 		var hz := SIREN_LOW_HZ + (SIREN_HIGH_HZ - SIREN_LOW_HZ) * tri
 		samples[i] = SIREN_GAIN * sin(phase)
 		phase += TAU * hz / float(MIX_RATE)
+	return _wav(samples, true)
+
+
+## Two-tone horn, loop-safe: each partial is rounded to a whole number of cycles
+## per buffer so the seam is silent; a one-pole lowpass keeps it a honk, not a buzz.
+func _build_horn_loop() -> AudioStreamWAV:
+	var samples := PackedFloat32Array()
+	samples.resize(HORN_SAMPLES)
+	for tone: float in HORN_TONES:
+		for h in 3:
+			var cycles := roundf(tone * float(h + 1) * float(HORN_SAMPLES) / float(MIX_RATE))
+			var step := TAU * cycles / float(HORN_SAMPLES)
+			var amp := HORN_GAIN / float(h + 1)
+			for i in HORN_SAMPLES:
+				samples[i] += sin(step * float(i)) * amp
+	var y := 0.0
+	for i in HORN_SAMPLES:
+		y += 0.32 * (samples[i] - y)
+		samples[i] = y
 	return _wav(samples, true)
 
 

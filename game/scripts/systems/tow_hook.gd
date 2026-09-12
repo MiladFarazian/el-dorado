@@ -78,7 +78,7 @@ func _physics_process(_delta: float) -> void:
 			var a := _rear_anchor(player)
 			var b := hooked_body.to_global(_target_anchor_local)
 			var dist := a.distance_to(b)
-			if dist > SNAP_DISTANCE:
+			if dist > SNAP_DISTANCE and not _chain_held():
 				_release()
 				_flash_snapped()
 			else:
@@ -191,7 +191,7 @@ func _try_hook(player: RigidBody3D) -> void:
 		if systems is Dictionary:
 			var pol: Variant = (systems as Dictionary).get("police")
 			if is_instance_valid(pol) and (pol as Object).has_method("add_heat"):
-				pol.call("add_heat", 2)
+				pol.call("add_heat", 2, "HOOKED A CRUISER")
 	hooked.emit(target)
 
 
@@ -288,6 +288,16 @@ func _build_ui() -> void:
 	_snap_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	_snap_label.visible = false
 	_ui.add_child(_snap_label)
+
+
+## THE FULL EIGHT: while Book is holding on, the chain holds too (data:
+## full_eight.json "chain_unbreakable"). The joint still limits; only the snap is refused.
+func _chain_held() -> bool:
+	var sys: Variant = main_ref.get("systems") if main_ref != null else null
+	if not (sys is Dictionary) or not (sys as Dictionary).has("full_eight"):
+		return false
+	var fe: Variant = (sys as Dictionary)["full_eight"]
+	return fe is Node and (fe as Node).get("chain_held") == true
 
 
 func _flash_snapped() -> void:

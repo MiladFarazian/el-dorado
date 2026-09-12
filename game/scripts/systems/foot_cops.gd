@@ -351,7 +351,7 @@ func _down(o: Dictionary, body: RigidBody3D, striker: Node3D, charge: bool) -> v
 	if not charge: return
 	var pol := _peer("police")
 	if pol != null and pol.has_method("add_heat"):
-		pol.call("add_heat", DOWN_HEAT)
+		pol.call("add_heat", DOWN_HEAT, "DOWNED AN OFFICER")
 
 
 ## Contact backup for hits the proximity check missed. Static world is NOT a

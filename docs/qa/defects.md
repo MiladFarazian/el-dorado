@@ -103,6 +103,37 @@ Bar: `docs/qa/quality-bar.md`.
 > - **D-117 [S3] The surface beard read as a flat patch** (codex9/review/cast.png: a bandage
 >   moustache on a dark head, a mask beard on a light one) — PRODUCER-CLAIMED FIXED: per-vertex
 >   hair/skin stubble mix, feather widened from 7% to 22% of the patch. QA to rule at `cast`.
+> - **D-118 [S3] Heat had no reason** — a star lit and the player was never told why (DNA §4
+>   "legible"; the checklist's row 11 scored 1). PRODUCER-CLAIMED FIXED 2026-09-12 (D-056):
+>   `police.add_heat(n, reason)`, 16 call sites named, the reason drawn under WANTED for 2.6 s,
+>   `police.last_reason` public. Evidence: `evidence/mechanics-sept12/busted.png` (banner
+>   "WANTED / PROBE: LOITERING"), `mech_probe_headless.log` stage 1 (3/3). QA to rule.
+> - **D-119 [S2] There was no second fail state** — evade or die; a player who stopped with the
+>   law on him was shot at (heat ≥ 2) or rammed forever (heat 1). PRODUCER-CLAIMED FIXED (D-056):
+>   `systems/arrest.gd` + `on_foot.arrest(fine)` — still for 1.8 s with an officer at 2.6 m or a
+>   stopped cruiser within 5 m → BUSTED card → the impound lot beside the wrecker, heat 0, fine
+>   $150/star, not healed, not repaired. Evidence: `mech_probe_*.log` stage 4 (6/6: card, lot
+>   3.7 m from the pad, on foot, heat 0, $-150), `busted.png`. **Known gap, filed with it:** at
+>   heat 1 cruisers ram rather than pull alongside, so the cruiser path needs a wedged cruiser;
+>   the officer path (heat ≥ 2) is clean. QA to rule on both.
+> - **D-120 [S3] The player's ride had no brake lamps, reverse lamps, working headlamps, or a
+>   horn** (bar §4 "every verb has feedback": braking had none). PRODUCER-CLAIMED FIXED (D-056):
+>   `systems/vehicle_lamps.gd` (private lamp materials — the builder's cache is fleet-wide —
+>   brake 1.5 → 6.5, reverse white, night headlamps 5.0 + two shadowless spots), horn on H in
+>   `vehicle_audio.gd`, walkers ahead bolt (`pedestrians.honk_at`). Evidence: probe stage 2
+>   (7/7: energy 6.50 on S, 1.50 on release, horn plays/stops, 2 spots bound). Traffic lamps
+>   remain D-045. QA to rule; a night plate with the spots lit is still owed.
+> - **D-121 [S3] `vehicle_damage.gd` assigned a freed cruiser to a typed variable** — every
+>   heat clear with a tracked cruiser (the hospital respawn included) logged `SCRIPT ERROR:
+>   Trying to assign invalid previously freed instance` at line 61; the §5 boot gate never
+>   sees it because the gate never clears heat. PRODUCER-CLAIMED FIXED: checked as a Variant
+>   before the cast. Evidence: `mech_probe_headless.log` (the error at probe3, gone at probe4).
+> - **D-122 [S2] The protagonist's canon special ability did not exist** (story bible §4: "The
+>   Full Eight"; checklist row 20 scored 1). PRODUCER-CLAIMED LANDED (D-056):
+>   `systems/full_eight.gd` + `data/mechanics/full_eight.json` + the rope in `hud_gta.gd`.
+>   Evidence: probe stage 3 (11/11: key path fires; 0.35 / 0.55 / ×1.30 / chain held; ends at
+>   8.0 real-s; all four restored; cooldown 6 s), `full_eight.png` (veil + rope). Tuning is a
+>   first guess; QA to rule on feel at the `car_34` vantage with the veil up.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,

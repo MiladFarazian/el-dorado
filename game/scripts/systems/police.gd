@@ -93,7 +93,9 @@ var _spawned_total := 0
 var _ui: CanvasLayer = null
 var _stars: Array[Label] = []
 var _banner: Label = null
+var _banner_sub: Label = null        # the reason line under WANTED
 var _banner_t := 0.0
+var last_reason := ""                # PUBLIC (HUD, arrest): why the last star lit
 
 
 func setup(main: Node) -> void:
@@ -108,7 +110,10 @@ func setup(main: Node) -> void:
 
 
 # ============================== PUBLIC API ===================================
-func add_heat(n: int) -> void:
+## `reason` is the crime, in the player's words ("GRAND THEFT AUTO", "HIT A
+## PEDESTRIAN"): DNA §4 says heat must be LEGIBLE, so every star that lights says
+## why, under the WANTED banner. Callers that pass nothing still work.
+func add_heat(n: int, reason: String = "") -> void:
 	var new_heat := clampi(heat + n, 0, MAX_HEAT)
 	if new_heat == heat:
 		return
@@ -116,10 +121,13 @@ func add_heat(n: int) -> void:
 	heat = new_heat
 	if went_up:
 		_escape_t = 0.0  # fresh pursuit: re-arm spawning and the escape clock
-		_show_banner("WANTED", Color(0.95, 0.2, 0.15))
+		if reason != "":
+			last_reason = reason
+		_show_banner("WANTED", Color(0.95, 0.2, 0.15), reason)
 	elif heat == 0:
 		_despawn_all()
 		_escape_t = 0.0
+		last_reason = ""
 		_show_banner("EVADED", Color(0.35, 0.9, 0.45))
 	_update_stars()
 	heat_changed.emit(heat)
@@ -243,8 +251,12 @@ func _process(delta: float) -> void:
 	if _banner != null and _banner_t > 0.0:
 		_banner_t -= delta
 		_banner.modulate.a = clampf(_banner_t / (FLASH_SECONDS * 0.5), 0.0, 1.0)
+		if _banner_sub != null:
+			_banner_sub.modulate.a = _banner.modulate.a
 		if _banner_t <= 0.0:
 			_banner.visible = false
+			if _banner_sub != null:
+				_banner_sub.visible = false
 
 
 # ============================== PURSUIT AI ===================================
@@ -463,7 +475,7 @@ func _on_cruiser_body_entered(body: Node, cruiser: RaycastVehicle) -> void:
 			break
 	if closing >= RAM_HEAT_SPEED:
 		_ram_cd = RAM_COOLDOWN
-		add_heat(1)
+		add_heat(1, "RAMMED A CRUISER")
 
 
 ## The actor being pursued: character on foot, vehicle otherwise.
@@ -516,6 +528,15 @@ func _build_ui() -> void:
 	_banner.add_theme_constant_override("outline_size", 8)
 	_banner.visible = false
 	_ui.add_child(_banner)
+	_banner_sub = Label.new()
+	_banner_sub.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 126)
+	_banner_sub.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_banner_sub.add_theme_font_size_override("font_size", 22)
+	_banner_sub.add_theme_color_override("font_color", Color(0.95, 0.90, 0.80))
+	_banner_sub.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	_banner_sub.add_theme_constant_override("outline_size", 6)
+	_banner_sub.visible = false
+	_ui.add_child(_banner_sub)
 	_update_stars()
 
 
@@ -569,11 +590,15 @@ func _anyone_sees(pv: Node3D) -> bool:
 	return false
 
 
-func _show_banner(text: String, col: Color) -> void:
+func _show_banner(text: String, col: Color, sub: String = "") -> void:
 	if _banner == null:
 		return
 	_banner.text = text
 	_banner.add_theme_color_override("font_color", col)
 	_banner.modulate.a = 1.0
 	_banner.visible = true
-	_banner_t = FLASH_SECONDS
+	_banner_t = FLASH_SECONDS if sub == "" else FLASH_SECONDS * 1.6  # a reason needs reading time
+	if _banner_sub != null:
+		_banner_sub.text = sub
+		_banner_sub.modulate.a = 1.0
+		_banner_sub.visible = sub != ""

@@ -254,7 +254,7 @@ func _tick_drone(player: RigidBody3D, delta: float) -> void:
 		if _expose_t >= EXPOSURE_SECONDS:
 			_expose_t = 0.0   # clip uploaded: +1 heat, then it keeps filming
 			var pol := _peer("police")
-			if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1)
+			if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1, "FILMED BY THE HOA")
 	if d > SIGNAL_LOST_DISTANCE:
 		_signal_t += delta
 		if _signal_t >= SIGNAL_LOST_SECONDS:

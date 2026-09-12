@@ -407,7 +407,7 @@ func _crack_atm(st: Dictionary) -> void:
 		repo.call("add_money", pay, "ATM CRACKED")
 	var pol := _peer("police")
 	if pol != null and pol.has_method("add_heat"):
-		pol.call("add_heat", ATM_HEAT)
+		pol.call("add_heat", ATM_HEAT, "ROBBED AN ATM")
 	if body is Node and is_instance_valid(body):
 		_play_on(body as Node, _alarm_stream, ALARM_SECONDS,
 			ALARM_DB, ALARM_UNIT, ALARM_MAX_DIST)

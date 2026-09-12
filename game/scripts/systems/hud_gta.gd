@@ -39,6 +39,7 @@ const RADAR_RANGE := 150.0            # metres across HALF the radar width
 const RADAR_HZ := 20.0
 const BAR_H := 7.0                    # health / stamina bar height
 const BAR_GAP := 3.0
+const ROPE_H := 5.0                   # THE FULL EIGHT's bull rope, under the bars
 const STAR_SIZE := 30
 const STAR_COUNT := 5                 # GTA scale; police.MAX_HEAT may be lower — dim the rest
 const FONT_HUD := 19
@@ -70,6 +71,8 @@ const C_SEARCH_RIM := Color(1.0, 0.30, 0.25, 0.75)
 const C_HEALTH := Color(0.36, 0.72, 0.35, 1)
 const C_HEALTH_LOW := Color(0.85, 0.25, 0.20, 1)
 const C_STAMINA := Color(0.90, 0.80, 0.35, 1)
+const C_ROPE := Color(0.78, 0.60, 0.30, 1)        # manila rope
+const C_ROPE_HOT := Color(1.0, 0.92, 0.70, 1)     # full, or paying out
 const C_BAR_BG := Color(0, 0, 0, 0.55)
 const C_TEXT := Color(0.96, 0.96, 0.96, 1)
 const C_CASH := Color(0.55, 0.88, 0.45, 1)
@@ -84,6 +87,8 @@ var _radar: Control = null
 var _health_bg: ColorRect = null
 var _health: ColorRect = null
 var _stamina: ColorRect = null
+var _rope_bg: ColorRect = null
+var _rope: ColorRect = null
 var _stars: Array[Label] = []
 var _weapon_lbl: Label = null
 var _ammo_lbl: Label = null
@@ -96,6 +101,7 @@ var _font_bold: Font = null
 var _accum := 0.0
 var _health_w := 1.0                  # eased fractions so a hit reads as a sweep
 var _stamina_w := 1.0
+var _rope_w := 0.0
 var _hint_left := 0.0
 var _last_on_foot := -1               # -1 = unknown, forces the first hint
 var _rot := 0.0                       # radar rotation this frame (rad)
@@ -142,8 +148,8 @@ func _build() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(root)
 
-	# --- Radar, bottom-left, with the two bars under it.
-	var bars_h := BAR_H + BAR_GAP
+	# --- Radar, bottom-left, with the two bars under it and the rope under those.
+	var bars_h := BAR_H + BAR_GAP + ROPE_H + BAR_GAP
 	_radar = Control.new()
 	_radar.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_radar.offset_left = MARGIN
@@ -160,7 +166,10 @@ func _build() -> void:
 	_radar.draw.connect(_on_radar_draw)
 	root.add_child(_radar)
 
-	var bar_top := -(MARGIN + BAR_H)
+	var rope_top := -(MARGIN + ROPE_H)
+	_rope_bg = _rect(root, C_BAR_BG, MARGIN, rope_top, RADAR_W, ROPE_H)
+	_rope = _rect(root, C_ROPE, MARGIN, rope_top, 0.0, ROPE_H)
+	var bar_top := rope_top - BAR_GAP - BAR_H
 	_health_bg = _rect(root, C_BAR_BG, MARGIN, bar_top, RADAR_W, BAR_H)
 	var hw := RADAR_W * 0.58
 	_health = _rect(root, C_HEALTH, MARGIN, bar_top, hw, BAR_H)
@@ -267,6 +276,18 @@ func _update_bars(delta: float, on_foot: bool) -> void:
 	_stamina.size.x = maxf((RADAR_W - hw - 6.0) * _stamina_w, 0.0)
 	# In a car the stamina bar is meaningless; fade it rather than lie with a full bar.
 	_stamina.modulate.a = 0.35 if not on_foot else 1.0
+	# THE FULL EIGHT: the rope is full_eight.charge, nothing else. Absent system, no rope.
+	var fe := _peer("full_eight")
+	var has_rope := fe != null and fe.get("charge") is float
+	_rope_bg.visible = has_rope
+	_rope.visible = has_rope
+	if has_rope:
+		var frac := clampf(float(fe.get("charge")), 0.0, 1.0)
+		var riding: bool = fe.get("active") == true  # gotcha: `:=` cannot infer a get()==true
+		_rope_w = frac if riding else lerpf(_rope_w, frac, k)  # paying out is never eased
+		_rope.size.x = maxf(RADAR_W * _rope_w, 0.0)
+		var pulse := fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.3
+		_rope.color = C_ROPE_HOT if riding or (frac >= 0.999 and pulse) else C_ROPE
 
 
 func _update_top_right() -> void:
@@ -343,8 +364,8 @@ func _update_bottom(delta: float, actor: Node3D, on_foot: bool) -> void:
 
 func _hint_text(on_foot: bool) -> String:
 	if on_foot:
-		return "WASD move · SHIFT sprint · ALT walk · CTRL crouch · SPACE jump · RMB aim · LMB fire · Q weapon · R reload · V shoulder · E enter · G interact"
-	return "WASD drive · SPACE handbrake · E exit · F hook · N radio · C camera · TAB own rig · BACKSPACE reset"
+		return "WASD move · SHIFT sprint · ALT walk · CTRL crouch · SPACE jump · RMB aim · LMB fire · Q weapon · R reload · V shoulder · X the Full Eight · E enter · G interact"
+	return "WASD drive · SPACE handbrake · H horn · X the Full Eight · E exit · F hook · N radio · C camera · TAB own rig · BACKSPACE reset"
 
 
 # ============================== RADAR ========================================

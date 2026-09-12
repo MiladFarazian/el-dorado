@@ -144,6 +144,8 @@ func _register_input_actions() -> void:
 		"switch_vehicle": [KEY_TAB],
 		"toggle_camera": [KEY_C],
 		"reload_tuning": [KEY_T],
+		"special": [KEY_CAPSLOCK, KEY_X],  # THE FULL EIGHT (GTA's Caps Lock; X for laptops)
+		"horn": [KEY_H],
 	}
 	for action: String in bindings:
 		if not InputMap.has_action(action):

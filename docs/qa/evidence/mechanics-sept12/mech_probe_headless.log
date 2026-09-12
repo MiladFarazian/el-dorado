@@ -1,0 +1,29 @@
+MECHPROBE PASS stage1 last_reason published: PROBE CRIME
+MECHPROBE PASS stage1 banner subline shows the reason
+MECHPROBE PASS stage1 evaded clears the reason
+MECHPROBE PASS stage2 rope charged from speed: 0.185 after 3 s at 18.0 m/s
+MECHPROBE PASS stage2 headlamp spots bound to the ride: 2
+MECHPROBE PASS stage2 tail lamp material is private to the player's ride
+MECHPROBE PASS stage2 brake lamps flare on S: energy 6.50 (idle 1.5, brake 6.5)
+MECHPROBE PASS stage2 horn plays while H is held
+MECHPROBE PASS stage2 brake lamps settle on release: energy 1.50
+MECHPROBE PASS stage2 horn stops on release
+MECHPROBE PASS stage3 fired from the key path (special)
+MECHPROBE PASS stage3 time scale 0.35 (want 0.35)
+MECHPROBE PASS stage3 audio scale 0.55 (want 0.55)
+MECHPROBE PASS stage3 grip bonus 1.30 (want 1.30)
+MECHPROBE PASS stage3 chain held
+MECHPROBE PASS stage3 ended on its own after 2.8 game-s (8.0 real-s)
+MECHPROBE PASS stage3 time restored 1.00
+MECHPROBE PASS stage3 audio restored 1.00
+MECHPROBE PASS stage3 grip restored 1.00
+MECHPROBE PASS stage3 chain released
+MECHPROBE PASS stage3 cooldown armed 6.0 s
+MECHPROBE note: stage4 truck speed at officer placement 0.85 m/s after 1.7 s
+MECHPROBE PASS stage4 busted after 1.8 s still with an officer at arm's length
+MECHPROBE PASS stage4 the card says BUSTED.
+MECHPROBE PASS stage4 wrecker on the impound lot: 3.7 m from the pad
+MECHPROBE PASS stage4 Book on foot on the lot
+MECHPROBE PASS stage4 heat cleared
+MECHPROBE PASS stage4 fine paid: $4087 -> $3937 (want -150 at one star)
+MECH PROBE: PASS (27/27)

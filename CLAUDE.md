@@ -168,9 +168,20 @@ Standing rules the loop exists to enforce:
   `--skinned-bare` (body with no garment shells — bisects body vs wardrobe),
   `--gfx-legacy` (M22 materials), `--shot` (59 plates, windowed), `--hudshot` (the live HUD,
   windowed), `--perf` (see `docs/tech/rendering/perf-harness.md`), `--nobeacon`,
-  `--surf-census-quit`, `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
+  `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
   Boot census lines: `RENDER:`, `SURFACES:`, `SKIN LIB:`, `SKIN MICRO:`; `SHOT sun:` at `face`.
+- **Mechanics probe (D-056):** `godot --headless -- --mech-probe` — 27 checks in ~40 s: legible
+  heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore), busted
+  (card, impound, fine). Prints `MECH PROBE: PASS (n/n)`. Windowed with
+  `--mech-shots=/abs/dir` it also saves `full_eight.png` and `busted.png`. Run it after any
+  change to police/on_foot/full_eight/arrest/vehicle_lamps/vehicle_audio.
+- **Taste (D-056):** `docs/design/taste.md` is the discretion for autonomous rounds — thesis,
+  ten principles, the rubric, the DNA scorecard, the ranked backlog, anti-taste. Load it before
+  choosing what to build; re-score the card at the end of a round.
+- **Milad's task inbox:** a shared Apple Note, "El Dorado Tasks". `game/tools/tasks_note.sh`
+  reads it from Notes.app and diffs against `game/.gate/tasks_seen.txt`; run it at the start of a
+  session and between rounds, and work new items before the backlog.
 - **Codex's tools (2026-09-06, kept):** `tools/character_review.gd -- --out=DIR` (windowed;
   a neutral stage, fixed light, matched `face/profile/full/back/gait/normals/cast` plates —
   the right before/after instrument for people, 25 s) and `tools/session_test.gd --

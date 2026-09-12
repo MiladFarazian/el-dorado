@@ -58,9 +58,12 @@ func _physics_process(_d: float) -> void:
 			_track(n)
 	for id in _state.keys():
 		var st: Dictionary = _state[id]
-		var v: RigidBody3D = st["v"]
-		if not is_instance_valid(v) or not v.is_inside_tree():
+		# D-056/D-121: a freed cruiser (heat clear, despawn) must be checked as a
+		# Variant — assigning it to a typed RigidBody3D is itself the SCRIPT ERROR.
+		var vv: Variant = st["v"]
+		if not is_instance_valid(vv) or not (vv is RigidBody3D) or not (vv as Node).is_inside_tree():
 			_state.erase(id); continue
+		var v := vv as RigidBody3D
 		var vel := v.linear_velocity
 		var dv := vel - (st["last_vel"] as Vector3)
 		st["last_vel"] = vel

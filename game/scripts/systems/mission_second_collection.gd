@@ -319,7 +319,7 @@ func _release_target(loud: bool) -> void:
 		_loud = true
 		if is_instance_valid(_pedestal) and _pedestal.freeze:
 			_pedestal.freeze = false      # it goes over either way
-		_add_heat(ALARM_HEAT)
+		_add_heat(ALARM_HEAT, "TRIPPED THE ALARM")
 		_flash("LOCKDOWN — TWELVE CAMPUSES, ONE ALARM")
 	else:
 		_flash("RELEASE PRINTED. THE LORD PROVIDES A ROUTING NUMBER.")
@@ -445,7 +445,7 @@ func _tick_watchmen(actor: Node3D, delta: float) -> void:
 			_expose_t = 0.0
 			_spot_grace = SPOT_COOLDOWN
 			_spotted = true
-			_add_heat(SPOT_HEAT)
+			_add_heat(SPOT_HEAT, "SPOTTED BY A WATCHMAN")
 			_flash_for("A WATCHMAN HAS YOU. SMILE, FRIEND.", SPOT_FLASH_SECONDS)
 	elif not _lit:
 		_expose_t = maxf(0.0, _expose_t - EXPOSE_DECAY * delta)
@@ -958,10 +958,10 @@ func _player_down() -> bool:
 	return false
 
 
-func _add_heat(n: int) -> void:
+func _add_heat(n: int, reason: String = "") -> void:
 	var pol := _peer("police")
 	if pol != null and pol.has_method("add_heat"):
-		pol.call("add_heat", n)
+		pol.call("add_heat", n, reason)
 
 
 ## Story canon: jobs are soundtracked by the getaway vehicle's own dial. A dead

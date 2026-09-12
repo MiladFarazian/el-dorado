@@ -203,6 +203,39 @@ func _update_walk(ped: Dictionary, body: RigidBody3D, delta: float) -> void:
 	_path_point(ped["center"] as Vector2, float(ped["s"]))
 	_place(body, _pp_head * wdir, _pp_pos)  # face along travel
 
+## PUBLIC (vehicle_audio): the player leaned on the horn. Walkers ahead of the
+## grille inside `radius` bolt the way they would from a closing car — same flee,
+## same zigzag — without anyone having to be about to die first. A parked car
+## has no travel direction, so the split is off its FACING instead.
+func honk_at(src: Node3D, radius: float) -> void:
+	if not is_instance_valid(src) or not src.is_inside_tree():
+		return
+	var fwd := -src.global_transform.basis.z
+	fwd.y = 0.0
+	if fwd.length() < 0.1:
+		return
+	fwd = fwd.normalized()
+	for ped in _peds:
+		if int(ped["state"]) != WALK:
+			continue
+		var body: RigidBody3D = ped["body"]
+		if not is_instance_valid(body):
+			continue
+		var sep := body.global_position - src.global_position
+		sep.y = 0.0
+		var d := sep.length()
+		if d > radius or d < 0.01 or fwd.dot(sep / d) < 0.2:
+			continue
+		if _actor_velocity(src).length() > 1.0:
+			_start_flee(ped, body, src)
+			continue
+		var perp := Vector3(-fwd.z, 0.0, fwd.x)
+		if perp.dot(sep) < 0.0:
+			perp = -perp
+		ped["state"] = FLEE; ped["flee_dir"] = perp
+		ped["flee_t"] = _rng.randf_range(FLEE_TIME.x, FLEE_TIME.y)
+		ped["zig_t"] = _rng.randf_range(0.0, TAU)
+
 ## Bolt perpendicular to the threat's travel, on the side the ped is already
 ## on (seeded coin flip when dead-centre in the path).
 func _start_flee(ped: Dictionary, body: RigidBody3D, t: Node3D) -> void:
@@ -250,7 +283,7 @@ func _knockdown(ped: Dictionary, body: RigidBody3D, striker: Node) -> void:
 	if sv.length() < CHARGE_MIN_SPEED: return  # ped walked into a parked car
 	ped["charged"] = true  # once per ped, ever
 	var pol := _peer("police")
-	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", HEAT_ON_HIT)
+	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", HEAT_ON_HIT, "HIT A PEDESTRIAN")
 	var repo := _peer("repo_board")
 	if repo != null and repo.has_method("add_respect"):
 		repo.call("add_respect", RESPECT_ON_HIT, "")

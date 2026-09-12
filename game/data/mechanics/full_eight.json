@@ -1,0 +1,21 @@
+{
+  "_doc": "THE FULL EIGHT \u2014 Book's special ability (story bible \u00a74). Eight seconds of bull-rider time dilation; the meter is a bull rope. Charged by holding on: speed, air, towing at speed, near misses, the slab strip, shaking a tail. Read by systems/full_eight.gd at boot; T hot-reloads vehicles only, so relaunch for these.",
+  "duration_s": 8.0,
+  "time_scale": 0.35,
+  "audio_pitch": 0.55,
+  "cooldown_s": 6.0,
+  "min_charge_to_fire": 0.25,
+  "grip_bonus": 1.3,
+  "chain_unbreakable": true,
+  "charge_speed_threshold_mps": 18.0,
+  "charge_speed_per_s": 0.028,
+  "charge_air_per_s": 0.16,
+  "charge_tow_speed_mps": 8.0,
+  "charge_tow_per_s": 0.05,
+  "charge_near_miss": 0.06,
+  "near_miss_dist_m": 2.2,
+  "near_miss_rel_speed_mps": 14.0,
+  "charge_strip_tick": 0.05,
+  "charge_evaded_star": 0.1,
+  "_tuning": "duration is canon (eight seconds); time_scale 0.35 keeps the engine note readable at audio_pitch 0.55; a full rope from pure speed takes ~36 s on the freeway, ~6 s of air, ~20 s of a hot tow \u2014 hold on and it fills."
+}

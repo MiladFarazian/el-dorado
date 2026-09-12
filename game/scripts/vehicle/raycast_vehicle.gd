@@ -16,6 +16,7 @@ var wheels: Array[Dictionary] = []
 var current_steer := 0.0
 # World systems (weather) scale tire grip here: 1.0 dry, ~0.72 storm-wet.
 var grip_modifier := 1.0
+var grip_bonus := 1.0      # THE FULL EIGHT multiplies the friction circle; weather owns grip_modifier
 # Damage systems (police gunfire) scale drive force here: 1.0 healthy,
 # sputtering below half hull, 0.0 engine dead. Brakes and steering are never
 # touched — a shot-dead car still stops and still points, it just won't GO.
@@ -384,7 +385,7 @@ func _physics_process(delta: float) -> void:
 		w["fwd_speed"] = fwd_speed
 
 		# Friction circle budget scales with suspension load (and weather).
-		var max_grip := _f("tire_friction", 1.2) * spring_force * grip_modifier
+		var max_grip := _f("tire_friction", 1.2) * spring_force * grip_modifier * grip_bonus
 
 		var lat_stiff := _f("lateral_stiffness", 8000.0)
 		if handbrake and w["rear"]:

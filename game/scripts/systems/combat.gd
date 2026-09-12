@@ -428,6 +428,17 @@ func _handle_switch() -> void:
 		_wheel_hold = 0.0
 
 
+## The world's time scale with the wheel closed: 1.0, or THE FULL EIGHT's
+## dilation while Book is holding on. Two systems, one authority each.
+func _base_time_scale() -> float:
+	var sys: Variant = main_ref.get("systems") if main_ref != null else null
+	if sys is Dictionary and (sys as Dictionary).has("full_eight"):
+		var fe: Variant = (sys as Dictionary)["full_eight"]
+		if fe is Node and (fe as Node).has_method("active_time_scale"):
+			return float((fe as Node).call("active_time_scale"))
+	return 1.0
+
+
 func _wheel_open_now() -> void:
 	if _ui == null or not _ui.visible:
 		return  # holstered (in a car without a drive-by weapon): no wheel, no slow-mo
@@ -444,7 +455,7 @@ func _wheel_close(select: bool) -> void:
 	if not _wheel_open:
 		return
 	_wheel_open = false
-	Engine.time_scale = 1.0
+	Engine.time_scale = _base_time_scale()  # THE FULL EIGHT may still be running
 	if _wheel != null:
 		_wheel.visible = false
 	if select and _wheel_pick >= 0 and _wheel_pick < _weapons.size():
@@ -849,7 +860,7 @@ func _hit_ped(ped: RigidBody3D, pos: Vector3, dir: Vector3, ch: Node3D, head: bo
 	ped.apply_impulse(dir * PED_IMPULSE * imp * boost + Vector3.UP * PED_POP * imp,
 		pos - ped.global_position)
 	if ped.has_meta(PED_CHARGE_META): return
-	ped.set_meta(PED_CHARGE_META, true); _add_heat(PED_HEAT)
+	ped.set_meta(PED_CHARGE_META, true); _add_heat(PED_HEAT, "SHOT A BYSTANDER")
 	var repo := _peer("repo_board")
 	if repo != null and repo.has_method("add_respect"):
 		repo.call("add_respect", PED_RESPECT, "")
@@ -885,7 +896,7 @@ func _hit_police(cruiser: RigidBody3D, pos: Vector3, dir: Vector3, dmg: float,
 	var hp := int(cruiser.get_meta(POLICE_HP_META, POLICE_HP)) - int(dmg)
 	cruiser.set_meta(POLICE_HP_META, hp)
 	if hp <= 0 and not cruiser.has_meta(CRIPPLED_META):
-		cruiser.set_meta(CRIPPLED_META, true); _add_heat(1)
+		cruiser.set_meta(CRIPPLED_META, true); _add_heat(1, "DISABLED A CRUISER")
 		_hitmark(true)
 		if cruiser.has_method("set_external_input"):
 			cruiser.call("set_external_input", 0.0, 1.0, 0.0, true)
@@ -907,7 +918,7 @@ func _witness_heat(ch: Node3D) -> void:
 		for n: Node in get_tree().get_nodes_in_group(g):
 			if n is Node3D and is_instance_valid(n) and (n as Node3D) \
 					.global_position.distance_to(ch.global_position) <= SHOT_HEAT_RADIUS:
-				_heat_window = SHOT_HEAT_WINDOW; _add_heat(1); return
+				_heat_window = SHOT_HEAT_WINDOW; _add_heat(1, "SHOTS FIRED"); return
 
 
 # ============================== RELOAD =======================================
@@ -1342,9 +1353,9 @@ func _character() -> Node3D: return _fetch("character")
 
 func _camera() -> Camera3D: return _fetch("camera") as Camera3D
 
-func _add_heat(n: int) -> void:
+func _add_heat(n: int, reason: String = "") -> void:
 	var pol := _peer("police")
-	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", n)
+	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", n, reason)
 
 func _peer(peer_name: String) -> Node:
 	var sys: Variant = main_ref.get("systems") if main_ref != null else null

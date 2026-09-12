@@ -8,6 +8,7 @@ extends Node
 ## reference is null-checked (contract).
 
 const CHARACTER_SCRIPT := preload("res://scripts/player/player_character.gd")
+const REPO := preload("res://scripts/systems/repo_board.gd")  # PAD_CENTER: the impound lot
 
 # ============================== TUNABLES =====================================
 const EXIT_SIDE := 2.3               # driver door: -basis.x * this from origin (m)
@@ -32,6 +33,10 @@ var main_ref: Node = null
 var _debounce := 0.0
 var _death_active := false
 var _death_t := 0.0
+var _card_mode := "wasted"           # "wasted" (County General) or "busted" (Longhorn Impound)
+var _pending_fine := 0
+var _card_title: Label = null
+var _card_sub: Label = null
 var _ui: CanvasLayer = null
 var _card_root: Control = null
 
@@ -207,6 +212,22 @@ func kill_player() -> void:
 	_on_character_died()
 
 
+## PUBLIC (arrest): the cuffs closed. Same card machinery as a death, different
+## words, different destination — Book wakes on the Longhorn Impound lot beside
+## the wrecker (D-056), `fine` lighter, heat gone, NOT healed and NOT repaired:
+## the county fixes what the county shot; the impound fixes nothing.
+func arrest(fine: int) -> void:
+	if _death_active:
+		return
+	_card_mode = "busted"
+	_pending_fine = fine
+	if _card_title != null:
+		_card_title.text = "BUSTED."
+	if _card_sub != null:
+		_card_sub.text = "LONGHORN IMPOUND. Bail $%d. The wrecker's on the lot." % fine
+	_on_character_died()
+
+
 func _on_character_died() -> void:
 	if _death_active:
 		return
@@ -228,6 +249,9 @@ func _respawn() -> void:
 	_death_active = false
 	if _ui != null and is_instance_valid(_ui):
 		_ui.visible = false
+	if _card_mode == "busted":
+		_respawn_busted()
+		return
 	var hosp := _hospital_transforms()
 	if hosp.is_empty():
 		_respawn_in_truck()
@@ -243,6 +267,34 @@ func _respawn() -> void:
 	var guns := _peer("police_gunfire")
 	if guns != null and guns.has_method("repair_all"):
 		guns.call("repair_all")
+
+
+## The impound lot is the repo pad (repo_board.PAD_CENTER, 14 x 10 m, flat):
+## the wrecker parks on its west half facing the street, Book walks off the east.
+func _respawn_busted() -> void:
+	_card_mode = "wasted"
+	if _card_title != null:
+		_card_title.text = "BLESS YOUR HEART."
+	if _card_sub != null:
+		_card_sub.text = "COUNTY GENERAL patched you up — $%d. The wrecker's out front." % HOSPITAL_FEE
+	var pad: Vector3 = REPO.PAD_CENTER
+	var truck := Transform3D(Basis.IDENTITY, pad + Vector3(-3.5, 1.2, 0.0))
+	var door := Transform3D(Basis.IDENTITY, pad + Vector3(2.0, 0.25, 0.0))
+	var ch := _character()
+	var hp := float(ch.get("health")) if ch != null and ch.get("health") is float else -1.0
+	_respawn_at_hospital(door, truck)
+	ch = _character()
+	if hp >= 0.0 and ch != null and ch.has_method("take_damage"):
+		var mh: Variant = ch.get("max_health")
+		var top := float(mh) if (mh is float or mh is int) else 100.0
+		ch.call("take_damage", maxf(top - hp, 0.0))  # the heal in there is undone: no patching at the impound
+	var pol := _peer("police")
+	if pol != null and pol.has_method("add_heat"):
+		pol.call("add_heat", HEAT_CLEAR)
+	var repo := _peer("repo_board")
+	if repo != null and repo.has_method("add_money"):
+		repo.call("add_money", -_pending_fine, "LONGHORN IMPOUND")
+	_pending_fine = 0
 
 
 func _respawn_at_hospital(door: Transform3D, truck: Transform3D) -> void:
@@ -357,6 +409,7 @@ func _build_death_ui() -> void:
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE  # HUD law: STOP eats mouse look
 	center.add_child(vbox)
 	var title := Label.new()
+	_card_title = title
 	title.text = "BLESS YOUR HEART."
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", DEATH_FONT_SIZE)
@@ -365,6 +418,7 @@ func _build_death_ui() -> void:
 	title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 	vbox.add_child(title)
 	var sub := Label.new()
+	_card_sub = sub
 	sub.text = "COUNTY GENERAL patched you up — $%d. The wrecker's out front." % HOSPITAL_FEE
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_font_size_override("font_size", DEATH_SUB_FONT_SIZE)

@@ -664,7 +664,7 @@ func _on_hooked(body: Node) -> void:
 	if car.is_empty() or not bool(car["frozen"]): return
 	_unfreeze(car)  # once per event: no longer frozen afterwards
 	var pol := _peer("police")
-	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1)  # car theft
+	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1, "GRAND THEFT AUTO")  # car theft
 
 # ============================== PLUMBING =====================================
 func _bind_tow() -> void:

@@ -130,7 +130,7 @@ func claim(target: Node3D) -> RigidBody3D:
 	drivable.set_meta(DRIVER_META, false)  # empty from here on: no repeat crime
 	if occupied:
 		var police := target.is_in_group("police")
-		_add_heat(POLICE_HEAT if police else CIVILIAN_HEAT)
+		_add_heat(POLICE_HEAT if police else CIVILIAN_HEAT, "STOLE A CRUISER" if police else "GRAND THEFT AUTO")
 		_flash("YOU TOOK THE MAN'S CAR" if police else "GRAND THEFT AUTO")
 	return drivable
 
@@ -464,10 +464,10 @@ func _hooked_body() -> Node:
 	return v if v is Node and is_instance_valid(v) else null
 
 
-func _add_heat(n: int) -> void:
+func _add_heat(n: int, reason: String = "") -> void:
 	var pol := _peer("police")
 	if pol != null and pol.has_method("add_heat"):
-		pol.call("add_heat", n)
+		pol.call("add_heat", n, reason)
 
 
 func _flash(text: String) -> void:

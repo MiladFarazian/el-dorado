@@ -50,7 +50,8 @@ func _boot() -> void:
 	for i in 8:
 		await get_tree().physics_frame
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--shot") or arg.begins_with("--hudshot") or arg.begins_with("--perf") or arg.begins_with("--session-test"):
+		if arg.begins_with("--shot") or arg.begins_with("--hudshot") or arg.begins_with("--perf") \
+				or arg.begins_with("--session-test") or arg.begins_with("--mech-probe") or arg.begins_with("--wanted-probe"):
 			started = true
 			return
 	if DisplayServer.get_name() != "headless":

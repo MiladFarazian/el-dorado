@@ -413,7 +413,7 @@ func _land_ped(ped: RigidBody3D, ch: Node3D, impulse: Vector3,
 	ped.set_meta(HITS_META, 0)                   # a fresh count if he gets back up
 	if ped.has_meta(PED_CHARGE_META): return     # combat's literal meta: pay once
 	ped.set_meta(PED_CHARGE_META, true)
-	_add_heat(PED_HEAT)
+	_add_heat(PED_HEAT, "ASSAULTED A BYSTANDER")
 	var repo := _peer("repo_board")
 	if repo != null and repo.has_method("add_respect"):
 		repo.call("add_respect", PED_RESPECT, "")
@@ -437,7 +437,7 @@ func _witness_heat(ch: Node3D) -> void:
 		for n: Node in get_tree().get_nodes_in_group(g):
 			if n is Node3D and is_instance_valid(n) and (n as Node3D) \
 					.global_position.distance_to(ch.global_position) <= HEAT_RADIUS:
-				_heat_window = HEAT_WINDOW; _add_heat(1); return
+				_heat_window = HEAT_WINDOW; _add_heat(1, "BRAWLING IN PUBLIC"); return
 
 
 ## RESERVED hook for incoming damage. Nothing calls it yet — foot_cops owns the
@@ -688,9 +688,9 @@ func _character() -> Node3D: return _fetch("character")
 func _camera() -> Camera3D: return _fetch("camera") as Camera3D
 
 
-func _add_heat(n: int) -> void:
+func _add_heat(n: int, reason: String = "") -> void:
 	var pol := _peer("police")
-	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", n)
+	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", n, reason)
 
 
 func _peer(peer_name: String) -> Node:

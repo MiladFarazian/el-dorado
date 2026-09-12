@@ -45,7 +45,8 @@ if [[ "$MODE" == "--full" || "$MODE" == "--perf" ]]; then
     row "sweep" "$([[ $N -eq 59 && $ST -eq 0 && $E -eq 0 ]] && echo PASS || echo FAIL)" "saved=$N stalls=$ST ERROR=$E"
     PREV=${GATE_PREV_PLATES:-}; GATE_NULL=${GATE_NULL:-$HERE/.gate/null/B}
     if [[ -n "$PREV" && -d "$PREV" ]]; then
-      python3 tools/plates_diff.py "$PREV" "$OUT/plates" --report "$OUT/plates_diff.md" ${GATE_NULL:+--null "$GATE_NULL"} > "$OUT/plates_diff.txt" 2>&1
+      NULLARGS=(); [[ -n "$GATE_NULL" && -d "$GATE_NULL" ]] && NULLARGS=(--null "$GATE_NULL")
+      python3 tools/plates_diff.py "$PREV" "$OUT/plates" --report "$OUT/plates_diff.md" "${NULLARGS[@]}" > "$OUT/plates_diff.txt" 2>&1
       row "plate diff" "INFO" "$(grep '^PLATES:' "$OUT/plates_diff.txt" | cut -c1-110)"
     else
       row "plate diff" "SKIP" "set GATE_PREV_PLATES=<dir>; GATE_NULL defaults to game/.gate/null/B"

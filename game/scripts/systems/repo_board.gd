@@ -288,7 +288,7 @@ func _handle_hook(body: Node) -> void:
 		_delivering = true
 	elif is_instance_valid(body) and body.is_in_group("junker"):
 		var pol := _peer("police")  # gray work: wrong junker draws heat
-		if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1)
+		if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1, "HOOKED THE WRONG CAR")
 
 func _handle_release(body: Node) -> void:
 	if body != _target: return
