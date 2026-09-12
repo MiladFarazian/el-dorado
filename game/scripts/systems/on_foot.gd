@@ -216,7 +216,7 @@ func kill_player() -> void:
 ## words, different destination — Book wakes on the Longhorn Impound lot beside
 ## the wrecker (D-056), `fine` lighter, heat gone, NOT healed and NOT repaired:
 ## the county fixes what the county shot; the impound fixes nothing.
-func arrest(fine: int) -> void:
+func arrest(fine: int, note: String = "") -> void:
 	if _death_active:
 		return
 	_card_mode = "busted"
@@ -224,7 +224,9 @@ func arrest(fine: int) -> void:
 	if _card_title != null:
 		_card_title.text = "BUSTED."
 	if _card_sub != null:
-		_card_sub.text = "LONGHORN IMPOUND. Bail $%d. The wrecker's on the lot." % fine
+		# `note` is a favor being called in (random_events): somebody covered the bail.
+		_card_sub.text = "LONGHORN IMPOUND. %s" % note if note != "" \
+			else "LONGHORN IMPOUND. Bail $%d. The wrecker's on the lot." % fine
 	_on_character_died()
 
 

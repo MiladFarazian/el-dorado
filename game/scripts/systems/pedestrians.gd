@@ -27,6 +27,7 @@ const FLEE_SPEED := 4.0; const FLEE_TIME := Vector2(1.7, 2.3)  # panic run (m/s,
 const ZIG_RATE := 7.0; const ZIG_AMP := 0.55  # panicked zigzag (rad/s, rad)
 const KNOCK_RADIUS := 1.7; const KNOCK_CLOSING := 4.0  # pre-impact unfreeze
 const GUN_PANIC_RADIUS := 30.0; const GUN_PANIC_TIME := 4.0  # gunshot scatter
+const HOT_HEAT := 2; const HOT_RADIUS := 12.0  # D-057: a wanted man clears the sidewalk
 const HIT_CARRY := 0.6; const HIT_POP := 2.2  # striker velocity share; up-fling
 const CHARGE_MIN_SPEED := 2.0             # parked-car nudges are not a crime
 const HEAT_ON_HIT := 1; const RESPECT_ON_HIT := -2  # player-strike penalties
@@ -65,6 +66,7 @@ var main_ref: Node = null
 var _rng := RandomNumberGenerator.new()
 var _peds: Array[Dictionary] = []
 var _threats: Array[Node3D] = []  # membership rescanned every 0.3 s
+var _heat := 0                     # police.heat, cached at the threat refresh
 var _spawn_cd := 0.0; var _threat_cd := 0.0; var _spawned := 0
 var _combat_bound := false  # combat.shot_fired connected (peer binds lazily)
 var _copfire_bound := false  # police_gunfire.shot_fired connected likewise
@@ -195,7 +197,16 @@ func _check_threats(ped: Dictionary, body: RigidBody3D) -> bool:
 			_knockdown(ped, body, t); return true  # unfreeze BEFORE the impact
 		if closing > FLEE_CLOSING and int(ped["state"]) == WALK:
 			_start_flee(ped, body, t)
+		elif int(ped["state"]) == WALK and _heat >= HOT_HEAT and d < HOT_RADIUS and t.is_in_group("player"):
+			_flee_away(ped, sep / d)  # world memory, the cheap kind: they know who you are
 	return false
+
+## Straight away from a threat that need not be moving (a wanted man, a horn).
+func _flee_away(ped: Dictionary, away: Vector3) -> void:
+	away.y = 0.0
+	ped["state"] = FLEE; ped["flee_dir"] = away.normalized() if away.length() > 0.1 else Vector3.FORWARD
+	ped["flee_t"] = _rng.randf_range(FLEE_TIME.x, FLEE_TIME.y)
+	ped["zig_t"] = _rng.randf_range(0.0, TAU)
 
 func _update_walk(ped: Dictionary, body: RigidBody3D, delta: float) -> void:
 	var wdir := float(ped["wdir"])
@@ -364,6 +375,9 @@ func _nearest_s(c: Vector2, pos: Vector3) -> float:
 func _refresh_threats(pv: Node3D) -> void:
 	_threats.clear()
 	if pv != null: _threats.append(pv)
+	var pol := _peer("police")
+	var hv: Variant = pol.get("heat") if pol != null else null
+	_heat = int(hv) if hv is int else 0
 	for g: String in ["police", "civilian"]:
 		for n: Node in get_tree().get_nodes_in_group(g):
 			if n is RigidBody3D and is_instance_valid(n) \

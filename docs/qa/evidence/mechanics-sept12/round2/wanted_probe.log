@@ -1,0 +1,7 @@
+WANTEDPROBE PASS stage1 cruisers spawned: 2
+WANTEDPROBE PASS stage1 seen -> no search (search_active=false)
+WANTEDPROBE PASS stage2 search opened after 3.3 s
+WANTEDPROBE PASS stage2 search_center 0.8 m from last sighting (want < 30)
+WANTEDPROBE PASS stage2 search_radius 140 m at heat 2
+WANTEDPROBE PASS stage3 search closed after 0.32 s of re-contact
+WANTEDPROBE ---- 6 rows ----

@@ -1,8 +1,8 @@
 {
-  "_doc": "BUSTED — the second fail state. A repo man who stops moving with the law on him gets impounded: cruiser or officer within reach of a near-stationary Book for hold_s, then the card, then he wakes at Longhorn Impound beside the wrecker, lighter by the fine. Read by systems/arrest.gd at boot.",
+  "_doc": "BUSTED \u2014 the second fail state. A repo man who stops moving with the law on him gets impounded: cruiser or officer within reach of a near-stationary Book for hold_s, then the card, then he wakes at Longhorn Impound beside the wrecker, lighter by the fine. Read by systems/arrest.gd at boot.",
   "hold_s": 1.8,
   "officer_reach_m": 2.6,
-  "cruiser_reach_m": 5.0,
+  "cruiser_reach_m": 6.5,
   "player_still_mps": 1.6,
   "cruiser_still_mps": 2.5,
   "min_heat": 1,
@@ -11,5 +11,5 @@
   "fine_max": 900,
   "card_s": 4.0,
   "warning_s": 0.5,
-  "_tuning": "hold_s under 1.5 busts a player who paused at a light with a cruiser alongside; over 2.5 reads as cops who cannot close a door. Fines scale with stars because GTA's flat bail never taught anything."
+  "_tuning": "hold_s under 1.5 busts a player who paused at a light with a cruiser alongside; over 2.5 reads as cops who cannot close a door. Fines scale with stars because GTA's flat bail never taught anything. cruiser_reach_m 6.5 matches police.PULLOVER_STOP 5.0 plus the braking overshoot of an easing cruiser."
 }

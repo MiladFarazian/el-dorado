@@ -122,7 +122,8 @@ Bar: `docs/qa/quality-bar.md`.
 >   brake 1.5 → 6.5, reverse white, night headlamps 5.0 + two shadowless spots), horn on H in
 >   `vehicle_audio.gd`, walkers ahead bolt (`pedestrians.honk_at`). Evidence: probe stage 2
 >   (7/7: energy 6.50 on S, 1.50 on release, horn plays/stops, 2 spots bound). Traffic lamps
->   remain D-045. QA to rule; a night plate with the spots lit is still owed.
+>   remain D-045. The night plate: `evidence/mechanics-sept12/round2/brake_night.png` (22:00,
+>   tail lamps flared, both spots lighting the road). QA to rule.
 > - **D-121 [S3] `vehicle_damage.gd` assigned a freed cruiser to a typed variable** — every
 >   heat clear with a tracked cruiser (the hospital respawn included) logged `SCRIPT ERROR:
 >   Trying to assign invalid previously freed instance` at line 61; the §5 boot gate never
@@ -134,6 +135,22 @@ Bar: `docs/qa/quality-bar.md`.
 >   Evidence: probe stage 3 (11/11: key path fires; 0.35 / 0.55 / ×1.30 / chain held; ends at
 >   8.0 real-s; all four restored; cooldown 6 s), `full_eight.png` (veil + rope). Tuning is a
 >   first guess; QA to rule on feel at the `car_34` vantage with the veil up.
+> - **D-123 [S3] At one star a cruiser could only "arrest" by ramming and wedging** (the gap
+>   D-119 filed against itself). PRODUCER-CLAIMED FIXED 2026-09-12 (D-057): PULLOVER_* in
+>   `police.gd` — a still target at heat ≤ 2 gets a gap-scaled, braking approach that parks at
+>   5 m and holds; first cut lit "RAMMED A CRUISER" on contact, second cut busts at heat 1.
+>   Evidence: `evidence/mechanics-sept12/round2/mech_probe_headless.log` stage 4 (closest 5.2 m,
+>   0.03 m/s, heat 1 at the bust, fine $150), `--wanted-probe` unchanged. QA to rule.
+> - **D-124 [S2] No random events; nothing the player did was ever remembered** (checklist rows
+>   14 and 19 at 0/1). PRODUCER-CLAIMED LANDED (D-057): `systems/random_events.gd` — STRANDED,
+>   a towable dead sedan + waiting driver + beacon at an open curb when the world is quiet; the
+>   tow pays $220 + 2 respect and a favor that covers the next bail (persisted in the save).
+>   Evidence: probe stages 5–6 (favor spent, $0 fine, the line on the card; spawn 1/1 with a
+>   beacon; TTL despawn). No in-play plate yet — the event needs a quiet 75 s drive; QA to
+>   take one. QA to rule.
+> - **D-125 [S4] Pedestrians ignored a wanted man standing next to them.** PRODUCER-CLAIMED
+>   FIXED (D-057): heat ≥ 2 within 12 m → flee straight away. No probe row (needs a ped in
+>   range); QA to check by hand at 2★ on a downtown block.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,

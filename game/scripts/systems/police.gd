@@ -43,6 +43,20 @@ const RAM_COOLDOWN := 5.0
 const PURSUIT_LEAD := 0.5            # s of player velocity to lead the target
 const FOOT_CHASE_DIST := 18.0        # cruiser this close to an on-foot actor...
 const FOOT_CHASE_THROTTLE := 0.45    # ...caps throttle: menace, don't pancake
+# PULL-ALONGSIDE (D-057): at low heat a target that has STOPPED gets the arrest,
+# not the ram. Inside PULLOVER_RANGE the cruiser eases in and parks at
+# PULLOVER_STOP from the actor's origin — inside arrest.gd's cruiser reach —
+# and holds there while the actor stays still. Moving again releases the chase.
+const PULLOVER_MAX_HEAT := 2         # 3+ stars: they ram, they shoot, they do not park
+const PULLOVER_STILL := 2.0          # m/s: the actor counts as stopped under this
+const PULLOVER_RANGE := 45.0         # m: from here the approach is an approach
+const PULLOVER_STOP := 5.0           # m: park here (origin to origin)
+const PULLOVER_HOLD_SLACK := 3.0     # m: once parked, hold the brake out to this
+const PULLOVER_EASE_DIST := 20.0     # m over which the throttle eases off
+const PULLOVER_THROTTLE := Vector2(0.18, 0.55)  # min..max while easing in
+const PULLOVER_SPEED_GAIN := 0.5     # wanted approach speed = gap x this (m/s per m)
+const PULLOVER_CREEP := 1.5          # m/s floor: the last metres are a creep, never a ram
+const PULLOVER_APPROACH_MAX := 9.0   # m/s ceiling on the approach (RAM_HEAT_SPEED is 8 at contact)
 const STEER_FULL_ANGLE_DEG := 30.0   # error angle that saturates the steer
 const SLIDE_ANGLE_DEG := 70.0        # off-axis error that triggers a handbrake
 const SLIDE_MIN_SPEED := 12.0
@@ -306,6 +320,30 @@ func _drive(c: Dictionary, delta: float, pv: Node3D) -> void:
 		c["closing"] = (_actor_velocity(pv) - body.linear_velocity).dot(sep / sep_len)
 	else:
 		c["closing"] = 0.0
+	# The arrest approach: heat 1-2, the actor still, the cruiser near — park, hold.
+	if heat <= PULLOVER_MAX_HEAT and not search_active and sep_len < PULLOVER_RANGE \
+			and _actor_velocity(pv).length() < PULLOVER_STILL:
+		c["stuck_t"] = 0.0  # a deliberate stop is not a stuck cruiser
+		var parked: bool = c.get("pulled", false) == true
+		if sep_len <= PULLOVER_STOP or (parked and sep_len <= PULLOVER_STOP + PULLOVER_HOLD_SLACK):
+			c["pulled"] = true
+			body.set_external_input(0.0, 1.0, 0.0, true)
+			return
+		var gap := sep_len - PULLOVER_STOP
+		var ease := clampf(gap / PULLOVER_EASE_DIST, 0.0, 1.0)
+		var t_in := lerpf(PULLOVER_THROTTLE.x, PULLOVER_THROTTLE.y, ease)
+		var a_in := fwd.signed_angle_to(to_t.normalized(), up) if to_t.length() > 0.5 else 0.0
+		var s_in := clampf(a_in / deg_to_rad(STEER_FULL_ANGLE_DEG), -1.0, 1.0)
+		# Speed follows the gap down: carrying more than that into the last metres
+		# is a ram (+1 heat at RAM_HEAT_SPEED), so brake it off instead of coasting.
+		var want := clampf(gap * PULLOVER_SPEED_GAIN, PULLOVER_CREEP, PULLOVER_APPROACH_MAX)
+		var v_in := body.linear_velocity.length()
+		if v_in > want + 0.5:
+			body.set_external_input(0.0, clampf((v_in - want) / 4.0, 0.3, 1.0), s_in, false)
+		else:
+			body.set_external_input(t_in, 0.0, s_in, false)
+		return
+	c["pulled"] = false
 	if to_t.length() < 1.0:
 		body.set_external_input(0.3, 0.0, 0.0, false)
 		return

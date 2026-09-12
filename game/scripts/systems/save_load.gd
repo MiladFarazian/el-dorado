@@ -143,6 +143,9 @@ func _apply_pending() -> void:
 			rb.emit_signal("money_changed", money)
 		if rb.has_signal("respect_changed"):
 			rb.emit_signal("respect_changed", respect)
+	var re := _peer("random_events")
+	if re != null:
+		re.set("favors", int(_num(_pending.get("favors"), 0.0)))
 	var best: Variant = _pending.get("race_best")
 	if best is float or best is int:         # JSON null = no best: keep INF
 		var b := float(best)
@@ -162,11 +165,15 @@ func _snapshot() -> Dictionary:
 		"money": 0,
 		"respect": 0,
 		"race_best": null,
+		"favors": 0,
 	}
 	var rb := _peer("repo_board")
 	if rb != null:
 		d["money"] = int(_num(rb.get("money"), 0.0))
 		d["respect"] = int(_num(rb.get("respect"), 0.0))
+	var re := _peer("random_events")   # D-057: the world remembers who you towed
+	if re != null:
+		d["favors"] = int(_num(re.get("favors"), 0.0))
 	var race := _peer("race_event")
 	if race != null:
 		var b: Variant = race.get("_best")

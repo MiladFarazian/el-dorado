@@ -88,8 +88,16 @@ func _bust(heat: int, of: Node) -> void:
 	var fine := clampi(int(_n("fine_per_star", 150)) * heat,
 		int(_n("fine_min", 150)), int(_n("fine_max", 900)))
 	_set_hold(0.0)
+	# A favor owed (random_events: somebody you towed) covers the bail once.
+	var note := ""
+	var re := _peer("random_events")
+	if re != null and re.has_method("spend_favor"):
+		var fv: Variant = re.get("favors")
+		if fv is int and int(fv) > 0:
+			note = str(re.call("spend_favor"))
+			fine = 0
 	if of != null and of.has_method("arrest"):
-		of.call("arrest", fine)
+		of.call("arrest", fine, note)
 
 
 func _set_hold(v: float) -> void:

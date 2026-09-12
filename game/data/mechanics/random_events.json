@@ -1,0 +1,34 @@
+{
+  "_doc": "RANDOM EVENTS \u2014 ambient encounters that pay forward (DNA \u00a74: the world remembering kindness is the single best trick in the game). v1: STRANDED \u2014 a driver beside a dead sedan on the frontage road; hook it, haul it to Longhorn Impound, get paid, and they owe you one. A favor covers the bail the next time you are busted. Read by systems/random_events.gd at boot.",
+  "first_delay_s": 40.0,
+  "interval_min_s": 75.0,
+  "interval_max_s": 140.0,
+  "spawn_min_m": 55.0,
+  "spawn_max_m": 150.0,
+  "ttl_s": 240.0,
+  "pay": 220,
+  "respect": 2,
+  "drivers": [
+    {
+      "name": "DELIA",
+      "hail": "Delia's cousin at the county covered your bail."
+    },
+    {
+      "name": "RAY",
+      "hail": "Ray called in a favor at the impound. No bail."
+    },
+    {
+      "name": "MARISOL",
+      "hail": "Marisol knows the desk sergeant. Bail's handled."
+    },
+    {
+      "name": "TINO",
+      "hail": "Tino's uncle runs the tow lot. You walk."
+    },
+    {
+      "name": "COACH PRUITT",
+      "hail": "Coach Pruitt made a call. Bail's covered. This is our year."
+    }
+  ],
+  "_tuning": "first_delay under 30 s lands an event on top of the tutorial dispatch; intervals under a minute make the frontage road a taxi rank. pay 220 sits under a repo (250-450) because the favor is the real wage."
+}

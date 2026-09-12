@@ -137,3 +137,12 @@ repeating the commute. A bug outside the round's files fell out of the probe (D-
 rubric's "measurability" axis paid for itself on the first day. Next round's top of the list by
 the same rubric: random events that pay forward (rank 5) and world memory v1 (rank 6), with
 the cruiser pull-alongside as the police lever the Busted gap needs.
+
+**Round 2 — 2026-09-12 (D-057).** Inbox empty; the rubric's next three: the cruiser
+pull-alongside (the Busted gap), random events that pay forward (STRANDED, a favor that covers
+bail), crowds that fear a wanted man. Gate 5/5, probe 36/36 (the first cut of the pull-over lit a
+ram star and the probe said so — measurability again), wanted probe unchanged. Expected moves
+once QA rules: row 19 → 1 with a real random event that pays forward, row 14 → 1 (favors persist;
+peds react to heat), row 11 held at 2. Next by the rubric: melee guard that blocks (rank 8, cheap),
+then the Paper v1 spike (rank 9) once a mission skeleton with a diegetic timer is designed; fall
+and crash damage stay parked behind the ragdoll.

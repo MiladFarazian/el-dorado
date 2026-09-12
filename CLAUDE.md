@@ -171,11 +171,13 @@ Standing rules the loop exists to enforce:
   `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
   Boot census lines: `RENDER:`, `SURFACES:`, `SKIN LIB:`, `SKIN MICRO:`; `SHOT sun:` at `face`.
-- **Mechanics probe (D-056):** `godot --headless -- --mech-probe` — 27 checks in ~40 s: legible
-  heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore), busted
-  (card, impound, fine). Prints `MECH PROBE: PASS (n/n)`. Windowed with
-  `--mech-shots=/abs/dir` it also saves `full_eight.png` and `busted.png`. Run it after any
-  change to police/on_foot/full_eight/arrest/vehicle_lamps/vehicle_audio.
+- **Mechanics probe (D-056/D-057):** `godot --headless -- --mech-probe` — 36 checks in ~70 s:
+  legible heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore),
+  busted by a cruiser that pulls alongside (card, impound, fine, heat still 1), a favor that
+  covers bail, the stranded-driver spawn and its TTL. Prints `MECH PROBE: PASS (n/n)`. Windowed
+  with `--mech-shots=/abs/dir` it also saves `full_eight.png`, `brake_night.png`, `busted.png`.
+  Run it after any change to police/on_foot/full_eight/arrest/random_events/vehicle_lamps/
+  vehicle_audio/pedestrians.
 - **Taste (D-056):** `docs/design/taste.md` is the discretion for autonomous rounds — thesis,
   ten principles, the rubric, the DNA scorecard, the ranked backlog, anti-taste. Load it before
   choosing what to build; re-score the card at the end of a round.

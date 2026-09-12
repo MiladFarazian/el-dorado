@@ -6,8 +6,13 @@ extends Node
 ##     reaches), brake lamps flare on S and the horn plays on H while driving.
 ##  3. the Full Eight fires: time scale, audio scale, grip bonus, chain hold — then
 ##     ends on its own and restores all four.
-##  4. busted: heat 1, a still truck, an officer at arm's length → the card, then
-##     Book on the impound lot with the wrecker, heat 0, fine paid, not healed.
+##  4. busted, the cruiser path: heat 1, a still truck, a cruiser 40 m back — it
+##     pulls alongside and parks (D-057) → the card → Book on the impound lot with
+##     the wrecker, heat 0, fine paid, not healed.
+##  5. a favor owed: heat 1 on foot on the lot, an officer at arm's length → the
+##     card carries the favor line, no fine, the favor is spent.
+##  6. random events: spawn_now places a dead sedan + driver + beacon; an
+##     unanswered one despawns at its TTL.
 ## Windowed with `--mech-shots=/abs/dir` it also saves three evidence plates.
 const REPO := preload("res://scripts/systems/repo_board.gd")
 var main_ref: Node = null
@@ -20,6 +25,10 @@ var _money0 := 0
 var _officer: RigidBody3D = null
 var _key_tried := 0
 var _shot_done := false
+var _hour0 := -1.0
+var _cruiser: RigidBody3D = null
+var _min_d := 999.0
+var _heat_at_bust := 1
 
 
 func setup(main: Node) -> void:
@@ -94,7 +103,9 @@ func _physics_process(delta: float) -> void:
 		1: _stage_heat()
 		2: _stage_drive(pv)
 		3: _stage_fire(pv)
-		4: _stage_busted(pv)
+		4: _stage_pullover(pv)
+		5: _stage_favor()
+		6: _stage_stranded()
 		_: _finish()
 
 
@@ -126,6 +137,11 @@ func _stage_drive(pv: RigidBody3D) -> void:
 			var cfg: Variant = fe.get("cfg")
 			if cfg is Dictionary:
 				(cfg as Dictionary)["charge_speed_threshold_mps"] = 8.0  # the mechanism, not the tuning
+			if _shots != "":  # the night plate D-120 owes: set 22:00 now, the sky needs seconds to turn
+				var sky := _sys("sky_weather")
+				if sky != null and sky.get("time_of_day") is float:
+					_hour0 = float(sky.get("time_of_day"))
+					sky.set("time_of_day", 22.0)
 			pv.call("set_external_input", 1.0, 0.0, 0.0, false)
 			_sub = 1; _t = 0.0
 		1:
@@ -145,15 +161,25 @@ func _stage_drive(pv: RigidBody3D) -> void:
 				_sub = 3; _t = 0.0
 		3:
 			if _t >= 0.6:
-				_say(e > 4.0, "stage2 brake lamps flare on S: energy %.2f (idle 1.5, brake 6.5)" % e)
-				_say(honking, "stage2 horn plays while H is held")
+				if not _shot_done:  # once: the checks, and the plate if asked for
+					_shot_done = true
+					_say(e > 4.0, "stage2 brake lamps flare on S: energy %.2f (idle 1.5, brake 6.5)" % e)
+					_say(honking, "stage2 horn plays while H is held")
+					if _shots != "":
+						_shot("brake_night")
+				if _shots != "" and _t < 0.9:
+					return  # one more beat with the pedal down for the plate
 				Input.action_release("brake_reverse"); Input.action_release("horn")
+				var sky := _sys("sky_weather")
+				if _hour0 >= 0.0 and sky != null:
+					sky.set("time_of_day", _hour0)
 				_sub = 4; _t = 0.0
 		4:
 			if _t >= 1.0:
 				_say(e < 2.5, "stage2 brake lamps settle on release: energy %.2f" % e)
 				_say(not honking, "stage2 horn stops on release")
 				fe.set("charge", 1.0)
+				_shot_done = false
 				_stage = 3; _sub = 0; _t = 0.0
 
 
@@ -191,7 +217,7 @@ func _stage_fire(pv: RigidBody3D) -> void:
 				_say(false, "stage3 still active after %.1f game-s" % _t); _finish()
 
 
-func _stage_busted(pv: RigidBody3D) -> void:
+func _stage_pullover(pv: RigidBody3D) -> void:
 	var pol := _sys("police"); var of := _sys("on_foot"); var repo := _sys("repo_board")
 	if pol == null or of == null or repo == null:
 		_say(false, "stage4 systems missing"); _finish(); return
@@ -201,39 +227,41 @@ func _stage_busted(pv: RigidBody3D) -> void:
 			_sub = 1; _t = 0.0
 		1:
 			if pv.linear_velocity.length() < 1.0 or _t > 6.0:
-				print("MECHPROBE note: stage4 truck speed at officer placement %.2f m/s after %.1f s" % [pv.linear_velocity.length(), _t])
 				pol.call("add_heat", 1, "PROBE: LOITERING")
 				_money0 = int(repo.get("money"))
-				_officer = RigidBody3D.new()
-				_officer.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
-				_officer.freeze = true
-				_officer.add_to_group("officer")
-				var col := CollisionShape3D.new(); var box := BoxShape3D.new()
-				box.size = Vector3(0.5, 1.75, 0.35); col.shape = box; _officer.add_child(col)
-				main_ref.add_child(_officer)
-				_officer.global_position = pv.global_position + pv.global_transform.basis.x * 1.8 + Vector3.UP * 0.9
 				_sub = 2; _t = 0.0
-		2:
-			# The law keeps pace: a cruiser rams the parked truck (heat 1 is chase-and-
-			# ram) and shoves it metres; the officer walks with it and Book stays put.
-			if is_instance_valid(_officer):
-				_officer.global_position = pv.global_position + pv.global_transform.basis.x * 1.8 + Vector3.UP * 0.9
-			pv.linear_velocity = Vector3.ZERO
-			if of.call("player_down") == true:
-				var title: Variant = of.get("_card_title")
-				_say(true, "stage4 busted after %.1f s still with an officer at arm's length" % _t)
-				_say(title is Label and (title as Label).text == "BUSTED.", "stage4 the card says BUSTED.")
-				_sub = 3; _t = 0.0
-				_shot_done = false
-			elif _t > 5.0:
-				var arrest := _sys("arrest")
-				var od := _officer.global_position.distance_to(pv.global_position) if is_instance_valid(_officer) else -1.0
-				_say(false, "stage4 never busted in %.1f s (hold=%s heat=%s speed=%.2f officer_d=%.2f frozen=%s on_foot=%s)" % [
-					_t, arrest.get("hold") if arrest != null else "n/a", pol.get("heat"),
-					pv.linear_velocity.length(), od, _officer.freeze if is_instance_valid(_officer) else "?", main_ref.get("on_foot")])
-				_finish()
+		2:  # the first cruiser exists: put it 40 m back down the street, facing us
+			var cr: Variant = pol.get("cruisers")
+			if cr is Array and (cr as Array).size() >= 1:
+				var b: Variant = ((cr as Array)[0] as Dictionary).get("body")
+				if b is RigidBody3D and is_instance_valid(b):
+					var back := pv.global_transform.basis.z  # +z is behind the truck
+					var at := pv.global_position + back * 40.0 + Vector3.UP * 0.4
+					(b as RigidBody3D).global_transform = Transform3D(Basis.looking_at(-back, Vector3.UP), at)
+					(b as RigidBody3D).linear_velocity = Vector3.ZERO
+					(b as RigidBody3D).angular_velocity = Vector3.ZERO
+					_cruiser = b
+					_sub = 3; _t = 0.0
+			elif _t > 8.0:
+				_say(false, "stage4 no cruiser spawned in %.1f s" % _t); _finish()
 		3:
-			if not _shot_done and _t > 1.2:  # the card has faded in (0.45 s) and held
+			pv.linear_velocity = Vector3.ZERO  # Book sits still, whatever the cruiser does
+			var cd := _cruiser.global_position.distance_to(pv.global_position) if is_instance_valid(_cruiser) else -1.0
+			_min_d = minf(_min_d, cd)
+			if of.call("player_down") == true:
+				var cs := _cruiser.linear_velocity.length() if is_instance_valid(_cruiser) else -1.0
+				_say(true, "stage4 cruiser pulled alongside and busted a still Book after %.1f s (closest %.1f m, at the bust %.1f m, cruiser speed %.2f)" % [_t, _min_d, cd, cs])
+				_heat_at_bust = int(pol.get("heat"))
+				_say(_heat_at_bust == 1, "stage4 heat at the bust %d (want 1; last reason: %s)" % [_heat_at_bust, pol.get("last_reason")])
+				var title: Variant = of.get("_card_title")
+				_say(title is Label and (title as Label).text == "BUSTED.", "stage4 the card says BUSTED.")
+				_sub = 4; _t = 0.0; _shot_done = false
+			elif _t > 30.0:
+				var arrest := _sys("arrest")
+				_say(false, "stage4 cruiser never closed the arrest in 30 s (closest %.1f m, now %.1f m, hold=%s)" % [_min_d, cd, arrest.get("hold") if arrest != null else "n/a"])
+				_finish()
+		4:
+			if not _shot_done and _t > 1.2:
 				_shot_done = true
 				_shot("busted")
 			if of.call("player_down") != true:
@@ -244,9 +272,81 @@ func _stage_busted(pv: RigidBody3D) -> void:
 				_say(main_ref.get("on_foot") == true, "stage4 Book on foot on the lot")
 				_say(int(pol.get("heat")) == 0, "stage4 heat cleared")
 				var m := int(repo.get("money"))
-				_say(m == _money0 - 150, "stage4 fine paid: $%d -> $%d (want -150 at one star)" % [_money0, m])
-				if is_instance_valid(_officer):
-					_officer.queue_free()
-				_finish()
+				_say(m == _money0 - 150 * _heat_at_bust, "stage4 fine paid: $%d -> $%d (want -%d at %d star(s))" % [_money0, m, 150 * _heat_at_bust, _heat_at_bust])
+				_stage = 5; _sub = 0; _t = 0.0
 			elif _t > 7.0:
 				_say(false, "stage4 card never cleared"); _finish()
+
+
+func _stage_favor() -> void:
+	var pol := _sys("police"); var of := _sys("on_foot"); var repo := _sys("repo_board"); var re := _sys("random_events")
+	if pol == null or of == null or repo == null or re == null:
+		_say(false, "stage5 systems missing"); _finish(); return
+	var ch: Variant = main_ref.get("character")
+	match _sub:
+		0:
+			if _t < 1.6:
+				return  # the 1.4 s walk-out ends; Book stands on the lot
+			re.set("favors", 1)
+			_money0 = int(repo.get("money"))
+			pol.call("add_heat", 1, "PROBE: LOITERING II")
+			_officer = RigidBody3D.new()
+			_officer.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+			_officer.freeze = true
+			_officer.add_to_group("officer")
+			var col := CollisionShape3D.new(); var box := BoxShape3D.new()
+			box.size = Vector3(0.5, 1.75, 0.35); col.shape = box; _officer.add_child(col)
+			main_ref.add_child(_officer)
+			_sub = 1; _t = 0.0
+		1:
+			if ch is CharacterBody3D and is_instance_valid(ch) and is_instance_valid(_officer):
+				_officer.global_position = (ch as Node3D).global_position + Vector3(1.8, 0.9, 0.0)
+				(ch as CharacterBody3D).velocity = Vector3.ZERO
+			if of.call("player_down") == true:
+				var sub: Variant = of.get("_card_sub")
+				var txt := (sub as Label).text if sub is Label else ""
+				_say(int(re.get("favors")) == 0, "stage5 the favor was spent (favors=%s)" % re.get("favors"))
+				_say(not txt.contains("Bail $") and txt.contains("LONGHORN IMPOUND."), "stage5 the card carries the favor line: %s" % txt)
+				_sub = 2; _t = 0.0
+			elif _t > 6.0:
+				var arrest := _sys("arrest")
+				_say(false, "stage5 never busted on foot with an officer at arm's length (hold=%s)" % (arrest.get("hold") if arrest != null else "n/a"))
+				_finish()
+		2:
+			if of.call("player_down") != true:
+				_say(int(repo.get("money")) == _money0, "stage5 no fine with a favor owed: $%d -> $%d" % [_money0, int(repo.get("money"))])
+				_say(int(pol.get("heat")) == 0, "stage5 heat cleared")
+				if is_instance_valid(_officer):
+					_officer.queue_free()
+				_stage = 6; _sub = 0; _t = 0.0
+			elif _t > 7.0:
+				_say(false, "stage5 card never cleared"); _finish()
+
+
+func _stage_stranded() -> void:
+	var re := _sys("random_events")
+	if re == null:
+		_say(false, "stage6 random_events missing"); _finish(); return
+	match _sub:
+		0:
+			var ok: bool = re.call("spawn_now") == true
+			_say(ok, "stage6 spawn_now placed a stranded driver: %s" % re.get("event_name"))
+			_sub = 1; _t = 0.0
+		1:
+			if _t > 0.5:
+				var cars := get_tree().get_nodes_in_group("stranded").size()
+				var drivers := get_tree().get_nodes_in_group("stranded_driver").size()
+				_say(cars == 1 and drivers == 1, "stage6 one dead sedan, one driver (%d/%d), active=%s" % [cars, drivers, re.get("active")])
+				var beacons := 0
+				for n in get_tree().get_nodes_in_group("objective_beacon"):
+					if is_instance_valid(n): beacons += 1
+				_say(beacons >= 1, "stage6 a beacon marks it (%d beacon(s) in the world)" % beacons)
+				re.set("_ttl", 0.5)
+				_sub = 2; _t = 0.0
+		2:
+			if _t > 2.0:
+				var cars := 0
+				for n in get_tree().get_nodes_in_group("stranded"):
+					if is_instance_valid(n) and not n.is_queued_for_deletion(): cars += 1
+				_say(cars == 0 and re.get("active") == false, "stage6 unanswered, they called somebody else: %d left, active=%s" % [cars, re.get("active")])
+				_finish()
