@@ -177,3 +177,9 @@ pad). Gate 5/5, probe 45/45. Rule: anatomy gets a number before and after (`body
 **Round 7 — 2026-09-13 (D-062).** "Go." The body's open list from D-061, measured: the boot
 (three foot rows in the tool; a loaf became a boot), pecs and blades, a lumbar curve, a rounder
 deltoid. Gate 5/5, probe 45/45. The sleeve is the wall now — cloth volume, the milestone.
+
+**Round 8 — 2026-09-13 (D-063).** Milad: "improve details of missions." The missions were bare
+loops. Canon supplied the voice (Bolo's app), a shared kit supplied the card, the crowd system
+supplied the debtor at the door, and the radar finally shows the jobs. Probe 53/53 with the first
+end-to-end mission harness. Next rung: a third mission from systems that already exist ("Comin'
+Down" on the slab strip), then checkpoints.

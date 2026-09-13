@@ -43,6 +43,17 @@ const SIGNAL_LOST_DISTANCE := 120.0; const SIGNAL_LOST_SECONDS := 5.0  # continu
 const FLASH_SECONDS := 3.0
 const OBJECTIVE_FONT := 18; const FLASH_FONT := 28  # title flash reuses the label
 const BAR_WIDTH := 320.0                          # PORCHLIGHT LIVE meter (px)
+# D-063 DETAIL. The order has a number and a voice (the LONGHORN app, in Bolo
+# Capital's push-notification register), the debtor comes out of the house and
+# calls it in if you dawdle, and the contract ends on a CARD with the bonuses
+# you earned: no clips posted, under the window, no heat, and a medal by time.
+const ORDER_NO := "3319"
+const OWNER_CALL_SECONDS := 14.0                  # standing by the truck this long: she calls it in
+const OWNER_RANGE := 20.0                         # ...if the truck is still this close
+const OWNER_FOLLOW_SECONDS := 45.0
+const OWNER_DOOR := Vector3(-9.0, 0.0, 6.0)       # where she comes out, off the target's tail
+const BONUS_NO_CLIPS := 150; const BONUS_TIME := 100; const BONUS_NO_HEAT := 100
+const TIME_GOLD := 240.0; const TIME_SILVER := 360.0
 
 enum State { IDLE, DRIVE_TO, HOOK_IT, DELIVER, COMPLETE }
 
@@ -65,6 +76,9 @@ var _dispatch_beam: Node3D = null; var _target_beam: Node3D = null
 var _ui: CanvasLayer = null; var _objective: Label = null
 var _bar_bg: ColorRect = null; var _bar_fill: ColorRect = null
 var _flash_text := ""; var _flash_left := 0.0
+var _start_t := 0.0; var _clips := 0; var _heat0 := 0; var _heat_max := 0
+var _arrived := false; var _owner: RigidBody3D = null
+var _owner_t := 0.0; var _owner_called := false
 
 func setup(main: Node) -> void:
 	main_ref = main; _rng.seed = RNG_SEED
@@ -87,6 +101,8 @@ func _physics_process(delta: float) -> void:
 		State.COMPLETE:
 			_cooldown_t -= delta
 			if _cooldown_t <= 0.0: state = State.IDLE
+	if state != State.IDLE and state != State.COMPLETE:
+		_tick_details(delta)
 	if is_instance_valid(_target) and _target.global_position.y < FALL_RESET_Y:
 		_target.global_transform = _target_transform()   # fell out of world
 		_target.linear_velocity = Vector3.ZERO; _target.angular_velocity = Vector3.ZERO
@@ -107,7 +123,11 @@ func _tick_seek(player: RigidBody3D, delta: float, promote: bool) -> void:
 		_enter_deliver(); return   # poll fallback in case the signal bound late
 	if player == null: return
 	var d := player.global_position.distance_to(_target.global_position)
-	if promote and d <= HOOK_ZONE: state = State.HOOK_IT
+	if promote and d <= HOOK_ZONE:
+		state = State.HOOK_IT
+		if not _arrived:
+			_arrived = true
+			_say("Unit located. Back to the tailgate and hook. Do not engage the debtor.")
 	# Latch: dispatch sits ~896 m from the brisket — beyond ABANDON_DISTANCE at
 	# accept time — so the abandon clock only arms after the first approach.
 	if d <= ABANDON_DISTANCE:
@@ -127,25 +147,54 @@ func _tick_deliver() -> void:
 # ============================== TRANSITIONS ==================================
 func _start_mission() -> void:
 	_abandon_t = 0.0; _expose_t = 0.0; _signal_t = 0.0; _drone_spawned = false
-	_was_near = false
+	_was_near = false; _arrived = false; _clips = 0; _owner_t = 0.0; _owner_called = false
+	_start_t = Time.get_ticks_msec() / 1000.0
+	_heat0 = _heat(); _heat_max = _heat0
 	_target_yaw = _rng.randf_range(-0.35, 0.35) + PI * 0.5
 	_spawn_target(); state = State.DRIVE_TO; _flash("HOOK AND LADDER")
+	_say("ORDER %s · BARON BRISKET · 96-month note, four payments behind. STONEBRIDLE RANCH, the cul-de-sac. Recovery window 6:00. Your rating: 4.7★" % ORDER_NO, 6.0)
+	_say("HOA cameras on file. Longhorn Wrecker & Recovery is not liable for what Porchlight posts.", 4.5)
 
 func _enter_deliver() -> void:
 	state = State.DELIVER; _abandon_t = 0.0
 	if not _drone_spawned:
 		_drone_spawned = true; _spawn_drone(); _flash("PORCHLIGHT IS WATCHING")
+		_spawn_owner()
 
 func _complete_mission() -> void:
 	var board := _peer("repo_board")
+	var took := Time.get_ticks_msec() / 1000.0 - _start_t
+	var rows: Array = [["RECOVERY", "$%d" % PAYOUT]]
+	var total := PAYOUT
 	if board != null and board.has_method("add_money"):
 		board.call("add_money", PAYOUT, "CONTRACT: HOOK AND LADDER")
-	_despawn_target(); _despawn_drone()
-	state = State.COMPLETE; _cooldown_t = COOLDOWN_SECONDS; _flash("CONTRACT COMPLETE")
+		if _clips == 0:
+			board.call("add_money", BONUS_NO_CLIPS, "NO CLIPS POSTED"); total += BONUS_NO_CLIPS
+			rows.append(["NO CLIPS POSTED", "+$%d" % BONUS_NO_CLIPS])
+		if took <= TIME_SILVER:
+			board.call("add_money", BONUS_TIME, "INSIDE THE WINDOW"); total += BONUS_TIME
+			rows.append(["INSIDE THE WINDOW", "+$%d" % BONUS_TIME])
+		if _heat_max <= _heat0:
+			board.call("add_money", BONUS_NO_HEAT, "NO HEAT DRAWN"); total += BONUS_NO_HEAT
+			rows.append(["NO HEAT DRAWN", "+$%d" % BONUS_NO_HEAT])
+	rows.append(["TIME", "%d:%02d" % [int(took) / 60, int(took) % 60]])
+	rows.append(["TOTAL", "$%d" % total])
+	var medal := "GOLD" if took <= TIME_GOLD and _clips == 0 else ("SILVER" if took <= TIME_SILVER else "BRONZE")
+	_despawn_target(); _despawn_drone(); _despawn_owner()
+	state = State.COMPLETE; _cooldown_t = COOLDOWN_SECONDS
+	if _peer("mission_kit") == null: _flash("CONTRACT COMPLETE")   # the card says it otherwise
+	_card("CONTRACT COMPLETE", "ORDER %s · HOOK AND LADDER" % ORDER_NO, rows, medal)
+	_say("Recovery logged. Payout net of platform fee (0% this quarter). Bolo Capital thanks you for your hustle.", 5.0)
 
-func _abort_mission() -> void:
-	_despawn_target(); _despawn_drone()
+func _abort_mission(reason := "lapsed") -> void:
+	_despawn_target(); _despawn_drone(); _despawn_owner()
 	state = State.IDLE; _abandon_t = 0.0; _flash("CONTRACT LAPSED")  # re-arms now
+	if reason == "busted":
+		_say("Order %s reassigned. A Longhorn unit in the county impound is a Longhorn problem. Rating impact: −0.3★" % ORDER_NO, 5.0)
+	elif reason == "down":
+		_say("Order %s reassigned. Get well soon. Rating impact: −0.3★" % ORDER_NO, 4.5)
+	else:
+		_say("Order %s reassigned. Recovery window exceeded. Rating impact: −0.3★" % ORDER_NO, 4.5)
 
 # ============================== TOW EVENTS ===================================
 func _try_bind_tow() -> void:
@@ -253,6 +302,7 @@ func _tick_drone(player: RigidBody3D, delta: float) -> void:
 		_expose_t += delta
 		if _expose_t >= EXPOSURE_SECONDS:
 			_expose_t = 0.0   # clip uploaded: +1 heat, then it keeps filming
+			_clips += 1
 			var pol := _peer("police")
 			if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1, "FILMED BY THE HOA")
 	if d > SIGNAL_LOST_DISTANCE:
@@ -330,6 +380,61 @@ func _make_beam(height: float, width: float, color: Color, alpha: float,
 	var n := BEACON.beacon(color, height, width, alpha, energy, ring, ring_alpha)
 	n.visible = false; add_child(n)
 	return n
+
+# ============================== DETAIL (D-063) ===============================
+## Per tick while a contract is live: the heat high-water mark (for the NO HEAT
+## bonus), the owner's clock, and the two ways a contract ends badly.
+func _tick_details(delta: float) -> void:
+	_heat_max = maxi(_heat_max, _heat())
+	var of := _peer("on_foot")
+	if of != null and of.has_method("player_down") and of.call("player_down") == true:
+		var mode: Variant = of.get("_card_mode")
+		_abort_mission("busted" if mode == "busted" else "down")
+		return
+	if is_instance_valid(_owner) and not _owner_called:
+		var player := _player()
+		if player != null and player.global_position.distance_to(_owner.global_position) <= OWNER_RANGE:
+			_owner_t += delta
+			if _owner_t >= OWNER_CALL_SECONDS:
+				_owner_called = true
+				var pol := _peer("police")
+				if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1, "THE OWNER CALLED IT IN")
+				_say_as("THE OWNER", "I've got your plate and I've got Porchlight. They're on their way.", 4.5)
+		else:
+			_owner_t = maxf(_owner_t - delta, 0.0)
+
+## She comes out of the house the moment the chain goes taut.
+func _spawn_owner() -> void:
+	_despawn_owner()
+	var peds := _peer("pedestrians")
+	var player := _player()
+	if peds == null or player == null or not peds.has_method("spawn_follower_at"): return
+	var at := TARGET_POS + OWNER_DOOR + Vector3(0, 1.075, 0)
+	var b: Variant = peds.call("spawn_follower_at", at, (player.global_position - at).normalized(), player, OWNER_FOLLOW_SECONDS)
+	if b is RigidBody3D:
+		_owner = b; _owner.add_to_group("mission_owner")
+		_say_as("THE OWNER", "That's my truck! I'm four days late, not four months — who told you four months?!", 4.5)
+
+func _despawn_owner() -> void:
+	if is_instance_valid(_owner): _owner.queue_free()
+	_owner = null
+
+func _heat() -> int:
+	var pol := _peer("police")
+	var hv: Variant = pol.get("heat") if pol != null else null
+	return int(hv) if hv is int else 0
+
+func _say(line: String, seconds := 4.5) -> void:
+	var kit := _peer("mission_kit")
+	if kit != null and kit.has_method("say"): kit.call("say", "LONGHORN · RECOVERY", line, seconds)
+
+func _say_as(who: String, line: String, seconds := 4.5) -> void:
+	var kit := _peer("mission_kit")
+	if kit != null and kit.has_method("say"): kit.call("say", who, line, seconds)
+
+func _card(title: String, sub: String, rows: Array, medal: String) -> void:
+	var kit := _peer("mission_kit")
+	if kit != null and kit.has_method("card"): kit.call("card", title, sub, rows, medal)
 
 func _box_part(parent: Node, size: Vector3, pos: Vector3, mat: StandardMaterial3D) -> void:
 	var mi := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = size

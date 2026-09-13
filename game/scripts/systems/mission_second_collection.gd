@@ -302,6 +302,8 @@ func _start_mission() -> void:
 	_spawn_masts()
 	state = State.APPROACH
 	_flash("THE SECOND COLLECTION")
+	_say("ORDER 4471 · AMPT WEDGENEER · Overflow Fellowship, north plaza, stall 9. Booted to a fleet immobiliser. Lienholder of record: Bolo Capital (acquired Q2).", 6.5)
+	_say("Quiet work pays better. The kiosk prints a courtesy release if you can find the words. Or you can't.", 5.0)
 
 
 ## The boot comes off. `loud` means somebody heard it: +2 heat, the masts go to
@@ -321,8 +323,10 @@ func _release_target(loud: bool) -> void:
 			_pedestal.freeze = false      # it goes over either way
 		_add_heat(ALARM_HEAT, "TRIPPED THE ALARM")
 		_flash("LOCKDOWN — TWELVE CAMPUSES, ONE ALARM")
+		_say("ALARM EVENT LOGGED. Twelve campuses notified. Longhorn Wrecker & Recovery is not liable. Hook it and go.", 5.0)
 	else:
 		_flash("RELEASE PRINTED. THE LORD PROVIDES A ROUTING NUMBER.")
+		_say("Courtesy release printed. Campus asleep. CLEAN PAPER bonus in play — keep it that way.", 4.5)
 	state = State.HOOK_IT
 
 
@@ -346,7 +350,21 @@ func _complete_mission() -> void:
 	_teardown_props()
 	state = State.COMPLETE
 	_cooldown_t = COOLDOWN_SECONDS
-	_flash("CLEAN PAPER — NOBODY WOKE UP" if clean else "CONTRACT COMPLETE")
+	if _peer("mission_kit") == null:   # the card says it otherwise
+		_flash("CLEAN PAPER — NOBODY WOKE UP" if clean else "CONTRACT COMPLETE")
+	# D-063: the card, and the app's closing line.
+	var rows: Array = [["RECOVERY", "$%d" % PAYOUT_BASE]]
+	var total := PAYOUT_BASE
+	if clean:
+		rows.append(["CLEAN PAPER — NOBODY WOKE UP", "+$%d" % PAYOUT_CLEAN]); total += PAYOUT_CLEAN
+	if _radio_on():
+		rows.append(["HAULIN' MUSIC", "+$%d" % PAYOUT_RADIO]); total += PAYOUT_RADIO
+	rows.append(["RESPECT", "%+d" % (RESPECT_CLEAN if clean else RESPECT_LOUD)])
+	rows.append(["TOTAL", "$%d" % total])
+	var kit := _peer("mission_kit")
+	if kit != null and kit.has_method("card"):
+		kit.call("card", "CONTRACT COMPLETE", "ORDER 4471 · THE SECOND COLLECTION", rows, "GOLD" if clean else "SILVER")
+	_say("Recovery logged. The receipt lists the lienholder in eight-point type. Nobody reads receipts. Bolo Capital thanks you for your hustle.", 6.0)
 
 
 ## Fail forward: the order lapses, the props go away, the board re-arms NOW.
@@ -356,6 +374,14 @@ func _abort_mission(reason: String) -> void:
 	state = State.IDLE
 	_abandon_t = 0.0
 	_flash(reason)
+	_say("Order 4471 reassigned. Rating impact: −0.3★", 4.0)
+
+
+## D-063: the LONGHORN app talks in Bolo Capital's push-notification voice.
+func _say(line: String, seconds := 4.5) -> void:
+	var kit := _peer("mission_kit")
+	if kit != null and kit.has_method("say"):
+		kit.call("say", "LONGHORN · RECOVERY", line, seconds)
 
 
 func _teardown_props() -> void:

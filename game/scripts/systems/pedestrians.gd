@@ -46,6 +46,10 @@ const STUN_TIME := 1.3             # s a countered brawler stands stunned
 const BRAWL_GIVE_UP := 9.0         # m: Book this far away ends the fight
 const BRAWL_TIME := 10.0           # s of brawling, then he thinks better of it
 const WINDUP_LEAN := 0.25          # m he steps in over the windup
+# --- Followers (D-063): a mission spawns a walker who goes to a node and stands
+# there — the debtor who comes out of the house. Self-despawns on its clock or
+# when the node gets away.
+const FOLLOW_SPEED := 2.4; const FOLLOW_STOP := 2.8; const FOLLOW_GIVE_UP := 40.0
 const HIT_CARRY := 0.6; const HIT_POP := 2.2  # striker velocity share; up-fling
 const CHARGE_MIN_SPEED := 2.0             # parked-car nudges are not a crime
 const HEAT_ON_HIT := 1; const RESPECT_ON_HIT := -2  # player-strike penalties
@@ -67,7 +71,7 @@ const P0S: Array[Vector2] = [  # each side's straight start, relative to centre
 	Vector2(PATH_INSET - CORNER_R, PATH_INSET),
 	Vector2(-PATH_INSET, PATH_INSET - CORNER_R)]
 
-enum { WALK, FLEE, DOWN, BRAWL, IDLE }   # IDLE: a spawned brawler waiting (probe)
+enum { WALK, FLEE, DOWN, BRAWL, IDLE, FOLLOW }   # IDLE: a spawned brawler waiting (probe); FOLLOW: a mission walker
 
 const FACTORY := preload("res://scripts/world/character_factory.gd")
 ## SKINNED-BODY PROOF OF CONCEPT — inert unless `--skinned` is on the command
@@ -196,6 +200,7 @@ func _update_ped(ped: Dictionary, delta: float) -> void:
 		WALK:
 			if not _check_threats(ped, body): _update_walk(ped, body, delta)
 		BRAWL: _update_brawl(ped, body, delta)
+		FOLLOW: _update_follow(ped, body, delta)
 	# M10 walk cycle. Kinematic peds are moved by transform, so their gait
 	# speed is the scripted one (strolling, or the panic run), not velocity.
 	# A downed ped is loose physics: the rig freezes and it tumbles as a body.
@@ -205,6 +210,7 @@ func _update_ped(ped: Dictionary, delta: float) -> void:
 	if st == WALK: gait = float(ped["speed"])
 	elif st == FLEE: gait = FLEE_SPEED
 	elif st == BRAWL and bool(ped["moving"]): gait = BRAWL_SPEED
+	elif st == FOLLOW and bool(ped["moving"]): gait = FOLLOW_SPEED
 	FACTORY.animate(ped["rig"] as Dictionary, gait, delta, st != DOWN)
 	if st == BRAWL: _brawl_arms(ped, delta)   # after animate: the last writer wins the frame
 
@@ -328,6 +334,34 @@ func punch_in(body: RigidBody3D) -> float:
 	var ped := _find(body)
 	if ped.is_empty() or int(ped["state"]) != BRAWL or float(ped["stun_t"]) > 0.0: return INF
 	return float(ped["punch_t"])
+
+## PUBLIC (missions): a walker who goes to `target` and stands at arm's length
+## for `seconds`, then leaves. Returns the body (group "follower").
+func spawn_follower_at(pos: Vector3, facing: Vector3, target: Node3D, seconds: float) -> RigidBody3D:
+	var body := spawn_brawler_at(pos, facing)
+	body.add_to_group("follower")
+	var ped := _find(body)
+	if not ped.is_empty():
+		ped["state"] = FOLLOW; ped["brave"] = false
+		ped["follow"] = target; ped["follow_t"] = seconds; ped["bpos"] = pos
+	return body
+
+func _update_follow(ped: Dictionary, body: RigidBody3D, delta: float) -> void:
+	var t: Variant = ped.get("follow")
+	ped["follow_t"] = float(ped.get("follow_t", 0.0)) - delta
+	ped["moving"] = false
+	var bpos: Vector3 = ped["bpos"]
+	if not (t is Node3D) or not is_instance_valid(t) or float(ped["follow_t"]) <= 0.0 \
+			or (t as Node3D).global_position.distance_to(bpos) > FOLLOW_GIVE_UP:
+		body.queue_free()   # _validate drops the freed entry
+		return
+	var sep := (t as Node3D).global_position - bpos; sep.y = 0.0
+	var d := sep.length()
+	var head := sep.normalized() if d > 0.05 else Vector3.FORWARD
+	if d > FOLLOW_STOP:
+		bpos += head * minf(FOLLOW_SPEED * delta, d - FOLLOW_STOP); ped["moving"] = true
+		ped["bpos"] = bpos
+	_place(body, head, bpos)
 
 ## PUBLIC (probe/debug): a brave man standing at `pos` facing `facing`, waiting.
 func spawn_brawler_at(pos: Vector3, facing: Vector3) -> RigidBody3D:

@@ -19,6 +19,9 @@ extends Node
 ##  7. the impound pad takes a towed box (Milad, 2026-09-13: "the drop-off area
 ##     was blocking the vehicle"): a junker-sized box dragged at the chain's
 ##     force along z has to end up ON the pad, not against its edge.
+##  9. Hook and Ladder end to end (D-063): board the wrecker, roll into dispatch
+##     (the app speaks), reach the Brisket, hook it (the drone and the owner
+##     appear), deliver on the pad — the card, the payout with every bonus, GOLD.
 ##  8. melee (D-058): fists up, a brave man 1.3 m out — the jab lands and he
 ##     squares up; his punch takes 6 unguarded, 3 through a held guard, nothing
 ##     through a guard raised inside the perfect window (and he staggers); the
@@ -45,6 +48,8 @@ var _p0 := Vector3.ZERO
 var _only := -1                       # --mech-only=N: run stage N alone, then quit
 var _hp0 := 0.0
 var _press := ""                      # an action fed from idle time for one frame
+const HOOK := preload("res://scripts/systems/mission_hook_and_ladder.gd")
+var _rel := Transform3D.IDENTITY
 var _press_frames := 0
 
 
@@ -132,6 +137,7 @@ func _physics_process(delta: float) -> void:
 		6: _stage_stranded()
 		7: _stage_drag()
 		8: _stage_melee()
+		9: _stage_mission()
 		_: _finish()
 
 
@@ -471,7 +477,7 @@ func _stage_melee() -> void:
 			if _t > 0.8:
 				var st := int(peds.call("state_of", _brawler))
 				_say(st == 2, "stage8 the counter put him down (state=%d, DOWN=2)" % st)
-				_finish()
+				_stage = 9; _sub = 0; _t = 0.0
 
 
 func _stage_drift(pv: RigidBody3D) -> void:
@@ -490,3 +496,80 @@ func _stage_drift(pv: RigidBody3D) -> void:
 				if _only == 0:
 					_finish(); return
 				_stage = 1; _sub = 0; _t = 0.0
+
+
+func _stage_mission() -> void:
+	var m := _sys("mission_hook_and_ladder"); var kit := _sys("mission_kit"); var repo := _sys("repo_board")
+	var pv := _pv()
+	if m == null or kit == null or repo == null or pv == null:
+		_say(false, "stage9 mission systems missing"); _finish(); return
+	match _sub:
+		0:   # Book boards the wrecker
+			_shot_done = false
+			var ch: Variant = main_ref.get("character")
+			if ch is Node3D and is_instance_valid(ch):
+				(ch as Node3D).global_position = pv.global_position - pv.global_transform.basis.x * 2.3 + Vector3(0, -0.9, 0)
+			_press = "enter_exit"
+			_sub = 1; _t = 0.0
+		1:
+			if main_ref.get("on_foot") != true:
+				pv.global_transform = Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), HOOK.DISPATCH_POS + Vector3.UP * 1.2)
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				_money0 = int(repo.get("money"))
+				_sub = 2; _t = 0.0
+			elif _t > 3.0:
+				_say(false, "stage9 Book never boarded the wrecker (on_foot=%s)" % main_ref.get("on_foot")); _finish()
+		2:
+			pv.linear_velocity = Vector3.ZERO
+			if int(m.get("state")) == 1:
+				_say(true, "stage9 rolled into dispatch: ORDER accepted (state=1) after %.1f s" % _t)
+				_say(int(kit.call("lines_queued")) >= 1, "stage9 the app spoke (%d lines queued)" % int(kit.call("lines_queued")))
+				pv.global_transform = Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), HOOK.TARGET_POS + Vector3(0, 1.2, -8.0))
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				_sub = 3; _t = 0.0
+			elif _t > 4.0:
+				_say(false, "stage9 dispatch never triggered (state=%s)" % m.get("state")); _finish()
+		3:
+			pv.linear_velocity = Vector3.ZERO
+			if int(m.get("state")) == 2 and _t > 0.3:
+				_press = "hook"
+				_sub = 4; _t = 0.0
+			elif _t > 4.0:
+				_say(false, "stage9 never promoted to HOOK_IT (state=%s)" % m.get("state")); _finish()
+		4:
+			if int(m.get("state")) == 3 and _t > 0.8:
+				var tgt: Variant = m.get("_target")
+				var owner := get_tree().get_nodes_in_group("mission_owner").size()
+				var drone: Variant = m.get("_drone")
+				_say(true, "stage9 hooked: DELIVER (state=3)")
+				_say(drone is Node and is_instance_valid(drone), "stage9 the Porchlight drone is up")
+				_say(owner == 1, "stage9 the owner came out of the house (%d follower)" % owner)
+				if tgt is Node3D:
+					_rel = pv.global_transform.affine_inverse() * (tgt as Node3D).global_transform
+					var tx := Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), REPO.PAD_CENTER + Vector3(0, 1.2, -6.0))
+					pv.global_transform = tx
+					(tgt as RigidBody3D).global_transform = tx * _rel
+					pv.linear_velocity = Vector3.ZERO; (tgt as RigidBody3D).linear_velocity = Vector3.ZERO
+				_sub = 5; _t = 0.0
+			elif _t > 4.0:
+				_say(false, "stage9 the hook never took (state=%s)" % m.get("state")); _finish()
+		5:
+			pv.linear_velocity = Vector3.ZERO
+			if _t > 0.5 and _press == "":
+				_press = "hook"   # release on the pad
+				_sub = 6; _t = 0.0
+		6:
+			if int(m.get("state")) == 4:
+				var delta := int(repo.get("money")) - _money0
+				_say(true, "stage9 delivered: CONTRACT COMPLETE (state=4) after %.1f s" % _t)
+				_say(delta == 950, "stage9 payout with every bonus: $%d (want 950 = 600 + no clips 150 + window 100 + no heat 100)" % delta)
+				_say(kit.call("card_visible") == true, "stage9 the contract card is up")
+				_sub = 7; _t = 0.0
+			elif _t > 5.0:
+				_say(false, "stage9 release on the pad did not complete (state=%s)" % m.get("state")); _finish()
+		7:   # the card has faded in (0.7 s) and the app's closing line is up
+			if _t > 1.2:
+				if _shots != "" and not _shot_done:
+					_shot_done = true; _shot("mission_card")
+				if _t > 1.6:
+					_finish()

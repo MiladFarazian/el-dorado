@@ -66,6 +66,9 @@ const C_COP_CAR := Color(1.0, 0.30, 0.25, 1)      # cruisers: red/blue — red h
 const C_TARGET := Color(1.0, 0.78, 0.20, 1)
 const C_HOSPITAL := Color(0.95, 0.35, 0.35, 1)
 const C_PAD := Color(0.55, 0.90, 0.55, 1)
+const C_DISPATCH := Color(1.0, 0.85, 0.15, 1)      # D-063: the two job boards, and a live mission target
+const HOOK := preload("res://scripts/systems/mission_hook_and_ladder.gd")
+const SECOND := preload("res://scripts/systems/mission_second_collection.gd")
 const C_SEARCH := Color(1.0, 0.30, 0.25, 0.22)     # wanted search radius fill
 const C_SEARCH_RIM := Color(1.0, 0.30, 0.25, 0.75)
 const C_HEALTH := Color(0.36, 0.72, 0.35, 1)
@@ -439,6 +442,15 @@ func _on_radar_draw() -> void:
 			var tp := _to_map(_flat((tgt as Node3D).global_position), focus, s, c)
 			_radar.draw_circle(tp, 5.0, C_TARGET)
 			_radar.draw_arc(tp, 5.0, 0.0, TAU, 16, Color(0, 0, 0, 0.8), 1.5)
+	# D-063 (D-055 was "neither mission is findable from the minimap"): the two
+	# job boards as fixed markers, and a live mission target as a gold ring.
+	_marker(Vector2(HOOK.DISPATCH_POS.x, HOOK.DISPATCH_POS.z), focus, s, c, C_DISPATCH, "D")
+	_marker(Vector2(SECOND.BOARD_POS.x, SECOND.BOARD_POS.z), focus, s, c, C_DISPATCH, "N")
+	for n: Node in get_tree().get_nodes_in_group("mission_target"):
+		if n is Node3D and is_instance_valid(n) and (n as Node3D).is_inside_tree():
+			var mp := _to_map(_flat((n as Node3D).global_position), focus, s, c)
+			_radar.draw_arc(mp, 6.5, 0.0, TAU, 20, C_DISPATCH, 2.5)
+			_radar.draw_circle(mp, 2.5, C_DISPATCH)
 
 	# --- Player arrow, always centred, always pointing up (heading-up map).
 	var session := _peer("session")

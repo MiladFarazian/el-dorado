@@ -250,3 +250,17 @@ decide how the mission feels:
 
 `SWEEP_HALF` (0.42 rad) and the spotlight's `spot_angle` (24°) are kept in sync on
 purpose: **what you see is the rule.** Change one, change both.
+
+
+---
+
+## Presentation (D-063, 2026-09-13)
+
+The LONGHORN app (Bolo Capital's push-notification voice, shared `mission_kit.gd`) now carries the
+order: *"ORDER 4471 · AMPT WEDGENEER · Overflow Fellowship, north plaza, stall 9. Booted to a fleet
+immobiliser. Lienholder of record: Bolo Capital (acquired Q2)."* — the reveal-planting line, said
+out loud in eight-point type — then *"Quiet work pays better."* The quiet release and the alarm each
+get a line. The contract ends on the card: RECOVERY $1,100, CLEAN PAPER +$550 if nobody woke up,
+HAULIN' MUSIC +$75 with the radio on, RESPECT +4/+1, the total, GOLD for clean and SILVER for loud;
+and the app's closing line: *"The receipt lists the lienholder in eight-point type. Nobody reads
+receipts."* The night board is an **N** on the radar; a live target is a gold ring.

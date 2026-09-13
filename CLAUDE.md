@@ -171,14 +171,19 @@ Standing rules the loop exists to enforce:
   `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
   Boot census lines: `RENDER:`, `SURFACES:`, `SKIN LIB:`, `SKIN MICRO:`; `SHOT sun:` at `face`.
-- **Mechanics probe (D-056…D-059):** `godot --headless -- --mech-probe` — 45 checks in ~90 s:
+- **Mechanics probe (D-056…D-063):** `godot --headless -- --mech-probe` — 53 checks in ~110 s:
   a parked truck stays parked (drift < 2 cm over 8 s), legible heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore),
   busted by a cruiser that pulls alongside (card, impound, fine, heat still 1), a favor that
   covers bail, the stranded-driver spawn and its TTL, a towed box sliding onto the impound pad,
-  and the melee loop (jab, brawler, guard, perfect block, counter). Prints
+  the melee loop (jab, brawler, guard, perfect block, counter), and Hook and Ladder end to end
+  (dispatch, the app, hook, drone + owner, deliver, card, $950). Prints
   `MECH PROBE: PASS (n/n)`; `--mech-only=N` runs one stage. Windowed with `--mech-shots=/abs/dir` it also saves `full_eight.png`,
-  `brake_night.png`, `busted.png`, `brawl.png`. Run it after any change to police/on_foot/
-  full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board.
+  `brake_night.png`, `busted.png`, `brawl.png`, `mission_card.png`. Run it after any change to police/on_foot/
+  full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board/
+  mission_*/mission_kit.
+- **Missions speak through `mission_kit.gd`** (D-063): `say(speaker, line, s)` and
+  `card(title, subtitle, rows, medal)`. The dispatcher is the LONGHORN app in Bolo Capital's
+  push-notification voice (canon: "quotas and an app"); do not invent a named dispatcher.
 - **A bug Milad finds by playing goes to the top of the round** (D-058), and gets a probe row
   that reproduces it BEFORE the fix, so the fix lands with a number.
 - **Anatomy is measured, not eyeballed** (D-061): `godot --headless --script res://tools/body_measure.gd

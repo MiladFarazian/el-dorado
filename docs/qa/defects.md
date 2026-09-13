@@ -203,6 +203,14 @@ Bar: `docs/qa/quality-bar.md`.
 >   `measure_after.md`. QA to rule at `body_side` and `full`.
 > - **D-134 update (D-062):** pecs, scapulae, lumbar curve, a rounder deltoid on top of D-061's
 >   rib cage. `round7/front_*`, `back_*`. The deltoid still reads square in the painted sleeve.
+> - **D-136 [S2] The missions were bare loops** — no briefing, nobody spoke, nothing happened at the
+>   house, a flash for an ending (Milad, 2026-09-13: "improve details of missions").
+>   PRODUCER-CLAIMED IMPROVED (D-063): `mission_kit.gd` (the LONGHORN app voice, the contract card
+>   with bonuses and a medal), the owner who comes out and calls it in, fail lines, clip counting.
+>   Evidence: probe stage 9 (8/8), `evidence/mechanics-sept13/round8/mission_card.png`. QA to rule
+>   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
+> - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
+>   and a gold ring on a live mission target. QA to rule at `--hudshot`.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,
