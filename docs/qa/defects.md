@@ -151,6 +151,17 @@ Bar: `docs/qa/quality-bar.md`.
 > - **D-125 [S4] Pedestrians ignored a wanted man standing next to them.** PRODUCER-CLAIMED
 >   FIXED (D-057): heat ≥ 2 within 12 m → flee straight away. No probe row (needs a ped in
 >   range); QA to check by hand at 2★ on a downtown block.
+> - **D-126 [S2] The impound pad blocked the delivery** — Milad, playing Hook and Ladder
+>   2026-09-13: "the area to drop off the vehicle was blocking the vehicle." Root cause: the pad
+>   was a 24 cm StaticBody3D slab with 22 cm lips; a towed box cannot climb a step.
+>   PRODUCER-CLAIMED FIXED (D-058): the pad is visual-only paint, flush. Evidence:
+>   `evidence/mechanics-sept13/mech_probe_headless.log` stage 7 — before: the box stops at
+>   z −7.2 m (the slab face); after: on the pad in 2.2 s. QA to rule by delivering the Brisket.
+> - **D-127 [S3] Melee had no opponent and a guard that blocked nothing** (`GUARD_DAMAGE_MULT`
+>   "read by nobody yet"; a landed jab did nothing visible). PRODUCER-CLAIMED FIXED (D-058):
+>   brave pedestrians square up and punch (6 hp, 1.1 s), guard halves, perfect guard counters,
+>   soft lock and step-in, stride cap while swinging. Evidence: probe stage 8 (7/7),
+>   `evidence/mechanics-sept13/brawl.png`. QA to rule by hand on a downtown block at fists.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,

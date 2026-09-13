@@ -28,6 +28,24 @@ const ZIG_RATE := 7.0; const ZIG_AMP := 0.55  # panicked zigzag (rad/s, rad)
 const KNOCK_RADIUS := 1.7; const KNOCK_CLOSING := 4.0  # pre-impact unfreeze
 const GUN_PANIC_RADIUS := 30.0; const GUN_PANIC_TIME := 4.0  # gunshot scatter
 const HOT_HEAT := 2; const HOT_RADIUS := 12.0  # D-057: a wanted man clears the sidewalk
+# --- Brawlers (D-058). A share of walkers are BRAVE: hit one with a fist and he
+# squares up instead of running — closes to reach, throws a punch on a windup
+# you can see, keeps at it until he is put down or you leave. His punch asks
+# melee.gd whether a guard is up (half) or JUST came up (nothing, and he
+# staggers — fair game for the counter). The rest of the sidewalk runs, which
+# is also new: a punched coward used to just stand there.
+const BRAVE_CHANCE := 0.35; const BRAVE_SEED := 0xB4A7E  # own stream: costumes stay seeded
+const BRAWL_REACH := 1.3           # m: he stops here and swings
+const BRAWL_SPEED := 2.6           # m/s closing on Book
+const PUNCH_INTERVAL := 1.1        # s between punches
+const PUNCH_WINDUP := 0.35         # s of visible lean-in before the punch lands
+const PUNCH_DAMAGE := 6.0          # hp; halved by a guard, zero on a perfect one
+const PUNCH_TRAUMA := 0.22
+const PUNCH_HIT_RANGE := 1.8       # m: Book inside this when it lands takes it
+const STUN_TIME := 1.3             # s a countered brawler stands stunned
+const BRAWL_GIVE_UP := 9.0         # m: Book this far away ends the fight
+const BRAWL_TIME := 10.0           # s of brawling, then he thinks better of it
+const WINDUP_LEAN := 0.25          # m he steps in over the windup
 const HIT_CARRY := 0.6; const HIT_POP := 2.2  # striker velocity share; up-fling
 const CHARGE_MIN_SPEED := 2.0             # parked-car nudges are not a crime
 const HEAT_ON_HIT := 1; const RESPECT_ON_HIT := -2  # player-strike penalties
@@ -49,7 +67,7 @@ const P0S: Array[Vector2] = [  # each side's straight start, relative to centre
 	Vector2(PATH_INSET - CORNER_R, PATH_INSET),
 	Vector2(-PATH_INSET, PATH_INSET - CORNER_R)]
 
-enum { WALK, FLEE, DOWN }
+enum { WALK, FLEE, DOWN, BRAWL, IDLE }   # IDLE: a spawned brawler waiting (probe)
 
 const FACTORY := preload("res://scripts/world/character_factory.gd")
 ## SKINNED-BODY PROOF OF CONCEPT — inert unless `--skinned` is on the command
@@ -67,6 +85,7 @@ var _rng := RandomNumberGenerator.new()
 var _peds: Array[Dictionary] = []
 var _threats: Array[Node3D] = []  # membership rescanned every 0.3 s
 var _heat := 0                     # police.heat, cached at the threat refresh
+var _brave_rng := RandomNumberGenerator.new()  # brave draws, off the costume stream
 var _spawn_cd := 0.0; var _threat_cd := 0.0; var _spawned := 0
 var _combat_bound := false  # combat.shot_fired connected (peer binds lazily)
 var _copfire_bound := false  # police_gunfire.shot_fired connected likewise
@@ -75,7 +94,7 @@ var _pp_pos := Vector3.ZERO; var _pp_head := Vector3.ZERO  # _path_point outputs
 var _clear_cells: Array[Vector2i] = []  # tower-free blocks: lots + the Trust plaza
 
 func setup(main: Node) -> void:
-	main_ref = main; _rng.seed = RNG_SEED
+	main_ref = main; _rng.seed = RNG_SEED; _brave_rng.seed = BRAVE_SEED
 	if bool(main.get("smoke_mode")):
 		set_physics_process(false); set_process(false); return  # smoke gate: inert
 	_build_clear_cells()
@@ -162,7 +181,9 @@ func _make_ped(c: Vector2, s: float) -> void:
 		"body": body, "center": c, "s": s, "wdir": wdir, "rig": rig,
 		"speed": _rng.randf_range(WALK_SPEED.x, WALK_SPEED.y),  # seeded stroll
 		"state": WALK, "age": 0.0, "charged": false, "still_t": 0.0,
-		"flee_t": 0.0, "flee_dir": Vector3.FORWARD, "zig_t": 0.0})
+		"flee_t": 0.0, "flee_dir": Vector3.FORWARD, "zig_t": 0.0,
+		"brave": _brave_rng.randf() < BRAVE_CHANCE, "punch_t": 0.0, "brawl_t": 0.0,
+		"stun_t": 0.0, "bpos": Vector3.ZERO, "moving": false, "spawned": false})
 
 # ============================== BEHAVIOUR ====================================
 func _update_ped(ped: Dictionary, delta: float) -> void:
@@ -174,6 +195,7 @@ func _update_ped(ped: Dictionary, delta: float) -> void:
 			if not _check_threats(ped, body): _update_flee(ped, body, delta)
 		WALK:
 			if not _check_threats(ped, body): _update_walk(ped, body, delta)
+		BRAWL: _update_brawl(ped, body, delta)
 	# M10 walk cycle. Kinematic peds are moved by transform, so their gait
 	# speed is the scripted one (strolling, or the panic run), not velocity.
 	# A downed ped is loose physics: the rig freezes and it tumbles as a body.
@@ -181,6 +203,7 @@ func _update_ped(ped: Dictionary, delta: float) -> void:
 	var gait := 0.0
 	if st == WALK: gait = float(ped["speed"])
 	elif st == FLEE: gait = FLEE_SPEED
+	elif st == BRAWL and bool(ped["moving"]): gait = BRAWL_SPEED
 	FACTORY.animate(ped["rig"] as Dictionary, gait, delta, st != DOWN)
 
 ## Distance math only against the cached threat set — NO raycasts. Positions
@@ -200,6 +223,109 @@ func _check_threats(ped: Dictionary, body: RigidBody3D) -> bool:
 		elif int(ped["state"]) == WALK and _heat >= HOT_HEAT and d < HOT_RADIUS and t.is_in_group("player"):
 			_flee_away(ped, sep / d)  # world memory, the cheap kind: they know who you are
 	return false
+
+# ============================== BRAWLING (D-058) =============================
+## PUBLIC (melee): a fist landed and did not put him down. Brave → he squares
+## up; the rest bolt. Nothing happens to a man already down or already fighting.
+func on_melee_hit(body: RigidBody3D, striker: Node) -> void:
+	var ped := _find(body)
+	if ped.is_empty(): return
+	var st := int(ped["state"])
+	if st == DOWN or st == BRAWL: return
+	if bool(ped.get("brave", false)):
+		_start_brawl(ped, body)
+	elif striker is Node3D:
+		_flee_away(ped, body.global_position - (striker as Node3D).global_position)
+
+func _start_brawl(ped: Dictionary, body: RigidBody3D) -> void:
+	ped["state"] = BRAWL; ped["punch_t"] = PUNCH_INTERVAL; ped["brawl_t"] = 0.0
+	ped["stun_t"] = 0.0; ped["bpos"] = body.global_position; ped["moving"] = false
+
+func _end_brawl(ped: Dictionary, body: RigidBody3D) -> void:
+	if bool(ped.get("spawned", false)):
+		ped["state"] = IDLE; return
+	var pv := _player()
+	_flee_away(ped, body.global_position - pv.global_position if pv != null else Vector3.FORWARD)
+
+## Face Book, close to reach, lean in over the windup, swing. A stunned man
+## stands there. Book too far, or too long at it, and he thinks better of it.
+func _update_brawl(ped: Dictionary, body: RigidBody3D, delta: float) -> void:
+	var pv := _player()
+	ped["brawl_t"] = float(ped["brawl_t"]) + delta
+	ped["moving"] = false
+	if not (pv is CharacterBody3D) or float(ped["brawl_t"]) > BRAWL_TIME \
+			or pv.global_position.distance_to(body.global_position) > BRAWL_GIVE_UP:
+		_end_brawl(ped, body); return
+	if float(ped["stun_t"]) > 0.0:
+		ped["stun_t"] = float(ped["stun_t"]) - delta
+		return
+	var bpos: Vector3 = ped["bpos"]
+	var sep := pv.global_position - bpos; sep.y = 0.0
+	var d := sep.length()
+	var head := sep.normalized() if d > 0.05 else Vector3.FORWARD
+	if d > BRAWL_REACH + 0.15:
+		bpos += head * minf(BRAWL_SPEED * delta, d - BRAWL_REACH); ped["moving"] = true
+		ped["bpos"] = bpos
+	ped["punch_t"] = float(ped["punch_t"]) - delta
+	var pt := float(ped["punch_t"])
+	var lean := head * WINDUP_LEAN * (1.0 - clampf(pt / PUNCH_WINDUP, 0.0, 1.0)) if pt <= PUNCH_WINDUP else Vector3.ZERO
+	_place(body, head, bpos + lean)
+	if pt <= 0.0:
+		_ped_punch(ped, pv as CharacterBody3D, body, d)
+		ped["punch_t"] = PUNCH_INTERVAL
+
+func _ped_punch(ped: Dictionary, ch: CharacterBody3D, body: RigidBody3D, d: float) -> void:
+	if d > PUNCH_HIT_RANGE: return              # swung at air
+	var melee := _peer("melee")
+	if melee != null and melee.has_method("perfect_guard") and melee.call("perfect_guard") == true:
+		ped["stun_t"] = STUN_TIME                # countered: he staggers, fair game
+		if melee.has_method("on_blocked"): melee.call("on_blocked", true)
+		return
+	var mult := 1.0
+	if melee != null and melee.has_method("guard_damage_mult"):
+		mult = float(melee.call("guard_damage_mult"))
+	if ch.has_method("take_damage"): ch.call("take_damage", PUNCH_DAMAGE * mult, body)
+	if mult < 1.0:
+		if melee != null and melee.has_method("on_blocked"): melee.call("on_blocked", false)
+	elif melee != null and melee.has_method("play_impact"):
+		melee.call("play_impact", PUNCH_TRAUMA)
+
+## PUBLIC (melee): a stunned brawler goes down to the next hit.
+func is_stunned(body: RigidBody3D) -> bool:
+	var ped := _find(body)
+	return not ped.is_empty() and int(ped["state"]) == BRAWL and float(ped["stun_t"]) > 0.0
+
+## PUBLIC (probe): the state enum value, or -1.
+func state_of(body: RigidBody3D) -> int:
+	var ped := _find(body)
+	return int(ped["state"]) if not ped.is_empty() else -1
+
+## PUBLIC (probe): seconds until his next punch lands, INF when not brawling.
+func punch_in(body: RigidBody3D) -> float:
+	var ped := _find(body)
+	if ped.is_empty() or int(ped["state"]) != BRAWL or float(ped["stun_t"]) > 0.0: return INF
+	return float(ped["punch_t"])
+
+## PUBLIC (probe/debug): a brave man standing at `pos` facing `facing`, waiting.
+func spawn_brawler_at(pos: Vector3, facing: Vector3) -> RigidBody3D:
+	var body := RigidBody3D.new()
+	_spawned += 1; body.name = "Brawler%d" % _spawned
+	body.mass = PED_MASS
+	body.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC; body.freeze = true
+	body.contact_monitor = true; body.max_contacts_reported = 8
+	body.add_to_group("pedestrian")
+	var col := CollisionShape3D.new(); var shape := BoxShape3D.new()
+	shape.size = COLLIDER_SIZE; col.shape = shape; body.add_child(col)
+	var rig: Dictionary = _body_script().build(body, FACTORY.random_config(_rng), -PED_HALF)
+	add_child(body)
+	_place(body, facing, pos)
+	body.body_entered.connect(_on_contact.bind(body))
+	_peds.append({"body": body, "center": Vector2(pos.x, pos.z), "s": 0.0, "wdir": 1.0, "rig": rig,
+		"speed": 0.0, "state": IDLE, "age": GRACE + 1.0, "charged": false, "still_t": 0.0,
+		"flee_t": 0.0, "flee_dir": Vector3.FORWARD, "zig_t": 0.0,
+		"brave": true, "punch_t": 0.0, "brawl_t": 0.0, "stun_t": 0.0, "bpos": pos,
+		"moving": false, "spawned": true})
+	return body
 
 ## Straight away from a threat that need not be moving (a wanted man, a horn).
 func _flee_away(ped: Dictionary, away: Vector3) -> void:

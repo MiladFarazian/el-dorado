@@ -13,6 +13,13 @@ extends Node
 ##     card carries the favor line, no fine, the favor is spent.
 ##  6. random events: spawn_now places a dead sedan + driver + beacon; an
 ##     unanswered one despawns at its TTL.
+##  7. the impound pad takes a towed box (Milad, 2026-09-13: "the drop-off area
+##     was blocking the vehicle"): a junker-sized box dragged at the chain's
+##     force along z has to end up ON the pad, not against its edge.
+##  8. melee (D-058): fists up, a brave man 1.3 m out — the jab lands and he
+##     squares up; his punch takes 6 unguarded, 3 through a held guard, nothing
+##     through a guard raised inside the perfect window (and he staggers); the
+##     counter puts him down.
 ## Windowed with `--mech-shots=/abs/dir` it also saves three evidence plates.
 const REPO := preload("res://scripts/systems/repo_board.gd")
 var main_ref: Node = null
@@ -29,6 +36,11 @@ var _hour0 := -1.0
 var _cruiser: RigidBody3D = null
 var _min_d := 999.0
 var _heat_at_bust := 1
+var _box: RigidBody3D = null
+var _brawler: RigidBody3D = null
+var _hp0 := 0.0
+var _press := ""                      # an action fed from idle time for one frame
+var _press_frames := 0
 
 
 func setup(main: Node) -> void:
@@ -78,6 +90,13 @@ func _finish() -> void:
 
 
 func _process(_d: float) -> void:
+	# Any action fed from idle time reads as a real key to the next physics tick.
+	if _press != "":
+		_press_frames += 1
+		if _press_frames <= 2:
+			Input.action_press(_press)
+		else:
+			Input.action_release(_press); _press = ""; _press_frames = 0
 	# Key path for the special: a press fed from idle time is what a real key looks
 	# like to the next physics tick. Tried thrice; the probe falls back to _fire().
 	if _stage == 3 and _sub == 0 and _key_tried < 3:
@@ -106,6 +125,8 @@ func _physics_process(delta: float) -> void:
 		4: _stage_pullover(pv)
 		5: _stage_favor()
 		6: _stage_stranded()
+		7: _stage_drag()
+		8: _stage_melee()
 		_: _finish()
 
 
@@ -349,4 +370,100 @@ func _stage_stranded() -> void:
 				for n in get_tree().get_nodes_in_group("stranded"):
 					if is_instance_valid(n) and not n.is_queued_for_deletion(): cars += 1
 				_say(cars == 0 and re.get("active") == false, "stage6 unanswered, they called somebody else: %d left, active=%s" % [cars, re.get("active")])
+				_stage = 7; _sub = 0; _t = 0.0
+
+
+func _stage_drag() -> void:
+	var pad: Vector3 = REPO.PAD_CENTER
+	match _sub:
+		0:
+			_box = RigidBody3D.new()
+			_box.name = "ProbeDragBox"
+			_box.mass = 1500.0
+			var pm := PhysicsMaterial.new(); pm.friction = 0.2; _box.physics_material_override = pm
+			var col := CollisionShape3D.new(); var bs := BoxShape3D.new()
+			bs.size = Vector3(2.0, 1.1, 4.5); col.shape = bs; _box.add_child(col)
+			main_ref.add_child(_box)
+			_box.global_position = pad + Vector3(4.5, 0.56, -13.0)  # clear of the wrecker and of Book
+			_sub = 1; _t = 0.0
+		1:
+			if not is_instance_valid(_box):
+				_say(false, "stage7 drag box vanished"); _finish(); return
+			_box.apply_central_force(Vector3(0.0, 0.0, 9000.0))  # a chain's pull, straight at the pad
+			var p := _box.global_position
+			var dz := p.z - pad.z
+			if absf(dz) <= REPO.PAD_HALF.y - 1.0 and absf(p.x - pad.x) <= REPO.PAD_HALF.x:
+				_say(true, "stage7 a towed box slides onto the impound pad (z %.1f m from centre after %.1f s, y %.2f)" % [dz, _t, p.y])
+				_box.queue_free(); _stage = 8; _sub = 0; _t = 0.0
+			elif _t > 6.0:
+				_say(false, "stage7 a towed box never made the pad: z %.1f m from centre, y %.2f — the pad edge is a wall to a box on a chain (Milad's report)" % [dz, p.y])
+				_box.queue_free(); _stage = 8; _sub = 0; _t = 0.0
+
+
+func _stage_melee() -> void:
+	var peds := _sys("pedestrians"); var melee := _sys("melee"); var combat := _sys("combat"); var pol := _sys("police")
+	var ch: Variant = main_ref.get("character")
+	if peds == null or melee == null or combat == null or not (ch is CharacterBody3D):
+		_say(false, "stage8 systems or character missing"); _finish(); return
+	var c := ch as CharacterBody3D
+	if pol != null and int(pol.get("heat")) > 0:
+		pol.call("add_heat", -10)   # a brawl draws heat; the law would end this test early
+	match _sub:
+		0:
+			_shot_done = false
+			var ok: bool = combat.call("select_weapon", "fists") == true
+			var fwd := -c.global_transform.basis.z; fwd.y = 0.0; fwd = fwd.normalized()
+			var b: Variant = peds.call("spawn_brawler_at", c.global_position + fwd * 1.3 + Vector3.UP * 0.875, -fwd)
+			_brawler = b if b is RigidBody3D else null
+			_say(ok and _brawler != null, "stage8 fists up, a brave man 1.3 m in front")
+			_hp0 = float(c.get("health"))
+			_press = "fire"
+			_sub = 1; _t = 0.0
+		1:
+			if _t > 0.7:
+				var hits := int(_brawler.get_meta("melee_hits", 0))
+				var st := int(peds.call("state_of", _brawler))
+				_say(hits == 1 and st == 3, "stage8 the jab landed (hits=%d) and he squared up (state=%d, BRAWL=3)" % [hits, st])
+				_sub = 2; _t = 0.0
+		2:
+			var hp := float(c.get("health"))
+			if hp < _hp0:
+				_say(is_equal_approx(_hp0 - hp, 6.0), "stage8 his punch landed unguarded: -%.0f hp after %.1f s (want 6)" % [_hp0 - hp, _t])
+				_hp0 = hp
+				Input.action_press("aim")   # guard up, and held past the perfect window
+				_sub = 3; _t = 0.0
+			elif _t > 3.5:
+				_say(false, "stage8 he never threw a punch in 3.5 s (state=%s punch_in=%s)" % [peds.call("state_of", _brawler), peds.call("punch_in", _brawler)]); _finish()
+		3:
+			var hp := float(c.get("health"))
+			if hp < _hp0:
+				_say(is_equal_approx(_hp0 - hp, 3.0), "stage8 guard held: -%.0f hp (want 3, half)" % (_hp0 - hp))
+				_hp0 = hp
+				Input.action_release("aim")
+				_sub = 4; _t = 0.0
+			elif _t > 3.5:
+				_say(false, "stage8 no punch against the guard in 3.5 s"); _finish()
+		4:
+			var pin := float(peds.call("punch_in", _brawler))
+			if _shots != "" and not _shot_done and pin > 0.0 and pin <= 0.30:
+				_shot_done = true
+				_shot("brawl")   # the plate: he is leaning into the punch
+			if pin > 0.0 and pin <= 0.18:
+				Input.action_press("aim")   # inside the perfect window
+				_sub = 5; _t = 0.0
+			elif _t > 3.5:
+				_say(false, "stage8 no windup to counter in 3.5 s"); _finish()
+		5:
+			if _t > 0.45:
+				var hp := float(c.get("health"))
+				var stunned: bool = peds.call("is_stunned", _brawler) == true
+				_say(is_equal_approx(hp, _hp0) and melee.get("last_block_perfect") == true, "stage8 perfect block: %.0f hp lost, perfect=%s" % [_hp0 - hp, melee.get("last_block_perfect")])
+				_say(stunned, "stage8 he is staggered (stunned=%s)" % stunned)
+				Input.action_release("aim")
+				_press = "fire"   # the counter: an automatic heavy
+				_sub = 6; _t = 0.0
+		6:
+			if _t > 0.8:
+				var st := int(peds.call("state_of", _brawler))
+				_say(st == 2, "stage8 the counter put him down (state=%d, DOWN=2)" % st)
 				_finish()

@@ -340,14 +340,31 @@ func _peer(peer_name: String) -> Node:
 		if n is Node and is_instance_valid(n): return n
 	return null
 
+## D-058 (Milad, 2026-09-13: "the drop-off area was blocking the vehicle"): the
+## pad WAS a 24 cm slab with 22 cm lips, all StaticBody3D — a curb. The wrecker
+## climbs it on its wheels; a towed junker or the Brisket is a BOX on a chain and
+## a box cannot climb a step, so the delivery stopped dead against the edge
+## (probe stage 7: z -7.2 m from centre, exactly the slab face). The pad is now
+## PAINT: 1.5 cm of grey and the hazard stripes as visuals with NO collider.
+## Delivery was always a position test (_handle_release), never a contact.
 func _build_impound() -> void:
-	_static_box(Vector3(PAD_HALF.x * 2.0, 0.24, PAD_HALF.y * 2.0), PAD_CENTER, Color(0.30, 0.30, 0.32), false)
-	for s: float in [-1.0, 1.0]:  # hazard-orange border slabs (low drivable lips)
-		_static_box(Vector3(PAD_HALF.x * 2.0, 0.1, 0.8), PAD_CENTER + Vector3(0, 0.17, s * (PAD_HALF.y - 0.4)), HAZARD, true)
-		_static_box(Vector3(0.8, 0.1, PAD_HALF.y * 2.0 - 1.6), PAD_CENTER + Vector3(s * (PAD_HALF.x - 0.4), 0.17, 0), HAZARD, true)
+	_paint_box(Vector3(PAD_HALF.x * 2.0, 0.015, PAD_HALF.y * 2.0), PAD_CENTER + Vector3(0, 0.0075, 0), Color(0.30, 0.30, 0.32), false)
+	for s: float in [-1.0, 1.0]:  # hazard-orange border stripes, flush
+		_paint_box(Vector3(PAD_HALF.x * 2.0, 0.012, 0.8), PAD_CENTER + Vector3(0, 0.02, s * (PAD_HALF.y - 0.4)), HAZARD, true)
+		_paint_box(Vector3(0.8, 0.012, PAD_HALF.y * 2.0 - 1.6), PAD_CENTER + Vector3(s * (PAD_HALF.x - 0.4), 0.02, 0), HAZARD, true)
 	# Sign pole + hazard board just east of the pad.
 	_static_box(Vector3(0.25, 4.2, 0.25), PAD_CENTER + Vector3(9.0, 2.1, 0), Color(0.5, 0.5, 0.5), false)
 	_static_box(Vector3(2.6, 1.3, 0.2), PAD_CENTER + Vector3(9.0, 3.9, 0), HAZARD, true)
+
+## Visual only: the pad and its stripes must never be a curb to a towed box.
+func _paint_box(size: Vector3, pos: Vector3, color: Color, emissive: bool) -> void:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color; m.roughness = 0.85
+	if emissive: m.emission_enabled = true; m.emission = color
+	var bm := BoxMesh.new(); bm.size = size
+	var mi := MeshInstance3D.new(); mi.mesh = bm; mi.material_override = m
+	mi.position = pos
+	add_child(mi)
 
 func _static_box(size: Vector3, pos: Vector3, color: Color, emissive: bool) -> void:
 	var body := StaticBody3D.new()

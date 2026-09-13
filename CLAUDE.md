@@ -171,13 +171,16 @@ Standing rules the loop exists to enforce:
   `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
   Boot census lines: `RENDER:`, `SURFACES:`, `SKIN LIB:`, `SKIN MICRO:`; `SHOT sun:` at `face`.
-- **Mechanics probe (D-056/D-057):** `godot --headless -- --mech-probe` — 36 checks in ~70 s:
+- **Mechanics probe (D-056…D-058):** `godot --headless -- --mech-probe` — 44 checks in ~80 s:
   legible heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore),
   busted by a cruiser that pulls alongside (card, impound, fine, heat still 1), a favor that
-  covers bail, the stranded-driver spawn and its TTL. Prints `MECH PROBE: PASS (n/n)`. Windowed
-  with `--mech-shots=/abs/dir` it also saves `full_eight.png`, `brake_night.png`, `busted.png`.
-  Run it after any change to police/on_foot/full_eight/arrest/random_events/vehicle_lamps/
-  vehicle_audio/pedestrians.
+  covers bail, the stranded-driver spawn and its TTL, a towed box sliding onto the impound pad,
+  and the melee loop (jab, brawler, guard, perfect block, counter). Prints
+  `MECH PROBE: PASS (n/n)`. Windowed with `--mech-shots=/abs/dir` it also saves `full_eight.png`,
+  `brake_night.png`, `busted.png`, `brawl.png`. Run it after any change to police/on_foot/
+  full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board.
+- **A bug Milad finds by playing goes to the top of the round** (D-058), and gets a probe row
+  that reproduces it BEFORE the fix, so the fix lands with a number.
 - **Taste (D-056):** `docs/design/taste.md` is the discretion for autonomous rounds — thesis,
   ten principles, the rubric, the DNA scorecard, the ranked backlog, anti-taste. Load it before
   choosing what to build; re-score the card at the end of a round.

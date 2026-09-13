@@ -79,7 +79,22 @@ const HEAT_WINDOW := 8.0          # ...and draws at most 1 heat per 8 s
 # matter they multiply their damage by it. Spec for whoever takes that up:
 # officer melee at contact range should deal ~6 hp, halved on a guard, and
 # never through a downed player.
-const GUARD_DAMAGE_MULT := 0.5    # RESERVED — read by nobody yet, on purpose
+const GUARD_DAMAGE_MULT := 0.5    # D-058: read by pedestrians' brawlers now
+# --- Soft lock (D-058): a strike snaps Book's facing onto the nearest standing
+# target inside a wide arc and steps him in so the sphere connects — GTA's
+# fist magnetism. Reach is not extended; only the feet and the facing move.
+const LOCK_EXTRA := 0.9           # m past effective reach a target still pulls the swing
+const LOCK_DOT := 0.35            # cos(~70 deg): acquisition arc, wider than ARC_DOT
+const STEP_IN_GAIN := 3.0         # m/s of step per metre of gap past the reach
+const STEP_IN_MAX := 2.4          # m/s cap on the step
+const STRIKE_SPEED_CAP := 3.4     # m/s stride cap while a swing is live (no sprint-punching)
+# --- A guard that BLOCKS (D-058). pedestrians' brawlers ask guard_damage_mult()
+# and perfect_guard(): a guard raised inside PERFECT_GUARD before the punch
+# lands takes nothing, staggers the puncher, and arms a counter — the next swing
+# is a heavy, whatever beat the chain was on. The guard's age resets on RMB down.
+const PERFECT_GUARD := 0.25       # s after the guard comes up that a block is a counter
+const COUNTER_WINDOW := 1.4       # s the armed counter waits for its swing
+const TRAUMA_BLOCK := 0.08; const TRAUMA_PERFECT := 0.16
 # ALSO DELIBERATELY NOT DONE: capping the stride mid-swing. combat.gd hands the
 # `combat_speed_cap` meta over while a melee weapon is selected (it removes it
 # every tick), so the channel is free — `ch.set_meta("combat_speed_cap", 3.4)`
@@ -141,6 +156,9 @@ const BAT_PITCH := -0.55          # rad: barrel leads the hands, raked up
 # ============================== STATE ========================================
 var is_guarding := false          # public: RMB held with a melee weapon up
 var is_striking := false          # public: mid-swing (windup through recovery)
+var last_block_perfect := false   # public (probe): the last block that landed was a counter
+var _guard_age := 0.0             # s since RMB came down (0 while it is up... or not held)
+var _counter_t := 0.0             # s left on an armed counter
 var main_ref: Node = null
 
 var _rng := RandomNumberGenerator.new()
@@ -250,6 +268,10 @@ func _physics_process(delta: float) -> void:
 		_stand_down(); return                 # a gun is up: LMB/RMB are combat's
 	_ensure_audio(ch); _ensure_prop(ch, def)
 	is_guarding = Input.is_action_pressed("aim")
+	_guard_age = _guard_age + delta if is_guarding else 0.0
+	_counter_t = maxf(_counter_t - delta, 0.0)
+	if is_striking:
+		ch.set_meta("combat_speed_cap", STRIKE_SPEED_CAP)  # combat clears it each tick; we re-assert
 	if _swing_t >= 0.0:
 		_swing_t += delta
 		var t := _swing_t / _swing_len
@@ -310,6 +332,8 @@ func _begin_swing(ch: Node3D, def: Dictionary) -> void:
 	_swing_len = maxf(float(def.get("swing_interval", 0.45)), 0.05)
 	_swing_side = 0 if idx == 0 else 1
 	_swing_heavy = idx == HEAVY_INDEX
+	if _counter_t > 0.0:                      # an armed counter is always the hook
+		_swing_heavy = true; _counter_t = 0.0
 	_swing_two_handed = bool(def.get("two_handed",
 		float(def.get("reach", 1.1)) >= 1.5))
 	if _swing_two_handed: _swing_side = 1     # a bat is swung right-handed
@@ -318,12 +342,39 @@ func _begin_swing(ch: Node3D, def: Dictionary) -> void:
 	_combo_t = _swing_len + COMBO_WINDOW
 	var heavy_swing := bool(def.get("knockdown", false))
 	_play(_whoosh, WHOOSH_DB, 0.70 if heavy_swing else 1.0)
+	_soft_lock(ch, def)
 	if _swing_heavy and not _crouched(ch) and ch is CharacterBody3D:
 		var body := ch as CharacterBody3D
 		if body.is_on_floor():                # step INTO the hook
 			var fwd := -ch.global_transform.basis.z; fwd.y = 0.0
 			if fwd.length() > 0.01:
 				body.velocity += fwd.normalized() * HEAVY_LUNGE
+
+
+## The magnetism: face the nearest standing target in the acquisition arc and
+## step in by the gap, so a swing thrown a shoulder's width off still connects.
+## Whoever is DOWN is skipped here too (THE RAIL applies to the feet as well).
+func _soft_lock(ch: Node3D, def: Dictionary) -> void:
+	var reach := effective_reach(def, _crouched(ch))
+	var fwd := -ch.global_transform.basis.z; fwd.y = 0.0
+	if fwd.length() < 0.01: return
+	fwd = fwd.normalized()
+	var best: Node3D = null; var best_d := INF
+	for g: String in ["pedestrian", "officer"]:
+		for n: Node in get_tree().get_nodes_in_group(g):
+			if not (n is RigidBody3D) or not is_instance_valid(n) or _is_down(n as RigidBody3D): continue
+			var sep := (n as Node3D).global_position - ch.global_position; sep.y = 0.0
+			var d := sep.length()
+			if d < 0.05 or d > reach + LOCK_EXTRA: continue
+			if sep.normalized().dot(fwd) < LOCK_DOT: continue
+			if d < best_d: best_d = d; best = n
+	if best == null: return
+	var to := best.global_position - ch.global_position; to.y = 0.0
+	ch.rotation.y = atan2(-to.x, -to.z)        # face him (forward is -Z)
+	if ch is CharacterBody3D and (ch as CharacterBody3D).is_on_floor() and not _crouched(ch):
+		var gap := best_d - reach
+		if gap > 0.0:
+			(ch as CharacterBody3D).velocity += to.normalized() * minf(gap * STEP_IN_GAIN, STEP_IN_MAX)
 
 
 ## SHAPE CAST, not a ray. A sphere of STRIKE_RADIUS is dropped at torso height
@@ -403,9 +454,13 @@ func _land_ped(ped: RigidBody3D, ch: Node3D, impulse: Vector3,
 		heavy_weapon: bool, arm: Vector3) -> void:
 	var hits := int(ped.get_meta(HITS_META, 0)) + 1
 	ped.set_meta(HITS_META, hits)
-	var down := heavy_weapon or _swing_heavy or hits >= PED_HITS_TO_DOWN
-	if not down: return                          # STAGGER: he keeps his feet
 	var peds := _peer("pedestrians")
+	var stunned: bool = peds != null and peds.has_method("is_stunned") and peds.call("is_stunned", ped) == true
+	var down := heavy_weapon or _swing_heavy or hits >= PED_HITS_TO_DOWN or stunned
+	if not down:                                 # STAGGER: he keeps his feet...
+		if peds != null and peds.has_method("on_melee_hit"):
+			peds.call("on_melee_hit", ped, ch)    # ...and a brave one squares up (the rest run)
+		return
 	if peds != null and peds.has_method("force_knockdown"):
 		peds.call("force_knockdown", ped, ch)     # WALK -> DOWN, unfreezes
 	if ped.freeze: ped.freeze = false
@@ -440,11 +495,35 @@ func _witness_heat(ch: Node3D) -> void:
 				_heat_window = HEAT_WINDOW; _add_heat(1, "BRAWLING IN PUBLIC"); return
 
 
-## RESERVED hook for incoming damage. Nothing calls it yet — foot_cops owns the
-## decision about whether its officers throw punches at all, and this is the
-## number they'd multiply by if a raised guard should matter.
+## PUBLIC (pedestrians' brawlers): the number a punch at Book is multiplied by.
 func guard_damage_mult() -> float:
 	return GUARD_DAMAGE_MULT if is_guarding else 1.0
+
+
+## PUBLIC (pedestrians): true while a freshly raised guard can still counter.
+func perfect_guard() -> bool:
+	return is_guarding and _guard_age <= PERFECT_GUARD
+
+
+## PUBLIC (pedestrians): a punch met the guard. A perfect one arms the counter.
+func on_blocked(perfect: bool) -> void:
+	last_block_perfect = perfect
+	if perfect: _counter_t = COUNTER_WINDOW
+	var ch := _character()
+	if _players.is_empty() and ch != null: _ensure_audio(ch)
+	_play(_crack if perfect else _thock, CRACK_DB if perfect else THOCK_DB, 1.15 if perfect else 0.85)
+	var cam := _camera()
+	if cam != null and cam.has_method("add_trauma"):
+		cam.call("add_trauma", TRAUMA_PERFECT if perfect else TRAUMA_BLOCK)
+
+
+## PUBLIC (pedestrians): the sound and the shake of a punch that landed on Book.
+func play_impact(trauma: float) -> void:
+	var ch := _character()
+	if _players.is_empty() and ch != null: _ensure_audio(ch)
+	_play(_thock, THOCK_DB, _rng.randf_range(0.80, 0.92))
+	var cam := _camera()
+	if cam != null and cam.has_method("add_trauma"): cam.call("add_trauma", trauma)
 
 
 # ============================== CHOREOGRAPHY =================================

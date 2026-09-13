@@ -146,3 +146,10 @@ once QA rules: row 19 → 1 with a real random event that pays forward, row 14 �
 peds react to heat), row 11 held at 2. Next by the rubric: melee guard that blocks (rank 8, cheap),
 then the Paper v1 spike (rank 9) once a mission skeleton with a diegetic timer is designed; fall
 and crash damage stay parked behind the ragdoll.
+
+**Round 3 — 2026-09-13 (D-058).** Milad's first played-it bug report outranked the backlog:
+the impound pad was a curb to a towed box (reproduced by a drag test before the fix, passing
+after). Then rank 8, the melee guard — which turned out to need an opponent first: brave
+pedestrians that square up, a guard that halves, a perfect guard that counters, soft lock and
+step-in. Probe 44/44. Rule learned: a bug Milad finds by playing goes to the top of the round,
+and gets a harness row before the fix so the fix has a number.
