@@ -749,6 +749,7 @@ const EXTRA_LAYERS: Array[String] = [
 	"res://scripts/world/freeway_dressing.gd",
 	"res://scripts/world/wild_dressing.gd",
 	"res://scripts/world/scenic_dressing.gd",
+	"res://scripts/world/street_wear.gd",     # D-059: lids, drains, tar patches on the downtown lanes
 	"res://scripts/world/landmarks.gd",
 	# M21 (defect D-023): downtown's architectural vocabulary. MUST stay LAST —
 	# it re-skins the tower stack from the recorded segments, and it frees the

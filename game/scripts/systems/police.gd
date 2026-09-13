@@ -327,7 +327,9 @@ func _drive(c: Dictionary, delta: float, pv: Node3D) -> void:
 		var parked: bool = c.get("pulled", false) == true
 		if sep_len <= PULLOVER_STOP or (parked and sep_len <= PULLOVER_STOP + PULLOVER_HOLD_SLACK):
 			c["pulled"] = true
-			body.set_external_input(0.0, 1.0, 0.0, true)
+			# Handbrake only: below 0.5 m/s a brake input is REVERSE in raycast_vehicle,
+			# and the park hold (D-059) needs both pedals up to take over.
+			body.set_external_input(0.0, 0.0, 0.0, true)
 			return
 		var gap := sep_len - PULLOVER_STOP
 		var ease := clampf(gap / PULLOVER_EASE_DIST, 0.0, 1.0)

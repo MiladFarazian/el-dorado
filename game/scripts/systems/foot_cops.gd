@@ -171,7 +171,7 @@ func _deploy(cruiser: RigidBody3D, pos: Vector3, pv: Node3D) -> void:
 ## One officer's tick. Returns true when he should despawn.
 func _update_officer(o: Dictionary, body: RigidBody3D, delta: float, pv: Node3D) -> bool:
 	if int(o["state"]) == DOWN:
-		FACTORY.animate(o["rig"] as Dictionary, 0.0, delta, false)
+		# D-059: no animate() on a downed man — the idle would breathe on the pavement.
 		o["down_t"] = float(o["down_t"]) + delta
 		return float(o["down_t"]) >= DOWN_TIME
 	if pv != null:

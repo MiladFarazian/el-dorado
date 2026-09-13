@@ -81,7 +81,8 @@ that doesn't is: *did somebody put a number on it, and did they look from the ba
 
 ## 5. NON-NEGOTIABLE (CI)
 
-- `--smoke` twice, byte-identical: `SMOKE PASS | pos=(193.000000, 1.097957, 517.465332) moved=40.5m speed=16.7m/s`
+- `--smoke` twice, byte-identical: `SMOKE PASS | pos=(193.000000, 1.097968, 517.631836) moved=40.4m speed=16.7m/s`
+  *(Amended 2026-09-13, D-059: the line moved from `1.097957, 517.465332 / 40.5m` when the park hold landed — the truck no longer creeps 17 cm before the throttle comes on at frame 30. Two runs must still match each other byte for byte.)*
 - `--headless --quit-after 900 2>&1`: zero error lines.
   **THE `2>&1` IS MANDATORY AND IS NOT A STYLE CHOICE (QA cycle 2, D-075).** Godot
   writes `WARNING:`, `ERROR:` and `SCRIPT ERROR:` to **stderr only**. An agent running

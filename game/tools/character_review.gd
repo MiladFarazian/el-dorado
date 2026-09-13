@@ -54,6 +54,11 @@ func _run() -> void:
 		if shot[0] == "gait":
 			for i in 24:
 				SKIN.animate(rig, 3.0, 1.0 / 60.0, true, true)
+		else:
+			# D-059: the standing views show the IDLE the player sees, not the bind
+			# pose — 90 fixed steps of it, so the plate is the same every run.
+			for i in 90:
+				SKIN.animate(rig, 0.0, 1.0 / 60.0, false, true)
 		if shot[0] == "normals" or shot[0] == "collar_normals":
 			root.debug_draw = Viewport.DEBUG_DRAW_NORMAL_BUFFER
 		else:

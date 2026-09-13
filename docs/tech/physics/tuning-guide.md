@@ -57,6 +57,13 @@ Every field is optional — the code default is listed in each table.
 | `lateral_stiffness` | N per m/s slip | 8000 | How hard the tire fights sideways slip *below* the friction ceiling. Response sharpness, not ultimate grip. | 5000-15000 | vague, drifty, slow to bite | darty, snappy breakaway |
 | `handbrake_grip_mult` | 0-1 | 0.3 | Multiplies rear `lateral_stiffness` while Space is held. Lower = looser, easier slides. | 0.1-0.5 | rear becomes a hovercraft | handbrake does nothing sideways |
 
+### Park hold (D-059)
+
+| Field | Unit | Default | What it does | Safe range | Too low | Too high |
+|---|---|---|---|---|---|---|
+| `park_hold_speed` | m/s | 0.6 | With no pedal down and all wheels grounded, horizontal speed under this is bled off — the static friction the tyre model does not have. A shove past it releases the hold. | 0.3-1.0 | a nudged car keeps creeping | a slow roll-out from a stop snaps dead |
+| `park_hold_decel` | m/s² | 6.0 | How fast the creep is bled off. | 3-12 | a visible settle after every stop | a hard stop you can feel |
+
 ### Drivetrain and brakes
 
 | Field | Unit | Default | What it does | Safe range | Too low | Too high |

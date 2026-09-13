@@ -200,6 +200,7 @@ func _update_ped(ped: Dictionary, delta: float) -> void:
 	# speed is the scripted one (strolling, or the panic run), not velocity.
 	# A downed ped is loose physics: the rig freezes and it tumbles as a body.
 	var st := int(ped["state"])
+	if st == DOWN: return   # D-059: a tumbling body keeps the pose it fell with; the idle would breathe on the pavement
 	var gait := 0.0
 	if st == WALK: gait = float(ped["speed"])
 	elif st == FLEE: gait = FLEE_SPEED

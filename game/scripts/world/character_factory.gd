@@ -2138,54 +2138,109 @@ static func _build_layers(torso: Node3D, collar: Node3D, rig: Dictionary,
 ## speed. At rest everything eases back to a neutral stand.
 ##   speed  planar m/s
 ##   moving whether the character intends to move (idle vs walk)
+## THE GAIT AND THE IDLE (D-059 rewrite; Milad: "character design is still super
+## shit" — the plates showed an A-pose mannequin whose walk barely swung an arm).
+## Walk amplitude used to scale to SPRINT speed (REF_SPEED 6.5), so a strolling
+## ped at 1.5 m/s swung his hips 8° and his arms 12°: a shuffle. Now the stride
+## amplitude saturates by WALK_SAT (a stroll swings like a stroll) and only the
+## extra — bigger swing, lean, bounce — scales on toward a sprint. The torso
+## counter-rotates on the hips, the forward arm bends at the elbow, the head
+## keeps its eyes level. Phase still advances with DISTANCE, so feet never skate.
+## The idle is no longer zero: elbows bent, shoulders rolled a touch forward,
+## weight shifting slowly, breath in the shoulders, the head drifting a few
+## degrees and back — seeded per rig off its own phase so a crowd never breathes
+## in unison. Joint sign law unchanged: +x swings a limb FORWARD.
+const WALK_SAT := 1.4                # m/s at which the stride reaches walking amplitude
+const WALK_HIP := 0.34; const RUN_HIP := 0.62      # rad, half-swing
+const WALK_ARM := 0.36; const RUN_ARM := 0.60
+const WALK_KNEE := 0.62; const RUN_KNEE := 0.95
+const WALK_BOB := 0.022; const RUN_BOB := 0.045     # m
+const TORSO_TWIST := 0.07            # rad, counter to the hips
+const ELBOW_FRONT := 0.30            # extra bend on the arm swinging forward
+const IDLE_ELBOW := 0.38; const IDLE_SH := 0.10     # bent elbows, shoulders a touch forward
+const IDLE_SWAY := 0.035; const IDLE_SWAY_HZ := 0.16
+const IDLE_BREATH := 0.004; const IDLE_BREATH_HZ := 0.27
+const IDLE_HEAD := 0.12; const IDLE_HEAD_HZ := 0.06
+const IDLE_SLOUCH := 0.03
+
 static func animate(rig: Dictionary, speed: float, delta: float,
 		moving: bool, grounded := true) -> void:
 	if rig.is_empty() or not is_instance_valid(rig.get("vis")):
 		return
-	var intensity := clampf(speed / REF_SPEED, 0.0, 1.4)
+	var stride := clampf(speed / WALK_SAT, 0.0, 1.0)
+	var run := clampf((speed - WALK_SAT) / (REF_SPEED - WALK_SAT), 0.0, 1.0)
 	# Phase advances with DISTANCE, so feet never skate at any speed.
 	var phase := float(rig["phase"]) + speed * delta * TAU * STRIDE_PER_M * 0.5
 	rig["phase"] = fmod(phase, TAU)
+	var it := float(rig.get("idle_t", 0.0)) + delta
+	rig["idle_t"] = it
+	if not rig.has("idle_seed"):
+		rig["idle_seed"] = fmod(float(rig.get("phase", 0.0)) * 7.31 + float(rig.get("base_y", 0.0)) * 13.7, TAU)
+	var seed: float = float(rig["idle_seed"])
 	var k := 1.0 - exp(-BLEND * delta)
+	var walking := moving and speed > 0.15 and grounded
 	var swing := 0.0
 	var bob := 0.0
 	var lean := 0.0
-	if moving and speed > 0.15 and grounded:
+	var sway := 0.0
+	var twist := 0.0
+	var head_y := 0.0
+	var head_x := 0.0
+	var sh_base := 0.0
+	var el_base := 0.12
+	if walking:
 		swing = sin(phase)
-		bob = absf(sin(phase)) * BOB_H * intensity
-		lean = LEAN_MAX * intensity
+		bob = absf(sin(phase)) * lerpf(WALK_BOB, RUN_BOB, run) * stride
+		lean = LEAN_MAX * run
+		sway = -0.04 * (0.5 + 0.5 * run) * sin(phase) * stride
+		twist = -TORSO_TWIST * sin(phase) * stride
+		el_base = lerpf(0.25, ELBOW_BEND, run)
+		head_x = -lean * 0.7                       # eyes stay level
 	elif not grounded:
-		swing = 0.35  # legs tuck slightly in the air
-	var hs := HIP_SWING * intensity * swing
-	var arm := -ARM_SWING * intensity * swing
+		swing = 0.35                               # legs tuck slightly in the air
+	else:                                          # standing: alive, not an A-pose
+		var breath := sin((it * IDLE_BREATH_HZ + seed) * TAU)
+		sway = IDLE_SWAY * sin((it * IDLE_SWAY_HZ + seed * 0.37) * TAU)
+		bob = IDLE_BREATH * (0.5 + 0.5 * breath)
+		lean = IDLE_SLOUCH
+		head_y = IDLE_HEAD * sin((it * IDLE_HEAD_HZ + seed * 0.61) * TAU) * sin((it * 0.043 + seed) * TAU)
+		head_x = -0.02 + 0.01 * breath
+		sh_base = IDLE_SH + 0.015 * breath
+		el_base = IDLE_ELBOW
+	var hip_amp := lerpf(WALK_HIP, RUN_HIP, run) * stride if walking else (0.35 if not grounded else 0.0)
+	var arm_amp := lerpf(WALK_ARM, RUN_ARM, run) * stride if walking else 0.0
+	var knee_amp := lerpf(WALK_KNEE, RUN_KNEE, run) * stride
 	for side in 2:
 		var sgn := 1.0 if side == 0 else -1.0
 		var hip: Node3D = rig["hip_%d" % side]
 		var knee: Node3D = rig["knee_%d" % side]
 		var sh: Node3D = rig["sh_%d" % side]
 		var el: Node3D = rig["el_%d" % side]
-		hip.rotation.x = lerp_angle(hip.rotation.x, hs * sgn, k)
+		hip.rotation.x = lerp_angle(hip.rotation.x, hip_amp * swing * sgn, k)
 		# Knee bends only one way, and most on the recovery (rear) swing.
-		var bend := maxf(-sin(phase * 1.0 + 0.9) * sgn, 0.0) * KNEE_BEND * intensity
+		var bend := maxf(-sin(phase + 0.9) * sgn, 0.0) * knee_amp if walking else 0.0
 		if not grounded:
 			bend = 0.5
+		elif not walking:
+			bend = 0.04 + 0.03 * maxf(-sway * sgn * 20.0, 0.0)   # the unweighted knee softens
 		knee.rotation.x = lerp_angle(knee.rotation.x, -bend, k)
-		sh.rotation.x = lerp_angle(sh.rotation.x, arm * sgn, k)
 		# JOINT SIGN LAW (M16 fix — a limb hangs down -Y, so a POSITIVE
 		# rotation.x swings it toward -Z = FORWARD):
 		#   knee flexion is BACKWARD -> negative (heel to butt) — correct above
 		#   elbow flexion is FORWARD -> POSITIVE
-		# M10 gave the elbow the knee's sign, so every arm in the game bent
-		# backwards at the elbow from M10 until now (Milad: "when ppl walk the
-		# elbows are backwards"). Knees and elbows are mirror joints; they can
-		# never share a sign.
-		el.rotation.x = lerp_angle(el.rotation.x,
-			ELBOW_BEND * (0.4 + 0.6 * intensity) if moving else 0.12, k)
+		# Knees and elbows are mirror joints; they can never share a sign.
+		var arm := -arm_amp * swing * sgn
+		sh.rotation.x = lerp_angle(sh.rotation.x, sh_base + arm, k)
+		var front := clampf(arm / maxf(arm_amp, 0.01), 0.0, 1.0) if walking else 0.0
+		el.rotation.x = lerp_angle(el.rotation.x, el_base + ELBOW_FRONT * front, k)
 	var torso: Node3D = rig["torso"]
 	torso.rotation.x = lerp_angle(torso.rotation.x, lean, k)
-	torso.rotation.z = lerp_angle(torso.rotation.z, -0.04 * intensity * sin(phase), k)
+	torso.rotation.z = lerp_angle(torso.rotation.z, sway, k)
+	torso.rotation.y = lerp_angle(torso.rotation.y, twist, k)
 	var head: Node3D = rig["head"]
-	head.rotation.x = lerp_angle(head.rotation.x, -lean * 0.7, k)  # eyes stay level
+	head.rotation.x = lerp_angle(head.rotation.x, head_x, k)
+	if not walking:
+		head.rotation.y = lerp_angle(head.rotation.y, head_y, k)
 	var vis: Node3D = rig["vis"]
 	if not rig.has("base_y"):
 		rig["base_y"] = vis.position.y   # the feet line this rig was built at

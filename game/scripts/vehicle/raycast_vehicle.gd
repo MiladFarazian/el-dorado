@@ -334,6 +334,7 @@ func _physics_process(delta: float) -> void:
 		if w["drives"]:
 			n_drive += 1
 	n_drive = maxi(n_drive, 1)
+	var n_grounded := 0
 
 	var engine_force := _f("max_engine_force", 9000.0) * power_modifier \
 		* clampf(1.0 - forward_speed / _f("top_speed", 40.0), 0.0, 1.0)
@@ -358,6 +359,7 @@ func _physics_process(delta: float) -> void:
 		var comp_vel := 0.0 if _just_reset else (compression - float(w["compression"])) / delta
 		w["compression"] = compression
 		w["grounded"] = true
+		n_grounded += 1
 
 		# Suspension: spring + damper along body up, applied at the hardpoint.
 		var spring_force := _f("spring_rate", 45000.0) * compression + _f("damping", 4500.0) * comp_vel
@@ -416,11 +418,29 @@ func _physics_process(delta: float) -> void:
 
 	_just_reset = false
 
-	# Aero + rolling resistance.
-	if speed > 0.5:
-		var resist := _f("drag", 0.5) * speed * speed + _f("rolling_resistance", 150.0)
+	# Aero + rolling resistance. Rolling resistance used to start at 0.5 m/s and
+	# nothing below it: a creeping car accelerated to exactly 0.5 and stayed there.
+	# It now fades in from rest, so a creep is damped from its first centimetre.
+	if speed > 0.02:
+		var resist := _f("drag", 0.5) * speed * speed \
+			+ _f("rolling_resistance", 150.0) * clampf(speed / 0.5, 0.0, 1.0)
 		apply_central_force(-linear_velocity.normalized() * resist)
 	apply_central_force(-up * _f("downforce", 2.0) * speed * speed)
+
+	# PARK HOLD (D-059; Milad: "all cars drift forward when they shouldn't").
+	# The tyre model has no static friction: lateral force is slip-proportional
+	# and longitudinal force is engine or brake only, so a car at rest with its
+	# body pitched a degree by com_forward is pushed along its nose by its own
+	# springs (they act along BODY up) and nothing answers — 3.27 m in 8 s on the
+	# flat spawn street, measured. Real tyres hold that with static friction;
+	# here, with no pedal down and every wheel on the ground, the horizontal
+	# velocity below park_hold_speed is bled off at park_hold_decel. A shove from
+	# outside (a ram, a tow) exceeds the speed and the hold lets go.
+	if throttle <= 0.0 and brake <= 0.0 and n_grounded == wheels.size():
+		var hv := linear_velocity - up * linear_velocity.dot(up)
+		if hv.length() < _f("park_hold_speed", 0.6):
+			var held := hv.move_toward(Vector3.ZERO, _f("park_hold_decel", 6.0) * delta)
+			linear_velocity += held - hv
 
 	# Visual wheel placement + spin.
 	for w in wheels:

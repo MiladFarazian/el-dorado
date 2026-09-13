@@ -171,16 +171,24 @@ Standing rules the loop exists to enforce:
   `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
   Boot census lines: `RENDER:`, `SURFACES:`, `SKIN LIB:`, `SKIN MICRO:`; `SHOT sun:` at `face`.
-- **Mechanics probe (D-056…D-058):** `godot --headless -- --mech-probe` — 44 checks in ~80 s:
-  legible heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore),
+- **Mechanics probe (D-056…D-059):** `godot --headless -- --mech-probe` — 45 checks in ~90 s:
+  a parked truck stays parked (drift < 2 cm over 8 s), legible heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore),
   busted by a cruiser that pulls alongside (card, impound, fine, heat still 1), a favor that
   covers bail, the stranded-driver spawn and its TTL, a towed box sliding onto the impound pad,
   and the melee loop (jab, brawler, guard, perfect block, counter). Prints
-  `MECH PROBE: PASS (n/n)`. Windowed with `--mech-shots=/abs/dir` it also saves `full_eight.png`,
+  `MECH PROBE: PASS (n/n)`; `--mech-only=N` runs one stage. Windowed with `--mech-shots=/abs/dir` it also saves `full_eight.png`,
   `brake_night.png`, `busted.png`, `brawl.png`. Run it after any change to police/on_foot/
   full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board.
 - **A bug Milad finds by playing goes to the top of the round** (D-058), and gets a probe row
   that reproduces it BEFORE the fix, so the fix lands with a number.
+- **A script-built MultiMesh can carry an EMPTY AABB** (D-059): `street_wear.gd`'s three
+  MultiMeshes rendered nothing for two sweeps — `get_aabb()` read zero — until
+  `MultiMesh.custom_aabb` was set from the instance origins. Set it on every runtime MultiMesh
+  (tire_fx already does); and never give a city-wide MultiMeshInstance3D a `visibility_range`,
+  which is measured from ITS origin, not the instances'. Headless cannot show AABBs (dummy
+  renderer): judge visibility with a windowed plate at a vantage that actually contains the layer.
+- **The smoke line is now** `pos=(193.000000, 1.097968, 517.631836) moved=40.4m speed=16.7m/s`
+  (D-059, the park hold); two runs must still match each other byte for byte.
 - **Taste (D-056):** `docs/design/taste.md` is the discretion for autonomous rounds — thesis,
   ten principles, the rubric, the DNA scorecard, the ranked backlog, anti-taste. Load it before
   choosing what to build; re-score the card at the end of a round.

@@ -162,6 +162,22 @@ Bar: `docs/qa/quality-bar.md`.
 >   brave pedestrians square up and punch (6 hp, 1.1 s), guard halves, perfect guard counters,
 >   soft lock and step-in, stride cap while swinging. Evidence: probe stage 8 (7/7),
 >   `evidence/mechanics-sept13/brawl.png`. QA to rule by hand on a downtown block at fists.
+> - **D-128 [S2] Every car crept forward at rest** — Milad, 2026-09-13: "all cars drift forward
+>   when they shouldn't." Measured: 3.27 m in 8 s, settling at 0.50 m/s (the rolling-resistance
+>   threshold). Root cause: no static friction in the tyre model; springs along body up.
+>   PRODUCER-CLAIMED FIXED (D-059): park hold + rolling resistance from rest. Evidence:
+>   `evidence/mechanics-sept13/round4/drift_before.log` (3.270 m) / `drift_after.log` (0.000 m);
+>   probe stage 0 guards it. QA to rule with a parked car on the frontage slope.
+> - **D-129 [S2] Characters stood in an A-pose and walked in a shuffle** (the "super shit" note;
+>   review `full.png`: arms straight; `gait.png`: 8° hips at a stroll). PRODUCER-CLAIMED FIXED
+>   (D-059): `animate()` rewritten — stride saturates at 1.4 m/s, torso twist, elbow on the
+>   forward arm, a living idle. Evidence: `round4/gait_before.png` → `gait_after.png`,
+>   `full_before.png` → `full_after.png`. QA to rule at `gait` and `full`; the idle still hangs
+>   its hands open (D-114 territory).
+> - **D-130 [S3] The downtown roadway was a clean plane with paint on it** (the "not detailed"
+>   note; `street_detail.png`). PRODUCER-CLAIMED IMPROVED (D-059): `street_wear.gd` — 230 lids,
+>   280 drains, 460 tar patches, three draw calls. Evidence: `round4/street_detail_before.png` →
+>   `street_detail_after.png`. QA to rule; the frontage roads and the suburb remain clean.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,

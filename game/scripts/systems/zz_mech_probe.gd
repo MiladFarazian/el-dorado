@@ -1,6 +1,9 @@
 extends Node
 ## MECHANICS PROBE — permanent QA infrastructure for D-056 (`godot -- --mech-probe`,
 ## headless is fine). Reads state, never renders. Stages:
+##  0. a parked truck stays parked (Milad, 2026-09-13: "all cars drift forward when
+##     they shouldn't"): no input for 8 s on the flat spawn street, horizontal drift
+##     must stay under 2 cm.
 ##  1. legible heat: add_heat(1, reason) publishes last_reason and the banner subline.
 ##  2. the Full Eight charges from speed (threshold lowered to what the spawn street
 ##     reaches), brake lamps flare on S and the horn plays on H while driving.
@@ -38,6 +41,8 @@ var _min_d := 999.0
 var _heat_at_bust := 1
 var _box: RigidBody3D = null
 var _brawler: RigidBody3D = null
+var _p0 := Vector3.ZERO
+var _only := -1                       # --mech-only=N: run stage N alone, then quit
 var _hp0 := 0.0
 var _press := ""                      # an action fed from idle time for one frame
 var _press_frames := 0
@@ -49,6 +54,8 @@ func setup(main: Node) -> void:
 	if bool(main.get("smoke_mode")) or not args.has("--mech-probe"):
 		set_physics_process(false); set_process(false); return
 	for a in args:
+		if a.begins_with("--mech-only="):
+			_only = int(a.substr(12))
 		if a.begins_with("--mech-shots="):
 			_shots = a.substr(13)
 			DirAccess.make_dir_recursive_absolute(_shots)
@@ -116,9 +123,7 @@ func _physics_process(delta: float) -> void:
 			_say(false, "no player vehicle after 8 s"); _finish()
 		return
 	match _stage:
-		0:
-			if _t >= 2.0:
-				_stage = 1; _t = 0.0
+		0: _stage_drift(pv)
 		1: _stage_heat()
 		2: _stage_drive(pv)
 		3: _stage_fire(pv)
@@ -467,3 +472,21 @@ func _stage_melee() -> void:
 				var st := int(peds.call("state_of", _brawler))
 				_say(st == 2, "stage8 the counter put him down (state=%d, DOWN=2)" % st)
 				_finish()
+
+
+func _stage_drift(pv: RigidBody3D) -> void:
+	match _sub:
+		0:
+			if _t >= 2.0:   # let the springs settle
+				_p0 = pv.global_position
+				_sub = 1; _t = 0.0
+		1:
+			if _t >= 8.0:
+				var d := pv.global_position - _p0
+				var horiz := Vector2(d.x, d.z).length()
+				var fwd := -pv.global_transform.basis.z
+				var along := Vector3(d.x, 0.0, d.z).dot(Vector3(fwd.x, 0.0, fwd.z).normalized())
+				_say(horiz < 0.02, "stage0 parked wrecker drift over 8 s: %.3f m (%.3f m along its nose, speed now %.3f m/s; want < 0.02)" % [horiz, along, pv.linear_velocity.length()])
+				if _only == 0:
+					_finish(); return
+				_stage = 1; _sub = 0; _t = 0.0

@@ -153,3 +153,12 @@ after). Then rank 8, the melee guard — which turned out to need an opponent fi
 pedestrians that square up, a guard that halves, a perfect guard that counters, soft lock and
 step-in. Probe 44/44. Rule learned: a bug Milad finds by playing goes to the top of the round,
 and gets a harness row before the fix so the fix has a number.
+
+**Round 4 — 2026-09-13 (D-059).** Milad's three notes ran the round: a drift bug (measured 3.27 m,
+fixed to 0.000 with a park hold and a probe row), the mannequin (a rewritten animator: a stroll
+that swings like a stroll, an idle that breathes), and detail (a street-wear layer: lids, drains,
+tar). Gate 5/5, probe 45/45. Lesson filed: a script-built MultiMesh can carry an empty AABB and cull
+itself everywhere — two sweeps showed a clean road until a diagnostic printed the bounds; set
+`custom_aabb`, and judge a new layer at a vantage that actually contains it.
+Next: hands that curl at rest, foot roll, wear on the frontage and suburb roads; then the
+backlog (rank 9, the Paper v1 spike).
