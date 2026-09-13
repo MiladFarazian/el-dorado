@@ -206,6 +206,28 @@ func _update_ped(ped: Dictionary, delta: float) -> void:
 	elif st == FLEE: gait = FLEE_SPEED
 	elif st == BRAWL and bool(ped["moving"]): gait = BRAWL_SPEED
 	FACTORY.animate(ped["rig"] as Dictionary, gait, delta, st != DOWN)
+	if st == BRAWL: _brawl_arms(ped, delta)   # after animate: the last writer wins the frame
+
+## D-060: the brawler's hands are up and the punch is an ARM, not just a lean.
+## Same joint grammar as melee.gd (+x swings a limb forward): both fists up in a
+## guard between punches; over the windup the right arm cocks back, at impact it
+## drives through, then it recovers to the guard. Stunned: the arms drop.
+func _brawl_arms(ped: Dictionary, delta: float) -> void:
+	var rig: Dictionary = ped["rig"]
+	if rig.is_empty(): return
+	var k := 1.0 - exp(-22.0 * delta)
+	var pt := float(ped["punch_t"])
+	var stunned := float(ped["stun_t"]) > 0.0
+	var sh_r := 0.95; var el_r := 1.85; var sh_l := 0.85; var el_l := 1.95   # the guard
+	if stunned:
+		sh_r = 0.25; el_r = 0.45; sh_l = 0.25; el_l = 0.45                    # rocked: arms sag
+	elif pt <= PUNCH_WINDUP:
+		var w := 1.0 - clampf(pt / PUNCH_WINDUP, 0.0, 1.0)                  # 0 cocked .. 1 landing
+		sh_r = lerpf(0.30, 1.60, w); el_r = lerpf(2.10, 0.15, w)             # cock back, drive through
+	for pair: Array in [["sh_1", sh_r], ["el_1", el_r], ["sh_0", sh_l], ["el_0", el_l]]:
+		var j: Variant = rig.get(pair[0])
+		if j is Node3D:
+			(j as Node3D).rotation.x = lerp_angle((j as Node3D).rotation.x, float(pair[1]), k)
 
 ## Distance math only against the cached threat set — NO raycasts. Positions
 ## and velocities read live off the cached body refs; membership is the part

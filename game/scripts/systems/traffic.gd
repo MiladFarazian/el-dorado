@@ -295,6 +295,7 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 			_unfreeze(car); return
 	var limit := _sense_limit(car, body, heading)
 	limit = minf(limit, _follow_limit(car, body, heading))
+	_honk_check(car, body, heading, limit, delta)
 	if turning:
 		_set_speed(car, minf(limit, TURN_SPEED), delta); _step_turn(car, body, delta); return
 	var dirv := car["dir"] as Vector3
@@ -324,6 +325,51 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 	_set_speed(car, limit, delta)
 	var pos := body.global_position + dirv * float(car["speed"]) * delta
 	pos.y = float(car["ride"]); _place(body, dirv, pos)
+
+# ============================== THE HORN (D-060) =============================
+## A driver you are holding up leans on the horn — DNA §4: "drivers honk, flee,
+## fight back". Blocked (lane speed under HONK_SPEED) with the PLAYER ahead in
+## the lane for HONK_AFTER seconds → one honk, then a cooldown drawn off the
+## runtime stream, never the seeded spawn draws. The stream is vehicle_audio's
+## own horn synthesis, pitched a little differently per honk.
+const HONK_AFTER := 2.4; const HONK_SPEED := 0.4; const HONK_GAP := 10.0
+const HONK_COOLDOWN := Vector2(4.0, 8.0); const HONK_DB := -6.0; const HONK_LEN := 0.9
+func _honk_check(car: Dictionary, body: RigidBody3D, heading: Vector3, limit: float, delta: float) -> void:
+	var actor := _player_actor()
+	var blocked := false
+	if limit < HONK_SPEED and actor != null:
+		blocked = _gap_ahead(body.global_position, heading, actor.global_position, float(car["half_len"])) < HONK_GAP
+	car["blocked_t"] = float(car.get("blocked_t", 0.0)) + delta if blocked else 0.0
+	car["honk_cd"] = maxf(float(car.get("honk_cd", 0.0)) - delta, 0.0)
+	if float(car["blocked_t"]) >= HONK_AFTER and float(car["honk_cd"]) <= 0.0:
+		car["honk_cd"] = _sig_rng.randf_range(HONK_COOLDOWN.x, HONK_COOLDOWN.y)
+		car["blocked_t"] = 0.0
+		_honk(car, body)
+
+func _honk(car: Dictionary, body: RigidBody3D) -> void:
+	var sys: Variant = main_ref.get("systems") if main_ref != null else null
+	if not (sys is Dictionary) or not (sys as Dictionary).has("vehicle_audio"): return
+	var va: Variant = (sys as Dictionary)["vehicle_audio"]
+	if not (va is Node) or not (va as Node).has_method("horn_stream"): return
+	var stream: Variant = (va as Node).call("horn_stream")
+	if not (stream is AudioStreamWAV): return
+	var p: Variant = car.get("horn_p")
+	if not (p is AudioStreamPlayer3D) or not is_instance_valid(p):
+		var np := AudioStreamPlayer3D.new()
+		np.stream = stream; np.unit_size = 12.0; np.max_distance = 150.0; np.volume_db = HONK_DB
+		body.add_child(np); car["horn_p"] = np; p = np
+	var hp := p as AudioStreamPlayer3D
+	hp.pitch_scale = 0.9 + 0.2 * _sig_rng.randf()   # not every horn is the same horn
+	hp.play()
+	get_tree().create_timer(HONK_LEN).timeout.connect(func() -> void:
+		if is_instance_valid(hp): hp.stop())   # the stream loops; a honk is a beat
+
+## The body a driver is stuck behind: the player's vehicle, or Book on foot.
+func _player_actor() -> Node3D:
+	if main_ref == null: return null
+	var key := "character" if main_ref.get("on_foot") == true else "vehicle"
+	var a: Variant = main_ref.get(key)
+	return a if a is Node3D and is_instance_valid(a) and (a as Node).is_inside_tree() else null
 
 ## ONE bumper-height ray per car per frame (10 cars = 10 rays, the whole
 ## budget); hit distance maps to a limit: 0 at STOP_GAP, full at +8 m.

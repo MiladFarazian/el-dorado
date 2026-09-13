@@ -178,6 +178,17 @@ Bar: `docs/qa/quality-bar.md`.
 >   note; `street_detail.png`). PRODUCER-CLAIMED IMPROVED (D-059): `street_wear.gd` — 230 lids,
 >   280 drains, 460 tar patches, three draw calls. Evidence: `round4/street_detail_before.png` →
 >   `street_detail_after.png`. QA to rule; the frontage roads and the suburb remain clean.
+> - **D-131 [S3] The hands hung as paddles** — straight fingers at rest (review `hand.png`,
+>   2026-09-13 morning). PRODUCER-CLAIMED FIXED (D-060): proximal ~15°, middle ~40° flexion in
+>   `character_hands.gd`. Evidence: `evidence/mechanics-sept13/round5/hand_before.png` →
+>   `hand_after.png`. QA to rule at `hand`.
+> - **D-132 [S3] The lips read as a smudge at `face`** despite 3–4 mm crowns. PRODUCER-CLAIMED
+>   IMPROVED (D-060): deeper, slightly wider vermilion multipliers. Evidence: `round5/face_before.png`
+>   → `face_after.png`. QA to rule.
+> - **D-133 [S4] The brawler's punch was a lean; traffic never honked.** PRODUCER-CLAIMED FIXED
+>   (D-060): `_brawl_arms` (guard, cock, drive, sag) and `traffic._honk_check` (2.4 s blocked → horn).
+>   Evidence: `round5/brawl.png` (arms up); the honk is unprobed — QA by hand at a light.
+> - **D-130 update:** the frontage strips now carry wear too (390 lids, 790 patches). Suburb still clean.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,

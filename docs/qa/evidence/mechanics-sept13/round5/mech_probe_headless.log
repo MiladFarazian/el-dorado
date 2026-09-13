@@ -1,0 +1,46 @@
+MECHPROBE PASS stage0 parked wrecker drift over 8 s: 0.000 m (0.000 m along its nose, speed now 0.000 m/s; want < 0.02)
+MECHPROBE PASS stage1 last_reason published: PROBE CRIME
+MECHPROBE PASS stage1 banner subline shows the reason
+MECHPROBE PASS stage1 evaded clears the reason
+MECHPROBE PASS stage2 rope charged from speed: 0.245 after 3 s at 18.0 m/s
+MECHPROBE PASS stage2 headlamp spots bound to the ride: 2
+MECHPROBE PASS stage2 tail lamp material is private to the player's ride
+MECHPROBE PASS stage2 brake lamps flare on S: energy 6.50 (idle 1.5, brake 6.5)
+MECHPROBE PASS stage2 horn plays while H is held
+MECHPROBE PASS stage2 brake lamps settle on release: energy 1.50
+MECHPROBE PASS stage2 horn stops on release
+MECHPROBE PASS stage3 fired from the key path (special)
+MECHPROBE PASS stage3 time scale 0.35 (want 0.35)
+MECHPROBE PASS stage3 audio scale 0.55 (want 0.55)
+MECHPROBE PASS stage3 grip bonus 1.30 (want 1.30)
+MECHPROBE PASS stage3 chain held
+MECHPROBE PASS stage3 ended on its own after 2.8 game-s (8.0 real-s)
+MECHPROBE PASS stage3 time restored 1.00
+MECHPROBE PASS stage3 audio restored 1.00
+MECHPROBE PASS stage3 grip restored 1.00
+MECHPROBE PASS stage3 chain released
+MECHPROBE PASS stage3 cooldown armed 6.0 s
+MECHPROBE PASS stage4 cruiser pulled alongside and busted a still Book after 8.3 s (closest 5.2 m, at the bust 5.2 m, cruiser speed 0.03)
+MECHPROBE PASS stage4 heat at the bust 1 (want 1; last reason: PROBE: LOITERING)
+MECHPROBE PASS stage4 the card says BUSTED.
+MECHPROBE PASS stage4 wrecker on the impound lot: 3.7 m from the pad
+MECHPROBE PASS stage4 Book on foot on the lot
+MECHPROBE PASS stage4 heat cleared
+MECHPROBE PASS stage4 fine paid: $1687 -> $1537 (want -150 at 1 star(s))
+MECHPROBE PASS stage5 the favor was spent (favors=0)
+MECHPROBE PASS stage5 the card carries the favor line: LONGHORN IMPOUND. Somebody you towed made a call. Bail's covered.
+MECHPROBE PASS stage5 no fine with a favor owed: $1537 -> $1537
+MECHPROBE PASS stage5 heat cleared
+MECHPROBE PASS stage6 spawn_now placed a stranded driver: STRANDED · MARISOL
+MECHPROBE PASS stage6 one dead sedan, one driver (1/1), active=true
+MECHPROBE PASS stage6 a beacon marks it (7 beacon(s) in the world)
+MECHPROBE PASS stage6 unanswered, they called somebody else: 0 left, active=false
+MECHPROBE PASS stage7 a towed box slides onto the impound pad (z -3.9 m from centre after 2.2 s, y 0.54)
+MECHPROBE PASS stage8 fists up, a brave man 1.3 m in front
+MECHPROBE PASS stage8 the jab landed (hits=1) and he squared up (state=3, BRAWL=3)
+MECHPROBE PASS stage8 his punch landed unguarded: -6 hp after 0.6 s (want 6)
+MECHPROBE PASS stage8 guard held: -3 hp (want 3, half)
+MECHPROBE PASS stage8 perfect block: 0 hp lost, perfect=true
+MECHPROBE PASS stage8 he is staggered (stunned=true)
+MECHPROBE PASS stage8 the counter put him down (state=2, DOWN=2)
+MECH PROBE: PASS (45/45)

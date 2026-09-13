@@ -933,10 +933,12 @@ static func _face_tint(x: float, y: float, theta: float, asym: float,
 	if stub > 0.0:
 		t = t.lerp(Color(0.80, 0.78, 0.77), stub * _bmp((y - 0.0560) / 0.0560)
 			* _sst((cos(theta) + 0.30) / 0.60))
-	t = t.lerp(Color(1.06, 0.64, 0.61),
-		fw * _bmp(x / 0.0272) * _bmp((y - (ys + 0.0072)) / 0.0098))
-	t = t.lerp(Color(1.12, 0.72, 0.68),
-		fw * _bmp(x / 0.0258) * _bmp((y - (ys - 0.0084)) / 0.0106))
+	# D-060: the vermilion reads as a smudge at `face` — deeper, a touch wider,
+	# still a multiplier on the skin so every tone keeps its own lip colour.
+	t = t.lerp(Color(0.98, 0.52, 0.50),
+		fw * _bmp(x / 0.0280) * _bmp((y - (ys + 0.0072)) / 0.0104))
+	t = t.lerp(Color(1.04, 0.60, 0.57),
+		fw * _bmp(x / 0.0266) * _bmp((y - (ys - 0.0084)) / 0.0112))
 	t = t.lerp(Color(0.24, 0.17, 0.16),
 		fw * _bmp(x / 0.0260) * _bmp((y - ys) / 0.0022))
 	t = t.lerp(Color(0.16, 0.12, 0.11),

@@ -17,6 +17,8 @@ const EW_Z0 := 133.0; const EW_DZ := 86.0; const EW_COUNT := 5
 const NS_Z_RANGE := Vector2(50.0, 546.0)
 const EW_X_RANGE := Vector2(110.0, 780.0)
 const KERB := 13.0
+const FRONTAGE_Z := 30.0; const FRONTAGE_X := 754.0   # greybox_city's frontage strips
+const FRONTAGE_TOP := 0.05; const FRONTAGE_LANE := 2.8; const FRONTAGE_HALF := 6.0
 const LANE_C := 3.5                   # travel-lane centre from the street centreline
 const CROSS_CLEAR := 17.0             # no wear inside a crossing box
 const WEAR_Y := 0.048                 # 2 mm over city_dressing's ROW_PAINT_Y
@@ -51,6 +53,11 @@ func build(_city: Node3D) -> void:
 	for j in EW_COUNT:
 		var cz := EW_Z0 + EW_DZ * float(j)
 		_lane_wear(lids, patches, Vector3(EW_X_RANGE.x, 0.0, cz), Vector3(1, 0, 0), EW_X_RANGE.y - EW_X_RANGE.x, Vector3(0, 0, 1), _ns_centres())
+	# The two frontage strips under the freeway (greybox_city: 12 m wide at z = ±30,
+	# surface 0.05): one lane each way, lids on the lane centres, no crossings to clear.
+	for side: float in [-1.0, 1.0]:
+		_lane_wear(lids, patches, Vector3(-FRONTAGE_X, FRONTAGE_TOP - WEAR_Y, side * FRONTAGE_Z), Vector3(1, 0, 0),
+			FRONTAGE_X * 2.0, Vector3(0, 0, 1), [], FRONTAGE_LANE, FRONTAGE_HALF)
 	_emit(_lid_mesh(), _iron(), lids)
 	_emit(_drain_mesh(), _iron(), drains)
 	_emit(_patch_mesh(), _tar(), patches)
@@ -83,18 +90,20 @@ func _diag() -> void:
 ## Along one street: lids on both travel lanes every MANHOLE_STEP, patches at
 ## random along the lanes, none inside a crossing box.
 func _lane_wear(lids: Array[Transform3D], patches: Array[Transform3D], start: Vector3,
-		along: Vector3, length: float, across: Vector3, crossings: Array[float]) -> void:
+		along: Vector3, length: float, across: Vector3, crossings: Array[float],
+		lane_c := LANE_C, half := KERB) -> void:
+	var y := WEAR_Y + start.y   # start.y carries a surface offset (the frontage sits at 0.05)
 	var s := _rng.randf_range(6.0, MANHOLE_STEP)
 	while s < length:
 		for side: float in [-1.0, 1.0]:
-			var p := start + along * s + across * (side * LANE_C)
+			var p := start + along * s + across * (side * lane_c)
 			if not _in_crossing(p, along, crossings):
-				lids.append(Transform3D(Basis.from_euler(Vector3(0, _rng.randf() * TAU, 0)), Vector3(p.x, WEAR_Y, p.z)))
+				lids.append(Transform3D(Basis.from_euler(Vector3(0, _rng.randf() * TAU, 0)), Vector3(p.x, y, p.z)))
 		s += MANHOLE_STEP + _rng.randf_range(-6.0, 6.0)
 	var n := int(length * 2.0 * PATCH_PER_LANE_M)
 	for _i in n:
 		var t := _rng.randf() * length
-		var off := _rng.randf_range(-KERB + 2.0, KERB - 2.0)
+		var off := _rng.randf_range(-half + 2.0, half - 2.0)
 		var p := start + along * t + across * off
 		if _in_crossing(p, along, crossings):
 			continue
@@ -102,7 +111,7 @@ func _lane_wear(lids: Array[Transform3D], patches: Array[Transform3D], start: Ve
 		var h := _rng.randf_range(PATCH_SIZE.x, PATCH_SIZE.y)
 		var yaw := atan2(along.x, along.z) + _rng.randf_range(-0.12, 0.12) + (PI * 0.5 if _rng.randf() < 0.5 else 0.0)
 		var b := Basis.from_euler(Vector3(0, yaw, 0)).scaled(Vector3(w, 1.0, h))
-		patches.append(Transform3D(b, Vector3(p.x, WEAR_Y - 0.001, p.z)))
+		patches.append(Transform3D(b, Vector3(p.x, y - 0.001, p.z)))
 
 
 func _in_crossing(p: Vector3, along: Vector3, crossings: Array[float]) -> bool:

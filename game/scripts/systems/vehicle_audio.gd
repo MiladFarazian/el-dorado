@@ -176,6 +176,11 @@ func _ensure_players(veh: RigidBody3D) -> void:
 		_horn = _make_player(veh, _horn_stream, HORN_UNIT_SIZE, HORN_MAX_DIST, HORN_DB)
 
 
+## PUBLIC (traffic): the same horn, for a driver you are holding up (D-060).
+func horn_stream() -> AudioStreamWAV:
+	return _horn_stream
+
+
 ## H, held: the loop plays; the press edge tells the walkers ahead to move.
 func _update_horn(veh: RigidBody3D) -> void:
 	if _horn == null or not is_instance_valid(_horn):

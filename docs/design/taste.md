@@ -162,3 +162,9 @@ itself everywhere — two sweeps showed a clean road until a diagnostic printed 
 `custom_aabb`, and judge a new layer at a vantage that actually contains it.
 Next: hands that curl at rest, foot roll, wear on the frontage and suburb roads; then the
 backlog (rank 9, the Paper v1 spike).
+
+**Round 5 — 2026-09-13 (D-060).** "More improvements." Stayed on the character note: hands that
+rest, lips that read, a brawler who swings; then drivers who honk and wear on the frontage.
+Found the ceiling: the shirt and trousers are painted on the body by the palette architecture, so
+cloth VOLUME is a milestone (a shell wardrobe), not a round. Filed as the next character lever.
+Gate 5/5, probe 45/45.
