@@ -651,6 +651,14 @@ Deep dive, including the per-layer table of what casts and why: `docs/tech/rende
 **Rule that came with it (CLAUDE.md):** anatomy changes are measured with `body_measure.gd` before and after, against the anthropometric row in `anatomy-sept13.md`; a plate alone does not close an anatomy defect.
 **Owner:** producer. **Open:** the armpit notch at the nipple line is under one cell; the deltoid still reads square in the sleeve; no scapulae; boots; cloth volume (D-060, a milestone).
 
+## D-062 · 2026-09-13 · Round 7: a boot, not a loaf; pecs, blades and a lumbar curve; a rounder shoulder
+**Status: LANDED, gated — quick gate 5/5 (86 scripts), `--mech-probe` 45/45, warm cache v21, 59-plate sweep clean; plates and the table in `docs/qa/evidence/mechanics-sept13/round7/`, the rows in `docs/qa/anatomy-sept13.md`. QA to rule on D-135 and the D-134 update.**
+**Milad:** *"go."* Inbox empty; the body's remaining faults from D-061's open list, each measured.
+**The boot.** Three foot rows joined `body_measure.gd`; the old foot was three round masses of one height, a loaf on a sole. Now a shaft over the ankle, a vamp sloping from the instep (0.085) to a low toe box (0.045), a heel block with a low blend so it reads as a step, a thin welted sole: 0.30 m long, 0.09 wide, and at instep height only the rear half exists — the toe is lower, which is what a boot is in profile.
+**The chest and the back.** Two pecs with a sternum between them replace the single bar that read as a chest plate; two flat scapula mounds put blades under the shirt; the waist is carried 12 mm forward so the side view has a lumbar curve instead of a plank.
+**The shoulder.** The deltoid cap is 18 % taller than wide and its centre 7 mm lower, and the trapezius slope ends 6 mm lower: the acromion corner rounds off. It still reads a little square in the painted sleeve; the number that would finish it is a sleeve shell (D-060, the milestone).
+**Owner:** producer. **Open:** the sleeve; the arm and trunk read as one mass at 1.25 m at 18 mm (one cell), open in the posed mesh; boots have no laces or pull straps.
+
 ## Pending — needs Milad
 0. **CLOSED 2026-08-11 — downtown street names.** The signage pass placed **HOWDY ST**
    on the EW_Z[2] row (z=305, downtown's eye), which is canon (§6 puts the Texchange on

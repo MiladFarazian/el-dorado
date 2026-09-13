@@ -196,6 +196,13 @@ Bar: `docs/qa/quality-bar.md`.
 >   lats, shoulder pivot 0.192, posture. Evidence: `evidence/mechanics-sept13/round6/` (before/after
 >   `full`, `front`, `body_side`, `back`, `showcase_people`; `measure_before.md` / `measure_after.md`),
 >   `docs/qa/anatomy-sept13.md`. QA to rule; open: deltoid still square in the sleeve, boots.
+> - **D-135 [S3] The boots were loaves** — three round masses of one height on a sole (review
+>   `body_side.png`, every plate since M22). PRODUCER-CLAIMED FIXED (D-062): shaft, sloping vamp,
+>   low toe box, heel block, welted sole; measured 0.30 long × 0.09 wide with the toe below instep
+>   height. Evidence: `evidence/mechanics-sept13/round7/body_side_before.png` → `_after.png`,
+>   `measure_after.md`. QA to rule at `body_side` and `full`.
+> - **D-134 update (D-062):** pecs, scapulae, lumbar curve, a rounder deltoid on top of D-061's
+>   rib cage. `round7/front_*`, `back_*`. The deltoid still reads square in the painted sleeve.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,

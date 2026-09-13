@@ -173,3 +173,7 @@ Gate 5/5, probe 45/45.
 the trunk was a 0.27 m tube with the arm inside the chest; the limbs were fine. Rebuilt the trunk as
 a rib cage with lats, moved the shoulder out, fixed the posture; two cuts (the first made a shoulder
 pad). Gate 5/5, probe 45/45. Rule: anatomy gets a number before and after (`body_measure.gd`).
+
+**Round 7 — 2026-09-13 (D-062).** "Go." The body's open list from D-061, measured: the boot
+(three foot rows in the tool; a loaf became a boot), pecs and blades, a lumbar curve, a rounder
+deltoid. Gate 5/5, probe 45/45. The sleeve is the wall now — cloth volume, the milestone.

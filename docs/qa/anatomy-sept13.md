@@ -45,3 +45,23 @@ out ~8° and stand a shade wider than the hips — constant in both gaits.
 **Still open:** the armpit notch at the nipple line does not resolve at 18 mm (it opens one cell
 lower); the deltoid still reads square in the sleeve; the shirt and trousers are palette paint, so
 cloth volume is a shell-wardrobe milestone (D-060); no scapulae; the boots are loaves.
+
+## Round 7 (D-062): the boot, the deltoid, the back
+
+Three foot rows joined the tool. The old foot was three round masses of the same height: a bread
+roll on a sole. The boot is a shaft over the ankle, a vamp that slopes from the instep down to a
+low toe box, a heel block, and a thin welted sole.
+
+| height | y | after (r3) | reading |
+|---|---|---|---|
+| ankle | 0.110 | width 0.090, length 0.108 | the shaft |
+| instep | 0.085 | width 0.090, length 0.162 | only the rear half of the boot reaches this height — the toe is lower |
+| vamp | 0.050 | width 0.090, length 0.288 | the full boot |
+| sole | 0.020 | width 0.090, length 0.306 | the welt |
+
+Also in r3: two pecs with a sternum between them (the single bar read as a chest plate), two flat
+scapula mounds, a deltoid cap 18 % taller than wide (rounds the acromion corner), the trapezius
+slope ending 6 mm lower, and the waist carried 12 mm forward for a lumbar curve. Trunk rows are
+unchanged from r2 (ribs 0.324, waist 0.288, shoulders 0.468). At 1.25 the arm and trunk now read as
+one mass at 18 mm — the lat's outer edge is one cell from the arm's inner edge; the posed abduction
+opens it in game.

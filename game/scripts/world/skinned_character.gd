@@ -224,7 +224,7 @@ static var _bake_n := 0
 static var _no_disk := false               # tools set this to force a real bake
 ## Bump when the field, the mesher or the vertex format changes, so a stale
 ## user:// bake can never outlive the code that made it.
-const CACHE_VER := 20   # 20: the trunk rebuilt as a rib cage, r2 (D-061); 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
+const CACHE_VER := 21   # 21: boots, pecs, scapulae, a rounder deltoid, a lumbar curve (D-062); 20: the trunk rebuilt as a rib cage, r2 (D-061); 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
 
 
 # ============================== PUBLIC API ===================================
@@ -515,14 +515,20 @@ static func _prims(w: float, g: float) -> Array:
 			0.058 * lg, 0.048 * lg, Vector3(1, 1, 1.0), 0.020, kb, 0))   # D-061: a fuller gastrocnemius
 		out.append(_cap(Vector3(hx * 1.05, 0.470, -0.050), Vector3(hx * 1.05, 0.470, -0.050),
 			0.032, 0.032, Vector3(1, 1.1, 0.8), 0.016, kb, 0))
-		# heel -> instep -> toe: three short masses, so a foot has a shape
-		out.append(_cap(Vector3(hx, 0.072, 0.018), Vector3(hx, 0.046, 0.052),
-			0.040, 0.033, Vector3(0.95, 1.0, 1.0), 0.018, kb, 0))
-		out.append(_cap(Vector3(hx, 0.058, 0.000), Vector3(hx, 0.040, -0.154),
-			0.049, 0.038, Vector3(1.0, 0.80, 1.0), 0.020, kb, 0))
-		# sole slab: low k so the welt stays a line and not a fillet
-		out.append(_cap(Vector3(hx, 0.018, -0.150), Vector3(hx, 0.018, 0.060),
-			0.051, 0.044, Vector3(1.0, 0.36, 1.0), 0.010, kb, 0))
+		# D-062: A BOOT, not a loaf. The old foot was three round masses of the
+		# same height — a bread roll with a sole. A boot is a shaft over an
+		# ankle, a vamp that SLOPES from the instep (0.085) down to a low toe box
+		# (0.045), a heel BLOCK behind it, and a thin welted sole.
+		out.append(_cap(Vector3(hx, 0.150, 0.004), Vector3(hx, 0.078, 0.008),          # shaft to the ankle
+			0.042, 0.046, Vector3(1.0, 1.0, 1.06), 0.016, kb, 0))
+		out.append(_cap(Vector3(hx, 0.062, 0.010), Vector3(hx, 0.036, -0.150),         # vamp: instep sloping to the toe
+			0.050, 0.038, Vector3(1.0, 0.68, 1.0), 0.016, kb, 0))
+		out.append(_cap(Vector3(hx, 0.034, -0.148), Vector3(hx, 0.030, -0.178),        # toe box: low and narrowing
+			0.038, 0.027, Vector3(1.0, 0.58, 1.0), 0.012, kb, 0))
+		out.append(_cap(Vector3(hx, 0.040, 0.040), Vector3(hx, 0.040, 0.058),          # heel block: a step, k low
+			0.042, 0.040, Vector3(0.94, 1.15, 0.80), 0.010, kb, 0))
+		out.append(_cap(Vector3(hx, 0.010, -0.176), Vector3(hx, 0.010, 0.064),         # welted sole, thin
+			0.048, 0.044, Vector3(1.0, 0.26, 1.0), 0.008, kb, 0))
 
 	# ---------- pelvis ----------
 	# widest at the trochanter and tapering BOTH ways. The factory learned in
@@ -548,7 +554,7 @@ static func _prims(w: float, g: float) -> Array:
 	# clavicles. Now: ribs r 152 -> under-ribs 146 -> waist 124, so the side
 	# and the front both read a taper, and the shoulder girdle sits on a chest
 	# instead of a pipe.
-	out.append(_cap(Vector3(0, 1.090, 0.0), Vector3(0, 1.005, 0.0),   # the waist
+	out.append(_cap(Vector3(0, 1.090, -0.006), Vector3(0, 1.005, -0.012),   # the waist, carried forward: a lumbar curve (D-062)
 		0.124 * w * belly, 0.128 * w * belly,
 		Vector3(1, 1, dep + 0.02), 0.034, B_TORSO, 0))
 	out.append(_cap(Vector3(0, 1.190, -0.004), Vector3(0, 1.090, 0.0),   # under the ribs
@@ -582,10 +588,17 @@ static func _prims(w: float, g: float) -> Array:
 		0.086 * w * belly * gut, 0.082 * w * belly * gut, Vector3(1, 0.90, 0.50), 0.036,
 		B_TORSO, 0))
 	# pec swell forward, scapula plane aft — the side view lives or dies here
-	out.append(_cap(Vector3(-0.067 * w, 1.336, -0.084), Vector3(0.067 * w, 1.336, -0.084),
-		0.079 * w, 0.079 * w, Vector3(1, 0.96, 0.55), 0.038, B_TORSO, 0))
+	# D-062: TWO pecs with a sternum between them, each a lens from the clavicle
+	# corner down and in to the nipple line — the old single bar read as a chest plate.
+	for ps: float in [-1.0, 1.0]:
+		out.append(_cap(Vector3(ps * 0.078 * w, 1.348, -0.078), Vector3(ps * 0.044 * w, 1.296, -0.088),
+			0.060 * w, 0.058 * w, Vector3(1.05, 0.92, 0.55), 0.036, B_TORSO, 0))
 	out.append(_cap(Vector3(-0.056 * w, 1.330, 0.070), Vector3(0.056 * w, 1.330, 0.070),
 		0.086 * w, 0.086 * w, Vector3(1, 1.10, 0.48), 0.038, B_TORSO, 0))
+	# D-062: scapulae — two flat mounds on the upper back, the blades under a shirt.
+	for ss: float in [-1.0, 1.0]:
+		out.append(_cap(Vector3(ss * 0.074 * w, 1.318, 0.074), Vector3(ss * 0.060 * w, 1.236, 0.068),
+			0.040 * w, 0.032 * w, Vector3(1.15, 1, 0.55), 0.032, B_TORSO, 0))
 
 	# ---------- shoulder girdle: ONE mass, acromion to acromion ----------
 	# This is M21's swept girdle written the way it always wanted to be. The
@@ -607,7 +620,7 @@ static func _prims(w: float, g: float) -> Array:
 	# the neck or leaves a dip before the shoulder cap — the puffed sleeve of
 	# body8/after/back.png.
 	for ts: float in [-1.0, 1.0]:
-		out.append(_cap(Vector3(ts * 0.060 * w, 1.462, 0.012), Vector3(ts * 0.178 * w, 1.428, 0.006),
+		out.append(_cap(Vector3(ts * 0.060 * w, 1.462, 0.012), Vector3(ts * 0.178 * w, 1.422, 0.006),
 			0.040, 0.040, Vector3(1, 1, 1.05), 0.030, B_COLLAR, 0))   # D-061: ends at the acromion (0.192)
 	# neck. M23 (D-102): r 47/57 -> 58/66 mm, deeper than wide. At 47 mm the
 	# neck read as a stalk under the head at `face`; an adult neck is ~38 cm
@@ -638,8 +651,8 @@ static func _prims(w: float, g: float) -> Array:
 		# M25: the deltoid's top was at 1.505 (centre 1.452 + r 53): five cm
 		# above where an acromion sits on a 1.75 m body, hence the hunched square
 		# shoulder. Centre 1.425, top 1.475, under the trapezius' 1.492.
-		out.append(_cap(Vector3(sx - ax * 0.004, 1.425, 0.002), Vector3(sx + ax * 0.010, 1.340, 0.004),
-			0.047 * lg, 0.045 * lg, Vector3(1.02, 1, 1), 0.016, sb, 0))   # D-061: 50/46 -> 47/45 with the pivot out
+		out.append(_cap(Vector3(sx - ax * 0.004, 1.418, 0.002), Vector3(sx + ax * 0.010, 1.340, 0.004),
+			0.046 * lg, 0.045 * lg, Vector3(1.0, 1.18, 0.97), 0.016, sb, 0))   # D-062: a taller cap rounds the acromion corner
 		out.append(_cap(Vector3(sx + ax * 0.010, 1.340, 0.004),
 			Vector3(sx + ax * 0.022, 1.175, 0.006),
 			0.046 * lg, 0.039 * lg, Vector3.ONE, 0.014, sb, 0))   # M25: bicep -> elbow taper

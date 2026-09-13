@@ -10,7 +10,8 @@ const HEIGHTS := [
 	["shoulders (deltoid line)", 1.425], ["upper chest", 1.380], ["chest (nipple line)", 1.300],
 	["under ribs", 1.190], ["waist", 1.080], ["belt", 1.030], ["hips (trochanter)", 0.900],
 	["crotch", 0.840], ["upper thigh", 0.760], ["mid thigh", 0.650], ["knee", 0.480],
-	["calf", 0.370], ["ankle", 0.110], ["upper arm", 1.250], ["forearm", 1.050], ["wrist", 0.930]]
+	["calf", 0.370], ["ankle", 0.110], ["instep (boot)", 0.085], ["vamp (boot)", 0.050], ["sole (boot)", 0.020],
+	["upper arm", 1.250], ["forearm", 1.050], ["wrist", 0.930]]
 
 
 func _init() -> void:
