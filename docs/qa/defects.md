@@ -189,6 +189,13 @@ Bar: `docs/qa/quality-bar.md`.
 >   (D-060): `_brawl_arms` (guard, cock, drive, sag) and `traffic._honk_check` (2.4 s blocked → horn).
 >   Evidence: `round5/brawl.png` (arms up); the honk is unprobed — QA by hand at a light.
 > - **D-130 update:** the frontage strips now carry wear too (390 lids, 790 patches). Suburb still clean.
+> - **D-134 [S2] The body was a tube with a coat hanger on it** — Milad, 2026-09-13: "character
+>   still looks unnatural, design better with more realistic body structure." Measured
+>   (`tools/body_measure.gd`): trunk 0.27 m wide ribs-to-belt with no taper; arm inside the chest
+>   radius. PRODUCER-CLAIMED IMPROVED (D-061): rib cage 0.324 → waist 0.288, shoulders 0.468,
+>   lats, shoulder pivot 0.192, posture. Evidence: `evidence/mechanics-sept13/round6/` (before/after
+>   `full`, `front`, `body_side`, `back`, `showcase_people`; `measure_before.md` / `measure_after.md`),
+>   `docs/qa/anatomy-sept13.md`. QA to rule; open: deltoid still square in the sleeve, boots.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,

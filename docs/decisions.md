@@ -642,6 +642,15 @@ Deep dive, including the per-layer table of what casts and why: `docs/tech/rende
 **Wear on the frontage** (`street_wear.gd`): the two 12 m frontage strips under the freeway get lids on their lane centres and patches — 230 → 390 lids, 460 → 790 patches, still three draw calls.
 **Owner:** producer. **Open:** cloth volume (a milestone); the suburb roads are still clean; the honk has no probe row; the brawler's guard is symmetric (a southpaw would be free).
 
+## D-061 · 2026-09-13 · The body, measured: a rib cage instead of a tube, and a man who stands like one
+**Status: LANDED, gated — quick gate 5/5 (86 scripts), `--mech-probe` 45/45, warm cache v20, 59-plate sweep clean; plates and tables in `docs/qa/evidence/mechanics-sept13/round6/`, the write-up in `docs/qa/anatomy-sept13.md`. QA to rule on D-134.**
+**Milad:** *"character still looks unnatural, design better with more realistic body structure."*
+**Measured first.** `tools/body_measure.gd` slices the 18 mm body field at anatomical heights and prints spans, depths and masses. The limbs, pelvis and thighs were within a cell of an adult male's; the trunk was 0.27 m wide from the ribs to the belt with no taper, 15 % narrow, and the arm hung inside the chest's radius. A coat hanger on two pipes — which is what every plate showed and what no face pass could fix.
+**Rebuilt (`_prims`):** rib cage as an egg (148 → 146 → 124), the top section narrowing to the clavicles, lats per side, the shoulder pivot out to 0.192 so the arm clears the chest, deltoid trimmed, gut only on the heavy end of the girth roll, pelvis and thigh tapers, a fuller calf. Two cuts: the first carried the rib width up under the deltoid and made a shoulder pad in every plate; r2 narrows the top section. After: ribs 0.324, waist 0.288, shoulders 0.468 — all within a cell of target. Cache 18 → 20 (two bakes).
+**Posture (`character_factory.animate`)**: arms ~7° off the flanks with the elbows just unlocked (22° → 14°), toe-out ~8°, stance a shade wider than the hips — constant in both gaits.
+**Rule that came with it (CLAUDE.md):** anatomy changes are measured with `body_measure.gd` before and after, against the anthropometric row in `anatomy-sept13.md`; a plate alone does not close an anatomy defect.
+**Owner:** producer. **Open:** the armpit notch at the nipple line is under one cell; the deltoid still reads square in the sleeve; no scapulae; boots; cloth volume (D-060, a milestone).
+
 ## Pending — needs Milad
 0. **CLOSED 2026-08-11 — downtown street names.** The signage pass placed **HOWDY ST**
    on the EW_Z[2] row (z=305, downtown's eye), which is canon (§6 puts the Texchange on

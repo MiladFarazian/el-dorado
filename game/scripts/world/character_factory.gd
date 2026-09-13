@@ -2159,7 +2159,11 @@ const WALK_KNEE := 0.62; const RUN_KNEE := 0.95
 const WALK_BOB := 0.022; const RUN_BOB := 0.045     # m
 const TORSO_TWIST := 0.07            # rad, counter to the hips
 const ELBOW_FRONT := 0.30            # extra bend on the arm swinging forward
-const IDLE_ELBOW := 0.38; const IDLE_SH := 0.10     # bent elbows, shoulders a touch forward
+const IDLE_ELBOW := 0.24; const IDLE_SH := 0.08     # elbows just unlocked, shoulders a touch forward
+# D-061 POSTURE. Arms do not hang glued to the flanks: the lats hold them ~7° out
+# and the shoulders roll slightly forward. Feet are not parallel: a standing man
+# toes out ~8° and stands a little wider than his hips. Constant, both gaits.
+const ARM_ABDUCT := 0.12; const TOE_OUT := 0.14; const LEG_ABDUCT := 0.045
 const IDLE_SWAY := 0.035; const IDLE_SWAY_HZ := 0.16
 const IDLE_BREATH := 0.004; const IDLE_BREATH_HZ := 0.27
 const IDLE_HEAD := 0.12; const IDLE_HEAD_HZ := 0.06
@@ -2219,6 +2223,9 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 		var sh: Node3D = rig["sh_%d" % side]
 		var el: Node3D = rig["el_%d" % side]
 		hip.rotation.x = lerp_angle(hip.rotation.x, hip_amp * swing * sgn, k)
+		var out_x := signf(hip.position.x) if absf(hip.position.x) > 0.001 else sgn
+		hip.rotation.y = lerp_angle(hip.rotation.y, -out_x * TOE_OUT, k)      # toes out
+		hip.rotation.z = lerp_angle(hip.rotation.z, out_x * LEG_ABDUCT, k)   # stance a shade wider than the hips
 		# Knee bends only one way, and most on the recovery (rear) swing.
 		var bend := maxf(-sin(phase + 0.9) * sgn, 0.0) * knee_amp if walking else 0.0
 		if not grounded:
@@ -2233,6 +2240,8 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 		# Knees and elbows are mirror joints; they can never share a sign.
 		var arm := -arm_amp * swing * sgn
 		sh.rotation.x = lerp_angle(sh.rotation.x, sh_base + arm, k)
+		var sh_out := signf(sh.position.x) if absf(sh.position.x) > 0.001 else sgn
+		sh.rotation.z = lerp_angle(sh.rotation.z, sh_out * ARM_ABDUCT, k)   # the arm hangs off the flank, not on it
 		var front := clampf(arm / maxf(arm_amp, 0.01), 0.0, 1.0) if walking else 0.0
 		el.rotation.x = lerp_angle(el.rotation.x, el_base + ELBOW_FRONT * front, k)
 	var torso: Node3D = rig["torso"]

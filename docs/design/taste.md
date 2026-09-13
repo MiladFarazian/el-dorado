@@ -168,3 +168,8 @@ rest, lips that read, a brawler who swings; then drivers who honk and wear on th
 Found the ceiling: the shirt and trousers are painted on the body by the palette architecture, so
 cloth VOLUME is a milestone (a shell wardrobe), not a round. Filed as the next character lever.
 Gate 5/5, probe 45/45.
+
+**Round 6 — 2026-09-13 (D-061).** Milad: the body structure. Measured before touching a number:
+the trunk was a 0.27 m tube with the arm inside the chest; the limbs were fine. Rebuilt the trunk as
+a rib cage with lats, moved the shoulder out, fixed the posture; two cuts (the first made a shoulder
+pad). Gate 5/5, probe 45/45. Rule: anatomy gets a number before and after (`body_measure.gd`).

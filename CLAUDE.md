@@ -181,6 +181,10 @@ Standing rules the loop exists to enforce:
   full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board.
 - **A bug Milad finds by playing goes to the top of the round** (D-058), and gets a probe row
   that reproduces it BEFORE the fix, so the fix lands with a number.
+- **Anatomy is measured, not eyeballed** (D-061): `godot --headless --script res://tools/body_measure.gd
+  -- --w=1.0 --g=1.0` prints the body field's spans at anatomical heights; the targets are in
+  `docs/qa/anatomy-sept13.md`. Run it before and after any `_prims` change; a body change bumps
+  `CACHE_VER` and needs the warm-cache bake before any in-game plate is judged.
 - **A script-built MultiMesh can carry an EMPTY AABB** (D-059): `street_wear.gd`'s three
   MultiMeshes rendered nothing for two sweeps — `get_aabb()` read zero — until
   `MultiMesh.custom_aabb` was set from the instance origins. Set it on every runtime MultiMesh
