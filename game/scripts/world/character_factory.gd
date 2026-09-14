@@ -100,13 +100,8 @@ const COP_PANTS := Color(0.09, 0.11, 0.20)
 const DUTY_BLACK := Color(0.07, 0.07, 0.08)
 
 # ---- gait tuning (all in the animator) ----
-const STRIDE_PER_M := 1.15          # gait radians per metre travelled
-const HIP_SWING := 0.62             # rad at full running speed
-const KNEE_BEND := 0.95
-const ARM_SWING := 0.5
-const ELBOW_BEND := 0.45
-const BOB_H := 0.045                # vertical bounce (m)
-const LEAN_MAX := 0.16              # forward lean at speed (rad)
+# Gait tunables live with animate() (D-065): stride length per speed, hip /
+# knee / arm amplitudes for the walk and the run, flight, lean, twist.
 const BLEND := 12.0                 # pose exp-decay rate toward target
 const REF_SPEED := 6.5              # m/s that counts as "full sprint"
 
@@ -2152,18 +2147,50 @@ static func _build_layers(torso: Node3D, collar: Node3D, rig: Dictionary,
 ## weight shifting slowly, breath in the shoulders, the head drifting a few
 ## degrees and back — seeded per rig off its own phase so a crowd never breathes
 ## in unison. Joint sign law unchanged: +x swings a limb FORWARD.
+## D-065 GAIT. Milad: "the running looks retarded." The review tool's gait
+## strips (tools/character_review.gd, sprint_side.png) showed why, three ways:
+##   1. the stride was a fixed 1.74 m at every speed, so a 6.5 m/s sprint ran
+##      at 7.5 steps a second — a scurry. The stride now lengthens with speed
+##      (walk 1.45 m, jog 2.35 m, sprint 4.0 m: 1.9 / 2.7 / 3.3 steps a second).
+##   2. every joint chased its target through a 12/s exponential blend, which
+##      at a sprint's 1.9 Hz halves the amplitude and lags it 45 degrees: the
+##      legs never opened. Gait joints now follow the phase through a 40/s
+##      blend (a 4 % loss); the idle keeps its slow 12/s.
+##   3. the knee bent in STANCE (its peak in late stance) and swung forward
+##      straight — a goose step. Knee flexion now peaks in mid-swing, heel
+##      toward the seat (1.05 rad walking, 1.95 sprinting), with a separate
+##      loading bend at mid-stance (0.30 / 0.65).
+## The body height comes from the supporting leg's geometry every frame, so a
+## walker's foot is on the ground at every phase (it floated 5 cm at double
+## support before), and a runner drops at mid-stance and lifts into flight.
+## The thigh swings farther forward than back (+46/-25 degrees at a sprint);
+## the elbows come up to ~80 degrees when running and pump from the shoulder
+## at +-0.85 rad; the torso counter-rotates 0.12 rad and leans 0.18.
+## Joint sign law unchanged: +x swings a limb FORWARD.
 const WALK_SAT := 1.4                # m/s at which the stride reaches walking amplitude
-const WALK_HIP := 0.34; const RUN_HIP := 0.62      # rad, half-swing
-const WALK_ARM := 0.36; const RUN_ARM := 0.60
-const WALK_KNEE := 0.62; const RUN_KNEE := 0.95
-const WALK_BOB := 0.022; const RUN_BOB := 0.045     # m
-const TORSO_TWIST := 0.07            # rad, counter to the hips
-const ELBOW_FRONT := 0.30            # extra bend on the arm swinging forward
+const STRIDE_BASE := 0.75            # m; a full cycle (two steps) covers STRIDE_BASE + STRIDE_PER_MS * speed
+const STRIDE_PER_MS := 0.50
+const WALK_HIP := 0.34; const RUN_HIP := 0.62          # rad, half-swing
+const WALK_HIP_BIAS := 0.15; const RUN_HIP_BIAS := 0.18   # the thigh's mean, forward of vertical (walk +28/-11 deg: 0.05 gave 1.3:1)
+const WALK_ARM := 0.30; const RUN_ARM := 0.60         # shoulder half-swing; 0.85 put the sprint's hand at eye level
+const WALK_KNEE := 1.05; const RUN_KNEE := 1.95        # swing-phase peak, heel toward the seat
+const WALK_LOAD := 0.30; const RUN_LOAD := 0.65        # mid-stance loading bend
+const RUN_LAND := 0.60               # a runner lands on a bent knee, under the body — never a straight reach (0.35 still reached)
+const SWING_LEAD_WALK := 0.35; const SWING_LEAD_RUN := -0.10   # where the swing knee peaks: early swing walking, mid-swing running
+const RUN_SINK := 0.04; const RUN_RISE := 0.07         # m: a runner sits low at mid-stance and lifts into flight (~9 cm)
+const WALK_TWIST := 0.07; const RUN_TWIST := 0.12      # rad, torso counter to the hips
+const WALK_LEAN := 0.02; const RUN_LEAN := 0.18
+const WALK_ELBOW := 0.25; const RUN_ELBOW := 1.45      # the elbow's mean flexion (a sprint holds ~90)
+const WALK_EF := 0.30; const RUN_EF := 0.25            # closes further on the forward swing
+const WALK_EB := 0.10; const RUN_EB := 0.30            # opens on the backswing
+const BLEND_GAIT := 40.0             # pose blend while walking or running (BLEND is the idle's)
+const THIGH_LEN := 0.43; const SHIN_LEN := 0.47        # HIP_PIVOT.y - KNEE_PIVOT.y, knee to the ground
 const IDLE_ELBOW := 0.24; const IDLE_SH := 0.08     # elbows just unlocked, shoulders a touch forward
 # D-061 POSTURE. Arms do not hang glued to the flanks: the lats hold them ~7° out
 # and the shoulders roll slightly forward. Feet are not parallel: a standing man
-# toes out ~8° and stands a little wider than his hips. Constant, both gaits.
-const ARM_ABDUCT := 0.12; const TOE_OUT := 0.14; const LEG_ABDUCT := 0.045
+# toes out ~8°. D-065: the knees sit inboard of the hips now (the femur angles
+# in), so the stance is only a shade wider than the knees.
+const ARM_ABDUCT := 0.12; const TOE_OUT := 0.14; const LEG_ABDUCT := 0.02
 const IDLE_SWAY := 0.035; const IDLE_SWAY_HZ := 0.16
 const IDLE_BREATH := 0.004; const IDLE_BREATH_HZ := 0.27
 const IDLE_HEAD := 0.12; const IDLE_HEAD_HZ := 0.06
@@ -2175,18 +2202,19 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 		return
 	var stride := clampf(speed / WALK_SAT, 0.0, 1.0)
 	var run := clampf((speed - WALK_SAT) / (REF_SPEED - WALK_SAT), 0.0, 1.0)
-	# Phase advances with DISTANCE, so feet never skate at any speed.
-	var phase := float(rig["phase"]) + speed * delta * TAU * STRIDE_PER_M * 0.5
+	# Phase advances with DISTANCE, so feet never skate; one cycle covers a
+	# stride that lengthens with speed, so the cadence stays human.
+	var stride_len := STRIDE_BASE + STRIDE_PER_MS * speed
+	var phase := float(rig["phase"]) + speed * delta * TAU / stride_len
 	rig["phase"] = fmod(phase, TAU)
 	var it := float(rig.get("idle_t", 0.0)) + delta
 	rig["idle_t"] = it
 	if not rig.has("idle_seed"):
 		rig["idle_seed"] = fmod(float(rig.get("phase", 0.0)) * 7.31 + float(rig.get("base_y", 0.0)) * 13.7, TAU)
 	var seed: float = float(rig["idle_seed"])
-	var k := 1.0 - exp(-BLEND * delta)
 	var walking := moving and speed > 0.15 and grounded
-	var swing := 0.0
-	var bob := 0.0
+	var k := 1.0 - exp(-(BLEND_GAIT if walking else BLEND) * delta)
+	var lift := 0.0
 	var lean := 0.0
 	var sway := 0.0
 	var twist := 0.0
@@ -2194,56 +2222,89 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 	var head_x := 0.0
 	var sh_base := 0.0
 	var el_base := 0.12
+	var hip_amp := 0.0
+	var hip_bias := 0.0
+	var arm_amp := 0.0
+	var knee_amp := 0.0
+	var load_amp := 0.0
+	var idle_knee := 0.0
+	var ef := 0.0
+	var eb := 0.0
+	var land_amp := 0.0
+	var lead := SWING_LEAD_WALK
 	if walking:
-		swing = sin(phase)
-		bob = absf(sin(phase)) * lerpf(WALK_BOB, RUN_BOB, run) * stride
-		lean = LEAN_MAX * run
-		sway = -0.04 * (0.5 + 0.5 * run) * sin(phase) * stride
-		twist = -TORSO_TWIST * sin(phase) * stride
-		el_base = lerpf(0.25, ELBOW_BEND, run)
+		hip_amp = lerpf(WALK_HIP, RUN_HIP, run) * stride
+		hip_bias = lerpf(WALK_HIP_BIAS, RUN_HIP_BIAS, run) * stride
+		arm_amp = lerpf(WALK_ARM, RUN_ARM, run) * stride
+		knee_amp = lerpf(WALK_KNEE, RUN_KNEE, run) * stride
+		load_amp = lerpf(WALK_LOAD, RUN_LOAD, run) * stride
+		# A runner's height is a designed curve — low at each mid-stance, up
+		# into flight between them; the walker's comes from the pendulum below.
+		lift = -RUN_SINK + RUN_RISE * (0.5 - 0.5 * cos(2.0 * phase))
+		lean = lerpf(WALK_LEAN, RUN_LEAN, run) * stride
+		sway = -0.03 * sin(phase) * stride
+		twist = -lerpf(WALK_TWIST, RUN_TWIST, run) * sin(phase) * stride
+		el_base = lerpf(WALK_ELBOW, RUN_ELBOW, run) * stride + 0.12 * (1.0 - stride)
+		ef = lerpf(WALK_EF, RUN_EF, run) * stride
+		eb = lerpf(WALK_EB, RUN_EB, run) * stride
+		land_amp = RUN_LAND * run * stride
+		lead = lerpf(SWING_LEAD_WALK, SWING_LEAD_RUN, run)
 		head_x = -lean * 0.7                       # eyes stay level
 	elif not grounded:
-		swing = 0.35                               # legs tuck slightly in the air
+		hip_amp = 0.35                             # legs tuck slightly in the air
 	else:                                          # standing: alive, not an A-pose
 		var breath := sin((it * IDLE_BREATH_HZ + seed) * TAU)
 		sway = IDLE_SWAY * sin((it * IDLE_SWAY_HZ + seed * 0.37) * TAU)
-		bob = IDLE_BREATH * (0.5 + 0.5 * breath)
+		lift = IDLE_BREATH * (0.5 + 0.5 * breath)
 		lean = IDLE_SLOUCH
 		head_y = IDLE_HEAD * sin((it * IDLE_HEAD_HZ + seed * 0.61) * TAU) * sin((it * 0.043 + seed) * TAU)
 		head_x = -0.02 + 0.01 * breath
 		sh_base = IDLE_SH + 0.015 * breath
 		el_base = IDLE_ELBOW
-	var hip_amp := lerpf(WALK_HIP, RUN_HIP, run) * stride if walking else (0.35 if not grounded else 0.0)
-	var arm_amp := lerpf(WALK_ARM, RUN_ARM, run) * stride if walking else 0.0
-	var knee_amp := lerpf(WALK_KNEE, RUN_KNEE, run) * stride
+		idle_knee = 0.04
+	var support := 0.0   # the longest leg's vertical reach: the one on the ground
 	for side in 2:
 		var sgn := 1.0 if side == 0 else -1.0
+		var ph := phase if side == 0 else phase + PI   # the other leg is half a cycle on
+		var s := sin(ph)
 		var hip: Node3D = rig["hip_%d" % side]
 		var knee: Node3D = rig["knee_%d" % side]
 		var sh: Node3D = rig["sh_%d" % side]
 		var el: Node3D = rig["el_%d" % side]
-		hip.rotation.x = lerp_angle(hip.rotation.x, hip_amp * swing * sgn, k)
+		var hip_x := hip_bias + hip_amp * s if walking else hip_amp * 0.35 * sgn
+		hip.rotation.x = lerp_angle(hip.rotation.x, hip_x, k)
 		var out_x := signf(hip.position.x) if absf(hip.position.x) > 0.001 else sgn
 		hip.rotation.y = lerp_angle(hip.rotation.y, -out_x * TOE_OUT, k)      # toes out
-		hip.rotation.z = lerp_angle(hip.rotation.z, out_x * LEG_ABDUCT, k)   # stance a shade wider than the hips
-		# Knee bends only one way, and most on the recovery (rear) swing.
-		var bend := maxf(-sin(phase + 0.9) * sgn, 0.0) * knee_amp if walking else 0.0
-		if not grounded:
+		hip.rotation.z = lerp_angle(hip.rotation.z, out_x * LEG_ABDUCT, k)   # a shade wider than the knees
+		var bend := 0.0
+		if walking:
+			# SWING (the thigh moving forward, cos > 0): the heel comes up toward
+			# the seat, peaking just before the thigh passes vertical. STANCE
+			# (cos < 0): a loading bend that peaks at mid-stance and is gone by
+			# toe-off. The two windows never overlap.
+			var swing := maxf(cos(ph + lead), 0.0)
+			var stance := maxf(-cos(ph), 0.0)
+			var land := pow(maxf(s, 0.0), 3.0)   # the thigh at its most forward
+			bend = knee_amp * pow(swing, 1.3) + load_amp * pow(stance, 1.5) + land_amp * land
+		elif not grounded:
 			bend = 0.5
-		elif not walking:
-			bend = 0.04 + 0.03 * maxf(-sway * sgn * 20.0, 0.0)   # the unweighted knee softens
-		knee.rotation.x = lerp_angle(knee.rotation.x, -bend, k)
+		else:
+			bend = idle_knee + 0.03 * maxf(-sway * sgn * 20.0, 0.0)   # the unweighted knee softens
 		# JOINT SIGN LAW (M16 fix — a limb hangs down -Y, so a POSITIVE
 		# rotation.x swings it toward -Z = FORWARD):
-		#   knee flexion is BACKWARD -> negative (heel to butt) — correct above
+		#   knee flexion is BACKWARD -> negative (heel to butt)
 		#   elbow flexion is FORWARD -> POSITIVE
 		# Knees and elbows are mirror joints; they can never share a sign.
-		var arm := -arm_amp * swing * sgn
+		knee.rotation.x = lerp_angle(knee.rotation.x, -bend, k)
+		var reach := THIGH_LEN * cos(hip.rotation.x) + SHIN_LEN * cos(hip.rotation.x + knee.rotation.x)
+		support = maxf(support, reach)
+		var arm := -arm_amp * s
 		sh.rotation.x = lerp_angle(sh.rotation.x, sh_base + arm, k)
 		var sh_out := signf(sh.position.x) if absf(sh.position.x) > 0.001 else sgn
 		sh.rotation.z = lerp_angle(sh.rotation.z, sh_out * ARM_ABDUCT, k)   # the arm hangs off the flank, not on it
 		var front := clampf(arm / maxf(arm_amp, 0.01), 0.0, 1.0) if walking else 0.0
-		el.rotation.x = lerp_angle(el.rotation.x, el_base + ELBOW_FRONT * front, k)
+		var back := clampf(-arm / maxf(arm_amp, 0.01), 0.0, 1.0) if walking else 0.0
+		el.rotation.x = lerp_angle(el.rotation.x, el_base + ef * front - eb * back, k)
 	var torso: Node3D = rig["torso"]
 	torso.rotation.x = lerp_angle(torso.rotation.x, lean, k)
 	torso.rotation.z = lerp_angle(torso.rotation.z, sway, k)
@@ -2255,6 +2316,13 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 	var vis: Node3D = rig["vis"]
 	if not rig.has("base_y"):
 		rig["base_y"] = vis.position.y   # the feet line this rig was built at
+	# The body sits on its supporting leg: standing reach is THIGH + SHIN, and
+	# the walker's foot never leaves the ground. A runner blends over to the
+	# designed sink-and-flight curve (its legs are rarely both under it). In
+	# the air the legs tuck, so the reach term is dropped (the jump owns the
+	# height).
+	var pendulum := support - THIGH_LEN - SHIN_LEN if grounded else 0.0
+	var bob := lerpf(pendulum + lift, lift, run) if walking else pendulum + lift
 	rig["bob"] = lerpf(float(rig["bob"]), bob, k)
 	vis.position.y = float(rig["base_y"]) + float(rig["bob"])
 

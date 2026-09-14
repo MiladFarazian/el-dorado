@@ -65,6 +65,13 @@ const COLLAR_PIVOT := Vector3(0.0, 0.56, 0.0)
 const HEAD_PIVOT := Vector3(0.0, 0.08, 0.0)
 const SHOULDER_X := 0.192   # D-061: was 0.183 — the arm hung INSIDE a 0.30 m chest
 const ELBOW_PIVOT := Vector3(0.0, -0.30, 0.0)
+## D-065: the femur angles IN. Hip joints are 0.20 m apart on this rig and the
+## knees sat straight below them, then the leg was abducted a further 2.6
+## degrees — an A-frame in every front plate. A standing adult's knees are
+## ~0.16 m apart centre to centre, closer than the hips, the shin vertical below
+## the knee, only the feet toeing out. The knee bones move 20 mm inboard and
+## the leg field follows them.
+const KNEE_IN := 0.028   # r2: 0.02 did not read at 350 px/m; 0.035 welded the calves at 18 mm and tore a knee
 
 # ---- bones. Index order IS the skin bind order. ----
 const B_ROOT := 0
@@ -86,9 +93,9 @@ const BONE_N := 12
 const BONES: Array = [
 	["root", -1, Vector3.ZERO, false],
 	["hip_0", B_ROOT, Vector3(-0.10, 0.90, 0.0), false],
-	["knee_0", B_HIP0, KNEE_PIVOT, false],
+	["knee_0", B_HIP0, Vector3(KNEE_IN, KNEE_PIVOT.y, 0.0), false],
 	["hip_1", B_ROOT, Vector3(0.10, 0.90, 0.0), false],
-	["knee_1", B_HIP1, KNEE_PIVOT, false],
+	["knee_1", B_HIP1, Vector3(-KNEE_IN, KNEE_PIVOT.y, 0.0), false],
 	["torso", B_ROOT, TORSO_PIVOT, false],
 	["collar", B_TORSO, COLLAR_PIVOT, false],
 	["head", B_COLLAR, HEAD_PIVOT, false],
@@ -224,7 +231,7 @@ static var _bake_n := 0
 static var _no_disk := false               # tools set this to force a real bake
 ## Bump when the field, the mesher or the vertex format changes, so a stale
 ## user:// bake can never outlive the code that made it.
-const CACHE_VER := 21   # 21: boots, pecs, scapulae, a rounder deltoid, a lumbar curve (D-062); 20: the trunk rebuilt as a rib cage, r2 (D-061); 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
+const CACHE_VER := 24   # 24: r2 — knees 28 mm in, knee r52, lats inboard, pecs a touch wider, deltoid ball-and-taper (D-065); 22: knees inboard, deltoid lowered, chest 0.33 (D-065); 21: boots, pecs, scapulae, a rounder deltoid, a lumbar curve (D-062); 20: the trunk rebuilt as a rib cage, r2 (D-061); 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
 
 
 # ============================== PUBLIC API ===================================
@@ -498,23 +505,25 @@ static func _prims(w: float, g: float) -> Array:
 		var hb := B_HIP0 if side == 0 else B_HIP1
 		var kb := B_KNEE0 if side == 0 else B_KNEE1
 		var hx := sx * HIP_PIVOT.x
-		# thigh: from inside the pelvis down to the knee, drifting outboard so
-		# the two do not weld into a column where they pass the crotch.
-		out.append(_cap(Vector3(hx, 0.880, 0.004), Vector3(hx * 1.06, 0.500, 0.008),
-			0.092 * lg, 0.062 * lg, Vector3(1, 1, 1.06), 0.026, hb, 0))   # D-061: 88/68 -> 92/62, a quad and a knee
+		var kx := hx - sx * KNEE_IN          # D-065: the knee, inboard of the hip
+		# thigh: from inside the pelvis down and IN to the knee (the femur's
+		# valgus angle); the two share the crotch through the smin.
+		out.append(_cap(Vector3(hx, 0.880, 0.004), Vector3(kx, 0.500, 0.008),
+			0.092 * lg, 0.056 * lg, Vector3(1, 1, 1.06), 0.026, hb, 0))   # D-061: 88/68 -> 92/62, a quad and a knee
 		# knee
-		out.append(_cap(Vector3(hx * 1.06, 0.500, 0.008), Vector3(hx * 1.05, 0.452, 0.004),
-			0.062 * lg, 0.058 * lg, Vector3(1, 1, 1.04), 0.018, kb, 0))
+		out.append(_cap(Vector3(kx, 0.500, 0.008), Vector3(kx, 0.452, 0.004),
+			0.052 * lg, 0.050 * lg, Vector3(1, 1, 1.04), 0.018, kb, 0))   # r2: a knee is the leg's narrowest girth (0.11), not the calf's
 		# calf belly high, hard taper to a real ankle
 		# M25 (D-053): the shin was one cone from r 70 below the knee to r 36 at
 		# the ankle — a pipe. Now a slimmer shin, a gastrocnemius belly high on
 		# the BACK of the calf, and a patella on the front of the knee.
-		out.append(_cap(Vector3(hx * 1.04, 0.395, 0.014), Vector3(hx, 0.100, -0.004),
+		out.append(_cap(Vector3(kx, 0.395, 0.014), Vector3(kx, 0.100, -0.004),
 			0.058 * lg, 0.036 * lg, Vector3(1, 1, 1.05), 0.020, kb, 0))
-		out.append(_cap(Vector3(hx * 1.02, 0.400, 0.040), Vector3(hx, 0.300, 0.034),
+		out.append(_cap(Vector3(kx, 0.400, 0.040), Vector3(kx, 0.300, 0.034),
 			0.058 * lg, 0.048 * lg, Vector3(1, 1, 1.0), 0.020, kb, 0))   # D-061: a fuller gastrocnemius
-		out.append(_cap(Vector3(hx * 1.05, 0.470, -0.050), Vector3(hx * 1.05, 0.470, -0.050),
+		out.append(_cap(Vector3(kx, 0.470, -0.050), Vector3(kx, 0.470, -0.050),
 			0.032, 0.032, Vector3(1, 1.1, 0.8), 0.016, kb, 0))
+		hx = kx                              # the boot hangs under the shin, not the hip
 		# D-062: A BOOT, not a loaf. The old foot was three round masses of the
 		# same height — a bread roll with a sole. A boot is a shaft over an
 		# ankle, a vamp that SLOPES from the instep (0.085) down to a low toe box
@@ -558,10 +567,16 @@ static func _prims(w: float, g: float) -> Array:
 		0.124 * w * belly, 0.128 * w * belly,
 		Vector3(1, 1, dep + 0.02), 0.034, B_TORSO, 0))
 	out.append(_cap(Vector3(0, 1.190, -0.004), Vector3(0, 1.090, 0.0),   # under the ribs
-		0.146 * w * belly, 0.124 * w * belly,
+		0.144 * w * belly, 0.124 * w * belly,
 		Vector3(1, 1, dep + 0.02), 0.034, B_TORSO, 0))
+	# D-065 r2 (Character Designer): the armpit floor sits at the nipple line
+	# (~0.16 m under the acromion); the field's notch opened 11 cm lower because
+	# the rib cage filled out to the hanging arm's inner edge (0.158). r140 here
+	# tore the flank at 18 mm (a fin where the lat cleared the wall); r146 with
+	# the lats inboard of it and the pecs a touch wider is what the cell size
+	# resolves — the posed 7-degree hang opens the notch in game.
 	out.append(_cap(Vector3(0, 1.320, -0.010), Vector3(0, 1.190, -0.004),   # the rib cage
-		0.148 * w, 0.146 * w * belly, Vector3(1, 1, dep), 0.034, B_TORSO, 0))
+		0.146 * w, 0.144 * w * belly, Vector3(1, 1, dep + 0.02), 0.034, B_TORSO, 0))
 	# The top section TAPERS IN. It carried the full chest radius on the first
 	# two bakes and the arms welded to it: the arm axis is at 0.183*w and its
 	# radius 0.049, so its inner edge sits 14 mm INSIDE a 0.150*w chest and the
@@ -580,8 +595,8 @@ static func _prims(w: float, g: float) -> Array:
 	# lats: the V of the back and the flank's taper, one flattened mass per side
 	# from the armpit to the waist, inboard of the arm so the notch stays open.
 	for ls: float in [-1.0, 1.0]:
-		out.append(_cap(Vector3(ls * 0.118 * w, 1.300, 0.046), Vector3(ls * 0.096 * w, 1.110, 0.034),
-			0.046 * w, 0.034 * w, Vector3(0.70, 1, 0.95), 0.030, B_TORSO, 0))
+		out.append(_cap(Vector3(ls * 0.106 * w, 1.300, 0.046), Vector3(ls * 0.090 * w, 1.110, 0.034),
+			0.046 * w, 0.034 * w, Vector3(0.70, 1, 0.95), 0.030, B_TORSO, 0))   # r2: inboard of the wall, never a fin
 	# gut: forward-only, and only on the heavy end of the girth roll
 	var gut := clampf((g - 0.85) / 0.30, 0.0, 1.0)   # D-061: none on a lean build, full by g 1.15
 	out.append(_cap(Vector3(0, 1.130, -0.048 * belly), Vector3(0, 1.062, -0.046 * belly),
@@ -591,8 +606,8 @@ static func _prims(w: float, g: float) -> Array:
 	# D-062: TWO pecs with a sternum between them, each a lens from the clavicle
 	# corner down and in to the nipple line — the old single bar read as a chest plate.
 	for ps: float in [-1.0, 1.0]:
-		out.append(_cap(Vector3(ps * 0.078 * w, 1.348, -0.078), Vector3(ps * 0.044 * w, 1.296, -0.088),
-			0.060 * w, 0.058 * w, Vector3(1.05, 0.92, 0.55), 0.036, B_TORSO, 0))
+		out.append(_cap(Vector3(ps * 0.082 * w, 1.348, -0.076), Vector3(ps * 0.046 * w, 1.296, -0.086),
+			0.062 * w, 0.058 * w, Vector3(1.06, 0.92, 0.55), 0.036, B_TORSO, 0))   # r2: a touch wider
 	out.append(_cap(Vector3(-0.056 * w, 1.330, 0.070), Vector3(0.056 * w, 1.330, 0.070),
 		0.086 * w, 0.086 * w, Vector3(1, 1.10, 0.48), 0.038, B_TORSO, 0))
 	# D-062: scapulae — two flat mounds on the upper back, the blades under a shirt.
@@ -651,8 +666,13 @@ static func _prims(w: float, g: float) -> Array:
 		# M25: the deltoid's top was at 1.505 (centre 1.452 + r 53): five cm
 		# above where an acromion sits on a 1.75 m body, hence the hunched square
 		# shoulder. Centre 1.425, top 1.475, under the trapezius' 1.492.
-		out.append(_cap(Vector3(sx - ax * 0.004, 1.418, 0.002), Vector3(sx + ax * 0.010, 1.340, 0.004),
-			0.046 * lg, 0.045 * lg, Vector3(1.0, 1.18, 0.97), 0.016, sb, 0))   # D-062: a taller cap rounds the acromion corner
+		# D-065: the cap sat with its widest point AT the acromion (centre 1.418,
+		# scaled 1.18 tall) — a shoulder pad, square at the corner in every front
+		# plate. A deltoid is widest ~5 cm BELOW the acromion and its top tucks
+		# under the trapezius slope, so the shoulder line runs neck -> acromion
+		# -> round -> down the arm without a corner. Centre 1.395, top 1.446.
+		out.append(_cap(Vector3(sx - ax * 0.004, 1.395, 0.002), Vector3(sx + ax * 0.010, 1.330, 0.004),
+			0.050 * lg, 0.038 * lg, Vector3(1.0, 1.06, 0.88), 0.016, sb, 0))   # r2: a ball and a taper into the bicep, not a cylinder
 		out.append(_cap(Vector3(sx + ax * 0.010, 1.340, 0.004),
 			Vector3(sx + ax * 0.022, 1.175, 0.006),
 			0.046 * lg, 0.039 * lg, Vector3.ONE, 0.014, sb, 0))   # M25: bicep -> elbow taper

@@ -207,7 +207,9 @@ Standing rules the loop exists to enforce:
   session and between rounds, and work new items before the backlog.
 - **Codex's tools (2026-09-06, kept):** `tools/character_review.gd -- --out=DIR` (windowed;
   a neutral stage, fixed light, matched `face/profile/full/back/gait/normals/cast` plates —
-  the right before/after instrument for people, 25 s) and `tools/session_test.gd --
+  the right before/after instrument for people, ~60 s; since D-065 it also saves GAIT STRIPS,
+  `walk|jog|sprint_side|quarter.png`, eight frames across one stride — judge any change to
+  `animate()` on the strips, never on one frame) and `tools/session_test.gd --
   --session-test` (headless; 34 session-flow checks, prints `SESSION TEST: PASS`). Both are
   part of the gate for character and session work.
 - **Character modules since 2026-09-08:** `character_hands.gd` (Codex; hands are their own

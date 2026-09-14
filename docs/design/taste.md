@@ -188,3 +188,11 @@ Down" on the slab strip), then checkpoints.
 already built — the strip, the Slab, the heat ladder, the kit — and the police behaviour it
 needed (a tail for a slow driver at low heat), which turned out to be right everywhere. Probe
 61/61. Next: the takeover crowd (club cars and people on the lot), checkpoints, then the Paper.
+
+**Round 10 — 2026-09-13 (D-065).** Milad, playing: "the running looks retarded… the body still
+looks like shit." A bug he finds by playing goes to the top (D-058). The instrument came first —
+gait strips in the review tool — and the strip made the diagnosis in one look: a fixed stride,
+a blend that could not keep up, a knee flexing in the wrong half of the cycle. Principle: measure
+the motion the way the body is measured. The femur now angles in and the deltoid is a shoulder,
+not a pad. Next for people: cloth volume (the shell wardrobe), an ankle, the hands' pose. Next
+overall: Milad's world-detail request ("detail the world more so we can then improve the map").

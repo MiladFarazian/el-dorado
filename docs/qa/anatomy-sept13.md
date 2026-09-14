@@ -65,3 +65,40 @@ slope ending 6 mm lower, and the waist carried 12 mm forward for a lumbar curve.
 unchanged from r2 (ribs 0.324, waist 0.288, shoulders 0.468). At 1.25 the arm and trunk now read as
 one mass at 18 mm — the lat's outer edge is one cell from the arm's inner edge; the posed abduction
 opens it in game.
+
+## Round 10 (D-065): the gait, the femur, the deltoid
+
+Milad: *"The running looks retarded and the character's proportions and body still looks like shit."*
+
+The review tool gained GAIT STRIPS (eight frames across a stride, side and quarter, at 1.4 / 3.2 /
+6.5 m/s). Before: a sprint that was a walk with a lean — a fixed 1.74 m stride (7.5 steps a
+second), a 12/s blend that halved the pose at that cadence, a knee that flexed in stance. After:
+see D-065 and `docs/qa/evidence/gait-sept13/`.
+
+| height | y | r3 (round 7) | r4 (round 10, final) | target | reading |
+|---|---|---|---|---|---|
+| shoulders | 1.425 | 0.468 | 0.468 | ~0.47 | the deltoid's widest point is now 3 cm lower, so this row is the slope |
+| upper chest | 1.380 | — | 0.468 | — | the deltoid's widest row; it tapers r50 → r38 into the bicep now |
+| under ribs, trunk | 1.190 | 0.324 | 0.324 | 0.32 | three masses: the arm clears the trunk by one cell here |
+| knee, each | 0.480 | 0.126 | 0.108 | 0.11 | a knee is the leg's narrowest girth |
+| knee, outer span | 0.480 | ~0.340 | 0.252 | — | centres ±0.072 — the femur angles in (KNEE_IN 0.028) |
+| calf, outer span | 0.370 | ~0.340 | 0.252 | — | vertical shins |
+| ankle, outer span | 0.110 | ~0.320 | 0.234 | — | feet under the knees; toe-out is posed |
+
+Trunk rows unchanged (ribs 0.324, waist 0.288, hips 0.360). Cache v24.
+
+**What the cell size taught (r2):** KNEE_IN 0.035 welded the calves and the mesher tore a hole at
+one knee; a rib cage at r140 left a fin on the flank where the lat cleared the wall. 0.028 and
+r146 with the lats inboard are what 18 mm resolves. The armpit is now open one cell at the
+armpit floor (1.19) and two below, which is anatomically right — and renders as a slot, not a
+crease, because a one-cell opening between two white surfaces has no shading. A sleeve shell
+(the wardrobe milestone) covers that junction; until then the slot is the known artifact.
+
+**Guild review (read-only, Sonnet — `docs/qa/evidence/gait-sept13/review_*.md`):** the
+Character Designer's four geometry calls (knees further in, a real knee taper, a ball-and-taper
+deltoid, the armpit floor at the nipple line) landed in r2 above; the Movement Mechanics
+Engineer's four constants (walk hip bias 0.05 → 0.15, a landing bend the swing does not decay
+out of, a 9 cm bounce, the sprint elbow at ~90) landed in the same pass. Still open from both
+lists, for round 12: a waist-to-hip cinch readable from the front (the belt masks it); the hands
+hang as a paddle; an ankle bone (foot roll), a pelvis bone (hip drop), foot IK — in that order
+of cost.

@@ -24,6 +24,11 @@ func _run() -> void:
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.environment.ambient_light_color = Color("cad7e8")
 	env.environment.ambient_light_energy = 0.55
+	# D-065: the game has ambient occlusion; without it a white sleeve against a
+	# white shirt has no crease at all, and an armpit reads as a slit.
+	env.environment.ssao_enabled = true
+	env.environment.ssao_radius = 0.35
+	env.environment.ssao_intensity = 2.5
 	stage.add_child(env)
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-35, -35, 0)
@@ -71,6 +76,13 @@ func _run() -> void:
 		root.get_texture().get_image().save_png(output + "/" + shot[0] + ".png")
 		print("CHARACTER REVIEW: " + shot[0])
 	root.debug_draw = Viewport.DEBUG_DRAW_DISABLED
+	# D-065: GAIT STRIPS. One frame of a walk says nothing about a walk. Eight
+	# frames across one full stride (phase marks at TAU/8), side-on and from the
+	# front quarter, at walking pace, a jog and full sprint — one image per gait
+	# and view, the character cropped out of each frame. The pose is driven by
+	# hand here, so the rig is frozen while each frame renders.
+	for gait in [["walk", 1.4], ["jog", 3.2], ["sprint", 6.5]]:
+		await _strip(rig, camera, float(gait[1]), str(gait[0]))
 	person.hide()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 3107
@@ -88,3 +100,40 @@ func _run() -> void:
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(output + "/cast.png")
 	quit()
+
+
+## Eight frames across one stride at `speed`, two views, cropped and tiled.
+func _strip(rig: Dictionary, camera: Camera3D, speed: float, label: String) -> void:
+	for i in 240:   # settle: at least two full cycles at any speed
+		SKIN.animate(rig, speed, 1.0 / 60.0, true, true)
+	var frames := 8
+	var views := [["side", Vector3(-3.1, 1.0, 0.0)], ["quarter", Vector3(-2.3, 1.15, -2.3)]]
+	for view in views:
+		camera.position = view[1]
+		camera.look_at(Vector3(0, 0.94, 0))
+		var strip: Image = null
+		var cw := 0
+		var ch := 0
+		for f in frames:
+			var mark := float(f) * TAU / float(frames)
+			var prev := float(rig["phase"])
+			for guard in 2000:
+				SKIN.animate(rig, speed, 1.0 / 60.0, true, true)
+				var ph := float(rig["phase"])
+				var a := fmod(prev - mark + TAU * 2.0, TAU)
+				var b := fmod(ph - mark + TAU * 2.0, TAU)
+				prev = ph
+				if b < a:
+					break
+			for i in 2:
+				await process_frame
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image()
+			if strip == null:
+				cw = int(img.get_width() * 0.42)
+				ch = img.get_height()
+				strip = Image.create(cw * frames, ch, false, img.get_format())
+			var x0 := (img.get_width() - cw) / 2
+			strip.blit_rect(img, Rect2i(x0, 0, cw, ch), Vector2i(cw * f, 0))
+		strip.save_png(output + "/" + label + "_" + str(view[0]) + ".png")
+		print("CHARACTER REVIEW: %s_%s (8 frames, %.1f m/s)" % [label, view[0], speed])

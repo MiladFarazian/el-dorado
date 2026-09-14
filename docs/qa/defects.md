@@ -211,6 +211,20 @@ Bar: `docs/qa/quality-bar.md`.
 >   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
 > - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
 >   and a gold ring on a live mission target. QA to rule at `--hudshot`.
+> - **D-138 [S1] The sprint was a walk with a lean.** `character_review.gd` gait strips
+>   (`docs/qa/evidence/gait-sept13/before/sprint_side.png`): at 6.5 m/s the legs barely open,
+>   the arms hang, no knee lift, 7.5 steps a second. Causes in `animate()`: a fixed 1.74 m stride,
+>   a 12/s pose blend passing 45 % of a 3.75 Hz signal, knee flexion windowed 140 degrees late
+>   (in stance, not swing). PRODUCER-CLAIMED FIXED (D-065): stride 0.75 + 0.5·speed, 40/s gait
+>   blend, swing-phase knee with a loading and a landing bend, elbows ~90 at a run, pendulum
+>   height for the walk, sink/flight for the run. Evidence: `gait-sept13/after/*_side.png`. QA to
+>   rule by sprinting Book down Howdy St and at the strips.
+> - **D-139 [S2] The legs stood as an A-frame and the shoulder was a pad.** `front.png`: knees
+>   wider than the hips (centres ±0.106 + 2.6 degrees of abduction), the deltoid widest at the
+>   acromion corner. PRODUCER-CLAIMED FIXED (D-065): knees 28 mm inboard of the hips (bones and
+>   field), abduction halved, knee r62 → 52, deltoid centre 1.418 → 1.395 tapering r50 → 38.
+>   Measured: knee 0.108 (target 0.11), knee outer span 0.252 (was ~0.34), shoulders 0.468
+>   unchanged. Known: the armpit renders as a one-cell slot. QA to rule at `front` / `full` / `back`.
 > - **D-137 [S3] The game had two missions and no Slow Lane** (the story bible's non-negotiable
 >   verb set: Hook, Saddle, Slow Lane, Paper — the strip existed as a loop, not a job).
 >   PRODUCER-CLAIMED LANDED (D-064): `mission_comin_down.gd`, three passes, the Task Force tail,
