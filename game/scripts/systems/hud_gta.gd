@@ -69,6 +69,7 @@ const C_PAD := Color(0.55, 0.90, 0.55, 1)
 const C_DISPATCH := Color(1.0, 0.85, 0.15, 1)      # D-063: the two job boards, and a live mission target
 const HOOK := preload("res://scripts/systems/mission_hook_and_ladder.gd")
 const SECOND := preload("res://scripts/systems/mission_second_collection.gd")
+const COMIN := preload("res://scripts/systems/mission_comin_down.gd")
 const C_SEARCH := Color(1.0, 0.30, 0.25, 0.22)     # wanted search radius fill
 const C_SEARCH_RIM := Color(1.0, 0.30, 0.25, 0.75)
 const C_HEALTH := Color(0.36, 0.72, 0.35, 1)
@@ -342,7 +343,7 @@ func _update_bottom(delta: float, actor: Node3D, on_foot: bool) -> void:
 	_obj_lbl.text = obj
 	# Scripted jobs already own their objective and exposure UI. Do not issue
 	# an unrelated ambient repo order underneath them.
-	for key in ["mission_hook_and_ladder", "mission_second_collection"]:
+	for key in ["mission_hook_and_ladder", "mission_second_collection", "mission_comin_down"]:
 		var mission := _peer(key)
 		if mission != null and int(mission.get("state")) != 0:
 			_obj_lbl.text = ""
@@ -446,6 +447,7 @@ func _on_radar_draw() -> void:
 	# job boards as fixed markers, and a live mission target as a gold ring.
 	_marker(Vector2(HOOK.DISPATCH_POS.x, HOOK.DISPATCH_POS.z), focus, s, c, C_DISPATCH, "D")
 	_marker(Vector2(SECOND.BOARD_POS.x, SECOND.BOARD_POS.z), focus, s, c, C_DISPATCH, "N")
+	_marker(Vector2(COMIN.BOARD_POS.x, COMIN.BOARD_POS.z), focus, s, c, Color(0.86, 0.36, 0.72), "C")
 	for n: Node in get_tree().get_nodes_in_group("mission_target"):
 		if n is Node3D and is_instance_valid(n) and (n as Node3D).is_inside_tree():
 			var mp := _to_map(_flat((n as Node3D).global_position), focus, s, c)

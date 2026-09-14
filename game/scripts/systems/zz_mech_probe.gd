@@ -22,6 +22,9 @@ extends Node
 ##  9. Hook and Ladder end to end (D-063): board the wrecker, roll into dispatch
 ##     (the app speaks), reach the Brisket, hook it (the drone and the owner
 ##     appear), deliver on the pad — the card, the payout with every bonus, GOLD.
+## 10. Comin' Down (D-064): TAB into the Candyland Slab, roll up to the club's
+##     board, one pass gate to gate (the probe shortens the night to one), the
+##     Task Force lights a star, park on the lot, lose them: the card, +$250, respect.
 ##  8. melee (D-058): fists up, a brave man 1.3 m out — the jab lands and he
 ##     squares up; his punch takes 6 unguarded, 3 through a held guard, nothing
 ##     through a guard raised inside the perfect window (and he staggers); the
@@ -49,6 +52,10 @@ var _only := -1                       # --mech-only=N: run stage N alone, then q
 var _hp0 := 0.0
 var _press := ""                      # an action fed from idle time for one frame
 const HOOK := preload("res://scripts/systems/mission_hook_and_ladder.gd")
+const COMIN := preload("res://scripts/systems/mission_comin_down.gd")
+var _hop_x := 0.0
+var _respect0 := 0
+var _cycles := 0
 var _rel := Transform3D.IDENTITY
 var _press_frames := 0
 
@@ -138,6 +145,7 @@ func _physics_process(delta: float) -> void:
 		7: _stage_drag()
 		8: _stage_melee()
 		9: _stage_mission()
+		10: _stage_comin()
 		_: _finish()
 
 
@@ -572,4 +580,62 @@ func _stage_mission() -> void:
 				if _shots != "" and not _shot_done:
 					_shot_done = true; _shot("mission_card")
 				if _t > 1.6:
-					_finish()
+					_stage = 10; _sub = 0; _t = 0.0
+
+
+func _stage_comin() -> void:
+	var m := _sys("mission_comin_down"); var kit := _sys("mission_kit"); var repo := _sys("repo_board"); var pol := _sys("police")
+	var pv := _pv()
+	if m == null or kit == null or repo == null or pol == null or pv == null:
+		_say(false, "stage10 mission systems missing"); _finish(); return
+	match _sub:
+		0:   # TAB into the slab
+			if str(pv.get("display_name")) == "Candyland Slab":
+				_say(true, "stage10 in the Candyland Slab after %d cycles" % _cycles)
+				pv.global_transform = Transform3D(Basis.IDENTITY, COMIN.BOARD_POS + Vector3(0, 1.0, -5.0))
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				_money0 = int(repo.get("money")); _respect0 = int(repo.get("respect"))
+				m.set("passes_needed", 1)
+				_sub = 1; _t = 0.0
+			elif _cycles >= 6:
+				_say(false, "stage10 could not cycle into the slab (%s)" % pv.get("display_name")); _finish()
+			elif _t > 0.4 and main_ref.has_method("_cycle_vehicle"):
+				main_ref.call("_cycle_vehicle"); _cycles += 1; _t = 0.0
+		1:
+			pv.linear_velocity = Vector3.ZERO
+			if int(m.get("state")) == 1 and _t > 0.3:
+				_say(true, "stage10 rolled up to the board in the slab: CRUISE (state=1)")
+				_say(int(kit.call("lines_queued")) >= 1, "stage10 Candyland spoke (%d lines queued)" % int(kit.call("lines_queued")))
+				_hop_x = 320.0
+				_sub = 2; _t = 0.0
+			elif _t > 4.0:
+				_say(false, "stage10 the board never took (state=%s, name=%s)" % [m.get("state"), pv.get("display_name")]); _finish()
+		2:   # gate to gate in hops (the mission counts the crossing, not the speed)
+			if int(m.get("state")) == 2:
+				_say(true, "stage10 pass complete at x=%.0f: TAKEOVER (state=2), heat %s" % [_hop_x, pol.get("heat")])
+				_say(int(pol.get("heat")) >= 1, "stage10 the Task Force lit a star")
+				pv.global_transform = Transform3D(Basis.IDENTITY, COMIN.TAKEOVER_POS + Vector3(0, 1.0, 0))
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				_sub = 3; _t = 0.0
+			elif _t > 0.25:
+				_t = 0.0; _hop_x += 45.0
+				pv.global_transform = Transform3D(Basis.looking_at(Vector3(1, 0, 0), Vector3.UP), Vector3(_hop_x, 1.0, 477.0))
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				if _hop_x > 820.0:
+					_say(false, "stage10 crossed the east gate and no pass counted (state=%s)" % m.get("state")); _finish()
+		3:
+			pv.linear_velocity = Vector3.ZERO
+			if int(m.get("state")) == 3:
+				_say(true, "stage10 parked on the lot: SLIDE OUT (state=3)")
+				pol.call("add_heat", -10)   # the probe loses them for you
+				_sub = 4; _t = 0.0
+			elif _t > 4.0:
+				_say(false, "stage10 the takeover never took (state=%s)" % m.get("state")); _finish()
+		4:
+			if int(m.get("state")) == 4:
+				var dm := int(repo.get("money")) - _money0; var dr := int(repo.get("respect")) - _respect0
+				_say(dm == 250 and dr >= 4, "stage10 COMPLETE: +$%d, respect +%d (want 250, >= 4)" % [dm, dr])
+				_say(kit.call("card_visible") == true, "stage10 the Candyland card is up")
+				_finish()
+			elif _t > 4.0:
+				_say(false, "stage10 slide-out never completed (state=%s heat=%s)" % [m.get("state"), pol.get("heat")]); _finish()

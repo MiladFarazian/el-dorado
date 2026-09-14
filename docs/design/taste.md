@@ -183,3 +183,8 @@ loops. Canon supplied the voice (Bolo's app), a shared kit supplied the card, th
 supplied the debtor at the door, and the radar finally shows the jobs. Probe 53/53 with the first
 end-to-end mission harness. Next rung: a third mission from systems that already exist ("Comin'
 Down" on the slab strip), then checkpoints.
+
+**Round 9 — 2026-09-13 (D-064).** "Keep it going." The third mission, Comin' Down, from systems
+already built — the strip, the Slab, the heat ladder, the kit — and the police behaviour it
+needed (a tail for a slow driver at low heat), which turned out to be right everywhere. Probe
+61/61. Next: the takeover crowd (club cars and people on the lot), checkpoints, then the Paper.

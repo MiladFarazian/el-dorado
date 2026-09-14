@@ -4,6 +4,7 @@ const MAP_VIEW := preload("res://scripts/ui/city_map.gd")
 const HOOK := preload("res://scripts/systems/mission_hook_and_ladder.gd")
 const SECOND := preload("res://scripts/systems/mission_second_collection.gd")
 const RACE := preload("res://scripts/systems/race_event.gd")
+const COMIN := preload("res://scripts/systems/mission_comin_down.gd")
 const GOLD := Color("edbd63")
 var main_ref: Node
 var menu: CanvasLayer
@@ -27,6 +28,8 @@ var activities: Array[Dictionary] = [
 	 "text": "LONGHORN DISPATCH  /  $600\nYour first job. Drive your wrecker into the gold marker and stop. Find the Brisket, back up close, press F to hook it, then haul it to impound."},
 	{"name": "The Second Collection", "pos": Vector2(SECOND.BOARD_POS.x, SECOND.BOARD_POS.z),
 	 "text": "OVERFLOW FELLOWSHIP  /  NIGHT REPO\nA booted fleet vehicle. Reach the job board to begin. Leave the truck outside, sneak in, and find a way to remove the boot. Quiet work pays better."},
+	{"name": "Comin' Down", "pos": Vector2(COMIN.BOARD_POS.x, COMIN.BOARD_POS.z),
+	 "text": "CANDYLAND C.C.  /  THE SLOW LANE\nBring the Candyland Slab (TAB) to the strip's west gate, slow. Three passes gate to gate under thirty while the Task Force shows. Then the takeover on the lot, and slide out."},
 	{"name": "Floodway Sprint", "pos": Vector2(RACE.PAD_CENTER.x, RACE.PAD_CENTER.z),
 	 "text": "THREEFORK FLOODWAY  /  TIME TRIAL\nDrive down into the concrete channel and stop on the race marker. Follow the checkpoints. Beat your best time."},
 	{"name": "Impound", "pos": Vector2(HOOK.PAD_CENTER.x, HOOK.PAD_CENTER.z),

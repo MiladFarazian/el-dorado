@@ -135,7 +135,7 @@ func _quiet_world() -> bool:
 		var hv: Variant = pol.get("heat")
 		if hv is int and int(hv) > 0:
 			return false
-	for key: String in ["mission_hook_and_ladder", "mission_second_collection"]:
+	for key: String in ["mission_hook_and_ladder", "mission_second_collection", "mission_comin_down"]:
 		var m := _peer(key)
 		if m != null and int(m.get("state")) != 0:
 			return false

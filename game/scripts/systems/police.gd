@@ -54,6 +54,12 @@ const PULLOVER_STOP := 5.0           # m: park here (origin to origin)
 const PULLOVER_HOLD_SLACK := 3.0     # m: once parked, hold the brake out to this
 const PULLOVER_EASE_DIST := 20.0     # m over which the throttle eases off
 const PULLOVER_THROTTLE := Vector2(0.18, 0.55)  # min..max while easing in
+# TAIL (D-064): at low heat a SLOW driver (a slab comin' down at 5 m/s) is not
+# rammed either — the cruiser falls in TAIL_GAP behind him and matches speed,
+# riding the bumper. Speed up past PULLOVER_SLOW and it is a chase again.
+const PULLOVER_SLOW := 8.0           # m/s: under this, cruisers tail instead of ram
+const TAIL_GAP := 7.0                # m behind the actor the tail wants to sit
+const TAIL_CLOSE_GAIN := 0.5         # m/s of extra speed per metre of gap past the slot
 const PULLOVER_SPEED_GAIN := 0.5     # wanted approach speed = gap x this (m/s per m)
 const PULLOVER_CREEP := 1.5          # m/s floor: the last metres are a creep, never a ram
 const PULLOVER_APPROACH_MAX := 9.0   # m/s ceiling on the approach (RAM_HEAT_SPEED is 8 at contact)
@@ -320,9 +326,27 @@ func _drive(c: Dictionary, delta: float, pv: Node3D) -> void:
 		c["closing"] = (_actor_velocity(pv) - body.linear_velocity).dot(sep / sep_len)
 	else:
 		c["closing"] = 0.0
+	# The tail: heat 1-2, the actor SLOW but moving — fall in behind and match.
+	var av := _actor_velocity(pv)
+	if heat <= PULLOVER_MAX_HEAT and not search_active and sep_len < PULLOVER_RANGE \
+			and av.length() >= PULLOVER_STILL and av.length() < PULLOVER_SLOW:
+		c["stuck_t"] = 0.0; c["pulled"] = false
+		var adir := av.normalized()
+		var slot := pv.global_position - adir * TAIL_GAP
+		var to_slot := slot - body.global_position; to_slot -= up * to_slot.dot(up)
+		var gap := to_slot.length()
+		var want := clampf(av.length() + gap * TAIL_CLOSE_GAIN, 1.0, av.length() + 6.0)
+		var a_t := fwd.signed_angle_to(to_slot.normalized(), up) if gap > 0.5 else 0.0
+		var s_t := clampf(a_t / deg_to_rad(STEER_FULL_ANGLE_DEG), -1.0, 1.0)
+		var v_t := body.linear_velocity.length()
+		if v_t > want + 0.5:
+			body.set_external_input(0.0, clampf((v_t - want) / 4.0, 0.3, 1.0), s_t, false)
+		else:
+			body.set_external_input(clampf(0.25 + gap * 0.03, 0.25, 0.7), 0.0, s_t, false)
+		return
 	# The arrest approach: heat 1-2, the actor still, the cruiser near — park, hold.
 	if heat <= PULLOVER_MAX_HEAT and not search_active and sep_len < PULLOVER_RANGE \
-			and _actor_velocity(pv).length() < PULLOVER_STILL:
+			and av.length() < PULLOVER_STILL:
 		c["stuck_t"] = 0.0  # a deliberate stop is not a stuck cruiser
 		var parked: bool = c.get("pulled", false) == true
 		if sep_len <= PULLOVER_STOP or (parked and sep_len <= PULLOVER_STOP + PULLOVER_HOLD_SLACK):

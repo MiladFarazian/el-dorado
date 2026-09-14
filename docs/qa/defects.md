@@ -211,6 +211,11 @@ Bar: `docs/qa/quality-bar.md`.
 >   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
 > - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
 >   and a gold ring on a live mission target. QA to rule at `--hudshot`.
+> - **D-137 [S3] The game had two missions and no Slow Lane** (the story bible's non-negotiable
+>   verb set: Hook, Saddle, Slow Lane, Paper — the strip existed as a loop, not a job).
+>   PRODUCER-CLAIMED LANDED (D-064): `mission_comin_down.gd`, three passes, the Task Force tail,
+>   the takeover, the card. Evidence: probe stage 10 (8/8). QA to rule by driving it in the Slab
+>   at night; open: the takeover has no crowd.
 > - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
 >   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
 > - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,
