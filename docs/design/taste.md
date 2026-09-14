@@ -196,3 +196,12 @@ a blend that could not keep up, a knee flexing in the wrong half of the cycle. P
 the motion the way the body is measured. The femur now angles in and the deltoid is a shoulder,
 not a pad. Next for people: cloth volume (the shell wardrobe), an ankle, the hands' pose. Next
 overall: Milad's world-detail request ("detail the world more so we can then improve the map").
+
+**Round 11 — 2026-09-13 (D-066).** "Detail the world more so we can then improve the map." The
+map was poor because the world had no register: places existed in six scripts and nowhere a map
+could read. So the atlas came first (data the map draws from; a place not in it is a canon bug),
+then two districts at the empty edges, each with a silhouette you can steer by from a kilometre
+— the Lone Spur wheel, the Harvest Hills billboard — and each carrying its satire in its own
+signage (a fair's price list, a developer's fine print), never in the people. Principle: the map
+is a view of a register, and a district is a destination before it is a decoration. Next: Cedar
+Cliff / Deacon Arts (warmth first), traffic on the new roads, the radar reading the atlas.

@@ -1,0 +1,434 @@
+{
+  "_doc": "THE ATLAS (D-066). The built world as data: districts, places, and every road that is not the downtown grid. ui/city_map.gd draws from this file; docs/design/world-atlas.md is its prose twin. A place that is built but not here is a canon bug. Coordinates are world x,z in metres (north = -z); rects are [x, z, width, depth].",
+  "world_half": 1000,
+  "districts": [
+    {
+      "id": "dorado",
+      "name": "DOWNTOWN DORADO",
+      "rect": [
+        120,
+        60,
+        688,
+        516
+      ],
+      "fill": "344047",
+      "label": [
+        134,
+        84
+      ],
+      "note": "The glass canyon: 48 blocks, the Green Light on Howdy Street (z 305), the Candyland strip on the south row (z 477)."
+    },
+    {
+      "id": "stonebridle",
+      "name": "STONEBRIDLE RANCH",
+      "rect": [
+        -600,
+        -880,
+        1300,
+        700
+      ],
+      "fill": "2c4038",
+      "label": [
+        -586,
+        -856
+      ],
+      "note": "The gated-HOA archetype: brick boxes, pools, trampolines, porch lights."
+    },
+    {
+      "id": "threefork",
+      "name": "THREEFORK FLOODWAY",
+      "rect": [
+        -710,
+        100,
+        180,
+        900
+      ],
+      "fill": "49575a",
+      "label": [
+        -704,
+        990
+      ],
+      "note": "The Big Empty — a levee-walled concrete channel, the Floodway Sprint's arena. No water neither."
+    },
+    {
+      "id": "gigastead",
+      "name": "GIGASTEAD",
+      "rect": [
+        -352,
+        401,
+        184,
+        158
+      ],
+      "fill": "3a3f3a",
+      "label": [
+        -350,
+        401
+      ],
+      "note": "Compute Ranch No. 7: three barns, stacks, Range Wardens. ECONOMIC MIRACLE IN PROGRESS."
+    },
+    {
+      "id": "overflow",
+      "name": "OVERFLOW CAMPUS",
+      "rect": [
+        40,
+        566,
+        205,
+        210
+      ],
+      "fill": "3d3b34",
+      "label": [
+        44,
+        566
+      ],
+      "note": "Overflow Fellowship's flagship: the arena church, the parking ocean, Blessing One on its pad."
+    },
+    {
+      "id": "middlington",
+      "name": "MIDDLINGTON",
+      "rect": [
+        500,
+        660,
+        300,
+        280
+      ],
+      "fill": "3b3a42",
+      "label": [
+        504,
+        940
+      ],
+      "note": "Rustlers Stadium (Colt Bidwell Field) and the tailgate lots — the metroplex's stadium superblock, this slice's fragment of it."
+    },
+    {
+      "id": "fairgrounds",
+      "name": "LONE STAR FAIRGROUNDS",
+      "rect": [
+        830,
+        100,
+        160,
+        330
+      ],
+      "fill": "463d2e",
+      "label": [
+        834,
+        120
+      ],
+      "note": "Off-season. The Deco gate on Fair Drive, the Lone Spur wheel, Tall Tom, the midway, the lots. STATE FAIR OPENS SEPT 26."
+    },
+    {
+      "id": "harvest",
+      "name": "HARVEST HILLS™",
+      "rect": [
+        -980,
+        -880,
+        340,
+        460
+      ],
+      "fill": "45402f",
+      "label": [
+        -976,
+        -856
+      ],
+      "note": "A Pioneer Vision Development. Framing lumber, mud roads, five model homes, a billboard bigger than any house. The map's visibly growing edge."
+    }
+  ],
+  "roads": [
+    {
+      "class": "freeway",
+      "name": "I-3",
+      "pts": [
+        [
+          -800,
+          0
+        ],
+        [
+          800,
+          0
+        ]
+      ]
+    },
+    {
+      "class": "frontage",
+      "name": "I-3 frontage (north)",
+      "pts": [
+        [
+          -800,
+          -30
+        ],
+        [
+          800,
+          -30
+        ]
+      ]
+    },
+    {
+      "class": "frontage",
+      "name": "I-3 frontage (south)",
+      "pts": [
+        [
+          -800,
+          30
+        ],
+        [
+          800,
+          30
+        ]
+      ]
+    },
+    {
+      "class": "ramp",
+      "pts": [
+        [
+          517,
+          18
+        ],
+        [
+          582,
+          18
+        ]
+      ]
+    },
+    {
+      "class": "ramp",
+      "pts": [
+        [
+          -582,
+          18
+        ],
+        [
+          -517,
+          18
+        ]
+      ]
+    },
+    {
+      "class": "ramp",
+      "pts": [
+        [
+          517,
+          -18
+        ],
+        [
+          582,
+          -18
+        ]
+      ]
+    },
+    {
+      "class": "ramp",
+      "pts": [
+        [
+          -582,
+          -18
+        ],
+        [
+          -517,
+          -18
+        ]
+      ]
+    },
+    {
+      "class": "street",
+      "name": "County General spur",
+      "pts": [
+        [
+          365,
+          563
+        ],
+        [
+          365,
+          640
+        ]
+      ]
+    },
+    {
+      "class": "street",
+      "name": "Overflow entry drive",
+      "pts": [
+        [
+          142,
+          566
+        ],
+        [
+          142,
+          641
+        ]
+      ]
+    },
+    {
+      "class": "strip",
+      "name": "the Candyland strip",
+      "pts": [
+        [
+          300,
+          477
+        ],
+        [
+          780,
+          477
+        ]
+      ]
+    },
+    {
+      "class": "street",
+      "name": "Fair Drive",
+      "pts": [
+        [
+          780,
+          305
+        ],
+        [
+          846,
+          305
+        ]
+      ]
+    },
+    {
+      "class": "street",
+      "name": "Pioneer Vision Parkway",
+      "pts": [
+        [
+          -800,
+          -36
+        ],
+        [
+          -800,
+          -440
+        ]
+      ]
+    },
+    {
+      "class": "dirt",
+      "pts": [
+        [
+          -540,
+          -150
+        ],
+        [
+          700,
+          -84
+        ]
+      ]
+    },
+    {
+      "class": "dirt",
+      "pts": [
+        [
+          -495,
+          150
+        ],
+        [
+          70,
+          880
+        ]
+      ]
+    },
+    {
+      "class": "dirt",
+      "pts": [
+        [
+          140,
+          610
+        ],
+        [
+          760,
+          930
+        ]
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Cattleman's Trust Tower",
+      "aka": "the Green Light",
+      "pos": [
+        408,
+        262
+      ],
+      "kind": "tower"
+    },
+    {
+      "name": "County General",
+      "pos": [
+        365,
+        612
+      ],
+      "kind": "hospital"
+    },
+    {
+      "name": "Longhorn Impound",
+      "pos": [
+        709,
+        558
+      ],
+      "kind": "impound"
+    },
+    {
+      "name": "Overflow Fellowship",
+      "pos": [
+        142,
+        735
+      ],
+      "kind": "church"
+    },
+    {
+      "name": "Rustlers Stadium",
+      "aka": "Colt Bidwell Field",
+      "pos": [
+        640,
+        782
+      ],
+      "kind": "stadium"
+    },
+    {
+      "name": "GigaStead",
+      "aka": "Compute Ranch No. 7",
+      "pos": [
+        -260,
+        480
+      ],
+      "kind": "industry"
+    },
+    {
+      "name": "Middlington water tower",
+      "pos": [
+        -300,
+        -140
+      ],
+      "kind": "watertower"
+    },
+    {
+      "name": "Floodway Sprint",
+      "pos": [
+        -620,
+        150
+      ],
+      "kind": "race"
+    },
+    {
+      "name": "the Lone Spur",
+      "aka": "the wheel",
+      "pos": [
+        912,
+        300
+      ],
+      "kind": "wheel"
+    },
+    {
+      "name": "Tall Tom",
+      "pos": [
+        868,
+        258
+      ],
+      "kind": "statue"
+    },
+    {
+      "name": "Harvest Hills sales office",
+      "aka": "MODELS OPEN",
+      "pos": [
+        -830,
+        -470
+      ],
+      "kind": "sales"
+    }
+  ]
+}

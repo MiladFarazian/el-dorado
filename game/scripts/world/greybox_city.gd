@@ -750,6 +750,8 @@ const EXTRA_LAYERS: Array[String] = [
 	"res://scripts/world/wild_dressing.gd",
 	"res://scripts/world/scenic_dressing.gd",
 	"res://scripts/world/street_wear.gd",     # D-059: lids, drains, tar patches on the downtown lanes
+	"res://scripts/world/fairgrounds.gd",     # D-066: the Lone Star Fairgrounds, east of the grid
+	"res://scripts/world/harvest_hills.gd",   # D-066: Harvest Hills, the slab-farm frontier, north-west
 	"res://scripts/world/landmarks.gd",
 	# M21 (defect D-023): downtown's architectural vocabulary. MUST stay LAST —
 	# it re-skins the tower stack from the recorded segments, and it frees the

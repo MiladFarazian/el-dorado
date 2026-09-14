@@ -100,7 +100,7 @@ artifacts instead of paying for a third pass. Therefore:
   in every long-mission brief verbatim.
 - Prefer several short focused missions over one monolithic pass, and order the brief so
   the highest-value question is answered first.
-- **A 59-vantage `--shot` sweep takes ~1–3 minutes — WITH A REAL RENDERER.** The earlier
+- **A 63-vantage `--shot` sweep takes ~1–3 minutes — WITH A REAL RENDERER.** The earlier
   "15–18 minutes" figure in this file was wrong; it was inferred from a run that had in
   fact deadlocked. **`--headless` + `--shot` hangs forever:** the dummy renderer never
   fires `RenderingServer.frame_post_draw`, so `_settle_and_save` awaits a frame that never
@@ -166,7 +166,7 @@ Standing rules the loop exists to enforce:
   `--env-legacy` (M22 look), `--env-no-{sdfgi,ssr,volfog,taa,farshadow,grade,scatter,exposure}`,
   `--env-aa=off|msaa2|msaa4|msaa8|taa|msaa2taa|msaa8taa`, `--factory` (the M22 rigid-part body; skinned is the default since D-050),
   `--skinned-bare` (body with no garment shells — bisects body vs wardrobe),
-  `--gfx-legacy` (M22 materials), `--shot` (59 plates, windowed), `--hudshot` (the live HUD,
+  `--gfx-legacy` (M22 materials), `--shot` (63 plates, windowed), `--hudshot` (the live HUD,
   windowed), `--perf` (see `docs/tech/rendering/perf-harness.md`), `--nobeacon`,
   `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
@@ -202,6 +202,12 @@ Standing rules the loop exists to enforce:
 - **Taste (D-056):** `docs/design/taste.md` is the discretion for autonomous rounds — thesis,
   ten principles, the rubric, the DNA scorecard, the ranked backlog, anti-taste. Load it before
   choosing what to build; re-score the card at the end of a round.
+- **The atlas (D-066):** `game/data/world/atlas.json` is the built world as data — districts,
+  non-grid roads by class, nameable places — and `ui/city_map.gd` draws from it; `docs/design/
+  world-atlas.md` is its prose twin with the still-prairie table. A layer that adds a nameable
+  place registers it there; a new road name goes in the naming bible §4. `godot -- --mapshot=PATH`
+  (windowed) saves the map as the player sees it. The `--shot` sweep is 63 plates (`fair_gate`,
+  `fair_wheel_night`, `harvest_edge`, `tall_tom` joined it).
 - **Milad's task inbox:** a shared Apple Note, "El Dorado Tasks". `game/tools/tasks_note.sh`
   reads it from Notes.app and diffs against `game/.gate/tasks_seen.txt`; run it at the start of a
   session and between rounds, and work new items before the backlog.

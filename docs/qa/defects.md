@@ -211,6 +211,18 @@ Bar: `docs/qa/quality-bar.md`.
 >   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
 > - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
 >   and a gold ring on a live mission target. QA to rule at `--hudshot`.
+> - **D-140 [S2] The city map named three places on a 2 km square** and drew the rest of the
+>   world as nothing: no church, stadium, compute ranch, water tower, hospital dot, strip or
+>   dirt road, and a hard-coded job legend that had gone stale. PRODUCER-CLAIMED FIXED (D-066):
+>   the map draws from `data/world/atlas.json` (8 districts, 15 roads, 11 places), the legend
+>   from the session's list. Evidence: `docs/qa/evidence/world-sept13/map_after.png`
+>   (`--mapshot`). QA to rule at M in a full-size window, where the place names show.
+> - **D-141 [S2] The east strip and the north-west corner were prairie** with no destination in
+>   them; the world's edges had nothing to drive to. PRODUCER-CLAIMED LANDED (D-066): the Lone
+>   Star Fairgrounds (gate, wheel, Tall Tom, midway, lots) and Harvest Hills™ (parkway, monument,
+>   billboard, mud lanes, ~60 lots in five stages, sales trailer). Evidence: `world-sept13/plates/`
+>   at `fair_gate`, `fair_wheel_night`, `harvest_edge`. QA to rule by driving Fair Drive and the
+>   parkway; open: no traffic on either.
 > - **D-138 [S1] The sprint was a walk with a lean.** `character_review.gd` gait strips
 >   (`docs/qa/evidence/gait-sept13/before/sprint_side.png`): at 6.5 m/s the legs barely open,
 >   the arms hang, no knee lift, 7.5 steps a second. Causes in `animate()`: a fixed 1.74 m stride,

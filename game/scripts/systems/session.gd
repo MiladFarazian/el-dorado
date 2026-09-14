@@ -53,6 +53,9 @@ func _boot() -> void:
 	for i in 8:
 		await get_tree().physics_frame
 	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--mapshot="):
+			await _map_shot(arg.trim_prefix("--mapshot="))
+			return
 		if arg.begins_with("--shot") or arg.begins_with("--hudshot") or arg.begins_with("--perf") \
 				or arg.begins_with("--session-test") or arg.begins_with("--mech-probe") or arg.begins_with("--wanted-probe"):
 			started = true
@@ -60,6 +63,19 @@ func _boot() -> void:
 	if DisplayServer.get_name() != "headless":
 		select_activity(0)
 		show_menu()
+
+## D-066: `--mapshot=/abs/path.png` (windowed) — open the city map exactly as
+## the player sees it and save the window. The map's own review plate.
+func _map_shot(path: String) -> void:
+	started = true
+	select_activity(0)
+	show_menu()
+	for i in 6:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(path)
+	print("MAPSHOT: " + path)
+	get_tree().quit()
 
 func _input(event: InputEvent) -> void:
 	if main_ref.smoke_mode or not event is InputEventKey or not event.pressed or event.echo:

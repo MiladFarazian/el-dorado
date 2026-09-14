@@ -111,6 +111,8 @@ Source keys used in tables: **map** · **story** · **A** · **C** · **satire**
 | Katy Trail | **the Casey Trail** | map | — |
 | Trinity Trails | **the Threefork Trails** | WB (D-005a) | Trinity Trails (verbatim, C) |
 | Frontage roads, Texas turnarounds | kept as descriptive genericisms | map | — |
+| — (this slice, D-066) | **Fair Drive** — Howdy Street carried east past the grid to the fairgrounds gate | producer | — |
+| — (this slice, D-066) | **Pioneer Vision Parkway** — the developer's own road north off the I-3 frontage into Harvest Hills™ | producer | — |
 
 ### Interchanges (landmarks-as-brands)
 | Real-world referent | Canon name | Source | Retired variants |

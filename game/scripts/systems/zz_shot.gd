@@ -18,6 +18,11 @@ var _busy := false
 # [name, camera pos, look-at, hour-of-day]
 var _shots: Array = [
 	["street_north", Vector3(193, 3.5, 470), Vector3(193, 12, 340), 13.0],
+	# D-066: the two new districts, judged from the road a player arrives on.
+	["fair_gate", Vector3(790.0, 3.0, 292.0), Vector3(846.0, 9.0, 305.0), 13.0],
+	["fair_wheel_night", Vector3(904.0, 2.0, 322.0), Vector3(960.0, 24.0, 250.0), 21.5],
+	["harvest_edge", Vector3(-800.0, 2.6, -395.0), Vector3(-805.0, 7.0, -480.0), 17.5],
+	["tall_tom", Vector3(820.0, 3.0, 303.0), Vector3(868.0, 9.0, 258.0), 15.0],   # through the gate opening; the first try stood 1.5 m off a pylon
 	["skyline_from_freeway", Vector3(-60, 15, 2), Vector3(500, 46, 210), 16.5],
 	["frontage_signs", Vector3(408, 3.4, 22), Vector3(414, 4.6, 44), 13.0],
 	["trust_tower", Vector3(540, 60, 396), Vector3(451, 142, 305), 13.0],
