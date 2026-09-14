@@ -211,6 +211,12 @@ Bar: `docs/qa/quality-bar.md`.
 >   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
 > - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
 >   and a gold ring on a live mission target. QA to rule at `--hudshot`.
+> - **D-142 [S1] The shirt and the trousers were paint on the skin** — a sleeve was the arm's own
+>   radius, a trouser leg the shin's; every review since D-050 called it "coat hanger on two
+>   pipes". PRODUCER-CLAIMED LANDED (D-067): constant-offset shells 10 mm off, 12 mm thick, one
+>   piece per garment, zones and weights inherited from the skin beneath. Evidence:
+>   `docs/qa/evidence/cloth-sept13/after/{torso,full,back,sprint_side}.png`. QA to rule at
+>   `torso` / `showcase_people` and by sprinting; known: the armhole is a straight seam.
 > - **D-140 [S2] The city map named three places on a 2 km square** and drew the rest of the
 >   world as nothing: no church, stadium, compute ranch, water tower, hospital dot, strip or
 >   dirt road, and a hard-coded job legend that had gone stale. PRODUCER-CLAIMED FIXED (D-066):

@@ -208,6 +208,13 @@ Standing rules the loop exists to enforce:
   place registers it there; a new road name goes in the naming bible §4. `godot -- --mapshot=PATH`
   (windowed) saves the map as the player sees it. The `--shot` sweep is 63 plates (`fair_gate`,
   `fair_wheel_night`, `harvest_edge`, `tall_tom` joined it).
+- **Cloth (D-067):** the shirt, sleeves and trousers are constant-offset SHELLS of the body
+  (`skinned_character._pieces`, "THE CLOTHES THEMSELVES"): 10 mm off, 12 mm thick, 4 mm cells,
+  one piece per garment, zone −1 = inherit the skin's palette zone. Laws paid for in plates: a
+  sheet needs THREE cells across it or it bakes as lace; every part closes its cut with a wall,
+  so a garment is one piece; a full-field shell at wrist height rings the wrist (use the trunk
+  field or an |x| clip). Anything that sits on the shirt carries `CLOTH_TOP`. A cache bump now
+  dresses the crowd over ~4 minutes on the first boot (63 s a bucket, async) — warm before plates.
 - **Milad's task inbox:** a shared Apple Note, "El Dorado Tasks". `game/tools/tasks_note.sh`
   reads it from Notes.app and diffs against `game/.gate/tasks_seen.txt`; run it at the start of a
   session and between rounds, and work new items before the backlog.

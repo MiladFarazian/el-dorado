@@ -231,7 +231,7 @@ static var _bake_n := 0
 static var _no_disk := false               # tools set this to force a real bake
 ## Bump when the field, the mesher or the vertex format changes, so a stale
 ## user:// bake can never outlive the code that made it.
-const CACHE_VER := 24   # 24: r2 — knees 28 mm in, knee r52, lats inboard, pecs a touch wider, deltoid ball-and-taper (D-065); 22: knees inboard, deltoid lowered, chest 0.33 (D-065); 21: boots, pecs, scapulae, a rounder deltoid, a lumbar curve (D-062); 20: the trunk rebuilt as a rib cage, r2 (D-061); 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
+const CACHE_VER := 28   # 28: the clothes as shells, r4 — one field, inherited zones, 12 mm cloth on 4 mm cells, one piece per garment (D-067); 24: r2 — knees 28 mm in, knee r52, lats inboard, pecs a touch wider, deltoid ball-and-taper (D-065); 22: knees inboard, deltoid lowered, chest 0.33 (D-065); 21: boots, pecs, scapulae, a rounder deltoid, a lumbar curve (D-062); 20: the trunk rebuilt as a rib cage, r2 (D-061); 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
 
 
 # ============================== PUBLIC API ===================================
@@ -1896,7 +1896,25 @@ const P_DUTY := 13
 const P_EPAULET := 14
 const P_BADGE := 15
 const P_HEM := 16
-const PIECE_N := 17
+# D-067: THE CLOTHES THEMSELVES — the shirt, the sleeves and the trousers as
+# shells with volume, not paint. See `_pieces` under "THE CLOTHES THEMSELVES".
+const P_SHIRT := 17          # hem to the neck's foot, armhole to armhole
+const P_SHIRT_V := 18        # the same, for a V-neck: two halves that stop at the notch
+const P_SHIRT_TAIL := 19     # over the waistband, untucked only
+const P_SLEEVE := 20         # a short sleeve: armhole to the line at 1.265
+const P_SLEEVE_LONG := 21    # a long sleeve: armhole to the cuff — ONE piece, so no ring at the biceps
+const P_PANTS := 22          # trousers: waistband to the boot, both legs one piece (the crotch never opens)
+const P_SHORTS := 23         # shorts: waistband to the thigh line
+const CLOTH_VOX := 0.004     # a cloth shell bakes on 4 mm cells: three across its thickness
+## Cloth stands CLOTH_OFF off the skin and is CLOTH_TH thick; everything that
+## used to sit on the painted shirt now sits CLOTH_TOP further out.
+## r3: 6 mm cloth on 6 mm cells baked as LACE — a sheet needs three cells
+## across it to close (the first pass, 6 mm on 2.5 mm cells, was solid and
+## 73 MB a bucket). 12 mm on 4 mm cells is solid at a fifth of that.
+const CLOTH_OFF := 0.010
+const CLOTH_TH := 0.012
+const CLOTH_TOP := 0.022
+const PIECE_N := 24
 const PIECE_NAME: Array = ["placket", "collar_pts", "collar_vee", "hood",
 	"pocket_l", "pocket_r", "yoke", "tie", "lanyard", "vest", "apron", "belt",
 	"buckle", "duty", "epaulet", "badge", "hem"]
@@ -2120,7 +2138,7 @@ static func _tailored_piece(piece: int, field: PackedFloat32Array, w: float) -> 
 					# 6.5 mm, not the stand's 4.5: the leaf lies OVER the stand where
 					# they overlap, so the two sheets no longer fight for depth at the
 					# junction (the jagged inner edges in codex9/review/collar.png).
-					vertices.append(_fabric_front(field, xy, 0.0065))
+					vertices.append(_fabric_front(field, xy, 0.0065 + CLOTH_TOP))   # D-067: on the cloth
 			_fabric_grid(indices, base, 9, 13, side > 0)
 	else:
 		var x0 := -0.013
@@ -2134,7 +2152,7 @@ static func _tailored_piece(piece: int, field: PackedFloat32Array, w: float) -> 
 			x1 = cx + 0.034
 			y0 = 1.283
 			y1 = 1.371
-		var relief := 0.0050 if piece == P_PLACKET else 0.0040
+		var relief := (0.0050 if piece == P_PLACKET else 0.0040) + CLOTH_TOP   # D-067: on the cloth
 		for row in 25:
 			var v := float(row) / 24.0
 			for col in 9:
@@ -2154,7 +2172,7 @@ static func _tailored_piece(piece: int, field: PackedFloat32Array, w: float) -> 
 					var u := float(col) / 8.0
 					var y := lerpf(y1 - 0.004, y1 + 0.022, v)
 					vertices.append(_fabric_front(field, Vector2(lerpf(x0 - 0.002, x1 + 0.002, u), y),
-						lerpf(0.0080, 0.0045, v)))
+						lerpf(0.0080, 0.0045, v) + CLOTH_TOP))
 			_fabric_grid(indices, base, 9, 5, false)
 	return _fabric_arrays(vertices, indices, zone, owner, w, field)
 
@@ -2352,10 +2370,10 @@ static func _clip_sdf(clip: Array, p: Vector3, ke: float) -> float:
 ## stops being represented at all.
 static func _sh(off: float, th: float, blo: Vector3, bhi: Vector3, clip: Array,
 		ke: float, bone: int, zone: int, k := 0.005,
-		trunk := false, carve := 0.0) -> Dictionary:
+		trunk := false, carve := 0.0, vox := 0.0) -> Dictionary:
 	return {"t": 0, "off": off, "th": th, "clip": clip, "ke": ke, "k": k,
 		"bone": bone, "zone": zone, "lo": blo, "hi": bhi, "trunk": trunk,
-		"carve": carve}
+		"carve": carve, "vox": vox}
 
 
 ## A solid prop (holster, radio, pouch). Trimmed by the body's own offset
@@ -2419,7 +2437,7 @@ static func _pieces(w: float, _g: float) -> Array:
 		out[i] = []
 
 	# ---- placket: the strip a shirt buttons down. 38 mm wide, 5 mm proud.
-	out[P_PLACKET] = [_sh(0.003, 0.008,
+	out[P_PLACKET] = [_sh(0.003 + CLOTH_TOP, 0.008,
 		Vector3(-0.034, 1.078, -0.20), Vector3(0.034, 1.458, 0.02),
 		[_slx(-0.019, 0.019), _sly(1.085, 1.452), _slz(-9.0, -0.012)],
 		0.006, B_TORSO, Z_G_PLACKET)]
@@ -2453,7 +2471,7 @@ static func _pieces(w: float, _g: float) -> Array:
 		[_sly(1.505, 1.542), _slr(0.0, 0.092, 0.0, 0.012)],
 		0.004, B_COLLAR, Z_G_COLLAR))
 	for sx: float in [-1.0, 1.0]:
-		pts.append(_sh(0.002, 0.004,   # M23: 4/9 -> 2/4 mm — a collar point is cloth, not a pillow
+		pts.append(_sh(0.002 + CLOTH_TOP, 0.004,   # M23: 4/9 -> 2/4 mm — a collar point is cloth, not a pillow; D-067: on the cloth
 			Vector3(minf(sx * 0.024, sx * 0.076) - 0.01, 1.455, -0.20),
 			Vector3(maxf(sx * 0.024, sx * 0.076) + 0.01, 1.540, 0.02),
 			[_slx(minf(sx * 0.024, sx * 0.076), maxf(sx * 0.024, sx * 0.076)),
@@ -2465,7 +2483,7 @@ static func _pieces(w: float, _g: float) -> Array:
 	# carries as a cut. The notch itself is skin; this is its binding.
 	var vee: Array = []
 	for sx: float in [-1.0, 1.0]:
-		vee.append(_sh(0.004, 0.008,
+		vee.append(_sh(0.004 + CLOTH_TOP, 0.008,
 			Vector3(-0.085, 1.392, -0.20), Vector3(0.085, 1.520, 0.02),
 			[_sl(Vector3(sx * 1.0, -V_SLOPE, 0.0), -V_SLOPE * V_APEX - 0.011,
 				-V_SLOPE * V_APEX + 0.011),
@@ -2475,7 +2493,7 @@ static func _pieces(w: float, _g: float) -> Array:
 
 	# ---- hood, DOWN: a roll of cloth behind the neck. Up is on the head, and
 	# the head is not part of this migration yet.
-	out[P_HOOD] = [_sh(0.020, 0.032,
+	out[P_HOOD] = [_sh(0.020 + CLOTH_TOP, 0.032,
 		Vector3(-0.14, 1.372, -0.04), Vector3(0.14, 1.556, 0.26),
 		[_slx(-0.115, 0.115), _sly(1.380, 1.548), _slz(0.010, 9.0)],
 		0.014, B_COLLAR, Z_G_HOOD)]
@@ -2501,13 +2519,13 @@ static func _pieces(w: float, _g: float) -> Array:
 	# is 2 mm everywhere, which is what makes a seam read as a seam.
 	var yoke: Array = []
 	for sx: float in [-1.0, 1.0]:
-		yoke.append(_sh(0.002, 0.003,            # front: a shallow V (a SEAM: 2 mm off — 1 mm penetrated at 11 vertices, verify7)
+		yoke.append(_sh(0.002 + CLOTH_TOP, 0.003,            # front: a shallow V (a SEAM: 2 mm off — 1 mm penetrated at 11 vertices, verify7)
 			Vector3(-0.16, 1.330, -0.20), Vector3(0.16, 1.410, 0.02),
 			[_sl(Vector3(sx * 1.0, -0.4667, 0.0), -0.4667 * 1.3416 - 0.005,
 				-0.4667 * 1.3416 + 0.005),
 			 _slx(-0.150, 0.150), _sly(1.330, 1.404), _slz(-9.0, -0.010)],
 			0.008, B_COLLAR, Z_G_TRIM))
-		yoke.append(_sh(0.002, 0.003,            # back: across the blades
+		yoke.append(_sh(0.002 + CLOTH_TOP, 0.003,            # back: across the blades
 			Vector3(-0.28, 1.352, -0.02), Vector3(0.28, 1.500, 0.24),
 			[_sl(Vector3(sx * 1.0, -0.416, 0.0), -0.416 * 1.372 - 0.006,
 				-0.416 * 1.372 + 0.006),
@@ -2521,11 +2539,11 @@ static func _pieces(w: float, _g: float) -> Array:
 	# above y 1.39 the chest is falling away fast. A shell does not care what
 	# the chest does; it IS what the chest does, 14 mm out.
 	out[P_TIE] = [
-		_sh(0.014, 0.014, Vector3(-0.030, 1.404, -0.22),
+		_sh(0.014 + CLOTH_TOP, 0.014, Vector3(-0.030, 1.404, -0.22),
 			Vector3(0.030, 1.450, 0.02),
 			[_slx(-0.020, 0.020), _sly(1.410, 1.444), _slz(-9.0, -0.010)],
 			0.008, B_COLLAR, Z_G_TIE),
-		_sh(0.014, 0.012, Vector3(-0.046, 1.176, -0.22),
+		_sh(0.014 + CLOTH_TOP, 0.012, Vector3(-0.046, 1.176, -0.22),
 			Vector3(0.046, 1.416, 0.02),
 			[_sl(Vector3(1.0, 0.055, 0.0), -9.0, 0.020 + 0.055 * 1.412),
 			 _sl(Vector3(-1.0, 0.055, 0.0), -9.0, 0.020 + 0.055 * 1.412),
@@ -2537,14 +2555,14 @@ static func _pieces(w: float, _g: float) -> Array:
 	# of a PLANE through the chest. A shell cannot be inside the shirt.
 	var lan: Array = []
 	for sx: float in [-1.0, 1.0]:
-		lan.append(_sh(0.028, 0.008,
+		lan.append(_sh(0.028 + CLOTH_TOP, 0.008,
 			Vector3(-0.075, 1.320, -0.24), Vector3(0.075, 1.520, 0.02),
 			[_sl(Vector3(sx * 1.0, 0.14, 0.0),
 				sx * sx * (0.020 + 0.14 * 1.336) - 0.007,
 				sx * sx * (0.020 + 0.14 * 1.336) + 0.007),
 			 _sly(1.330, 1.505), _slz(-9.0, -0.010)],
 			0.006, B_COLLAR, Z_G_CORD))
-	lan.append(_sh(0.028, 0.008, Vector3(-0.036, 1.256, -0.24),
+	lan.append(_sh(0.028 + CLOTH_TOP, 0.008, Vector3(-0.036, 1.256, -0.24),
 		Vector3(0.036, 1.348, 0.02),
 		[_slx(-0.026, 0.026), _sly(1.266, 1.338), _slz(-9.0, -0.010)],
 		0.008, B_TORSO, Z_G_CORD))
@@ -2553,12 +2571,12 @@ static func _pieces(w: float, _g: float) -> Array:
 	# ---- hi-vis vest: back shell plus two front panels, meeting over the
 	# shoulder. The reflective bands are ROWS OF THE PALETTE, not the ten
 	# mounted panels the factory spends on them.
-	var vest: Array = [_sh(0.014, 0.014,
+	var vest: Array = [_sh(0.014 + CLOTH_TOP, 0.014,
 		Vector3(-0.30, 1.150, -0.06), Vector3(0.30, 1.492, 0.30),
 		[_slx(-0.156 * w / 1.02, 0.156 * w / 1.02), _sly(1.162, 1.478),
 		 _slz(-0.030, 9.0)], 0.014, B_TORSO, Z_G_VEST)]
 	for sx: float in [-1.0, 1.0]:
-		vest.append(_sh(0.014, 0.014,
+		vest.append(_sh(0.014 + CLOTH_TOP, 0.014,
 			Vector3(-0.30, 1.150, -0.26), Vector3(0.30, 1.492, 0.06),
 			[_slx(minf(sx * 0.030, sx * 0.156 * w / 1.02),
 				maxf(sx * 0.030, sx * 0.156 * w / 1.02)),
@@ -2569,20 +2587,20 @@ static func _pieces(w: float, _g: float) -> Array:
 	# ---- apron: bib, skirt, straps, pocket. M21 measured the bib at 11.0 mm
 	# and the skirt at 23.3 — a 290 mm rigid board hung on a barrel.
 	var apron: Array = [
-		_sh(0.014, 0.012, Vector3(-0.11, 1.150, -0.26),
+		_sh(0.014 + CLOTH_TOP, 0.012, Vector3(-0.11, 1.150, -0.26),
 			Vector3(0.11, 1.406, 0.04),
 			[_slx(-0.082, 0.082), _sly(1.160, 1.394), _slz(-9.0, 0.0)],
 			0.014, B_TORSO, Z_G_APRON),
-		_sh(0.014, 0.012, Vector3(-0.20, 0.990, -0.26),
+		_sh(0.014 + CLOTH_TOP, 0.012, Vector3(-0.20, 0.990, -0.26),
 			Vector3(0.20, 1.176, 0.04),
 			[_slx(-0.168, 0.168), _sly(1.000, 1.168), _slz(-9.0, 0.0)],
 			0.016, B_ROOT, Z_G_APRON),
-		_sh(0.030, 0.010, Vector3(-0.11, 1.096, -0.28),
+		_sh(0.030 + CLOTH_TOP, 0.010, Vector3(-0.11, 1.096, -0.28),
 			Vector3(0.02, 1.170, 0.02),
 			[_slx(-0.096, -0.024), _sly(1.104, 1.162), _slz(-9.0, -0.010)],
 			0.008, B_ROOT, Z_G_APRON)]
 	for sx: float in [-1.0, 1.0]:
-		apron.append(_sh(0.014, 0.010,
+		apron.append(_sh(0.014 + CLOTH_TOP, 0.010,
 			Vector3(-0.12, 1.386, -0.24), Vector3(0.12, 1.512, 0.04),
 			[_sl(Vector3(sx * 1.0, -0.30, 0.0), -0.30 * 1.394 - 0.010,
 				-0.30 * 1.394 + 0.010),
@@ -2592,10 +2610,10 @@ static func _pieces(w: float, _g: float) -> Array:
 
 	# ---- belt and buckle. A buckle sits ON the belt: inside its height, and
 	# thin. M20's was 80 mm of buckle on a 55 mm band, +15.4/+17.7 mm proud.
-	out[P_BELT] = [_sh(0.004, 0.012, Vector3(-0.24, 1.002, -0.24),
+	out[P_BELT] = [_sh(0.004 + CLOTH_OFF, 0.012, Vector3(-0.24, 1.002, -0.24),   # D-067: on the waistband, outside the trousers
 		Vector3(0.24, 1.072, 0.24), [_sly(1.012, 1.062)],
 		0.006, B_ROOT, Z_BELT, 0.005, true, 0.001)]
-	out[P_BUCKLE] = [_sh(0.018, 0.010, Vector3(-0.07, 1.008, -0.24),
+	out[P_BUCKLE] = [_sh(0.018 + CLOTH_OFF, 0.010, Vector3(-0.07, 1.008, -0.24),
 		Vector3(0.07, 1.066, 0.02),
 		[_slx(-0.052, 0.052), _sly(1.018, 1.056), _slz(-9.0, -0.010)],
 		0.008, B_ROOT, Z_G_METAL)]
@@ -2604,25 +2622,25 @@ static func _pieces(w: float, _g: float) -> Array:
 	# front, shoulder mic. The props are trimmed by the body's offset surface,
 	# so they hang where a real one hangs and cannot enter the leg.
 	out[P_DUTY] = [
-		_sh(0.006, 0.016, Vector3(-0.24, 0.995, -0.26),
+		_sh(0.006 + CLOTH_OFF, 0.016, Vector3(-0.24, 0.995, -0.26),
 			Vector3(0.24, 1.080, 0.26), [_sly(1.005, 1.070)],
 			0.008, B_ROOT, Z_G_DUTY, 0.005, true, 0.001),
 		_sp(Vector3(0.152, 1.030, 0.020), Vector3(0.156, 0.936, 0.024),
-			0.030, 0.024, Vector3(0.80, 1.0, 1.0), 0.004, B_ROOT, Z_G_DUTY),
+			0.030, 0.024, Vector3(0.80, 1.0, 1.0), 0.004 + CLOTH_TOP, B_ROOT, Z_G_DUTY),
 		_sp(Vector3(-0.150, 1.038, 0.014), Vector3(-0.152, 0.972, 0.014),
-			0.021, 0.019, Vector3(0.86, 1.0, 1.0), 0.004, B_ROOT, Z_G_DUTY),
+			0.021, 0.019, Vector3(0.86, 1.0, 1.0), 0.004 + CLOTH_TOP, B_ROOT, Z_G_DUTY),
 		_sp(Vector3(-0.078, 1.070, -0.070), Vector3(-0.078, 1.024, -0.070),
-			0.024, 0.022, Vector3(1.0, 1.0, 0.70), 0.004, B_ROOT, Z_G_DUTY),
+			0.024, 0.022, Vector3(1.0, 1.0, 0.70), 0.004 + CLOTH_TOP, B_ROOT, Z_G_DUTY),
 		_sp(Vector3(0.080, 1.070, -0.070), Vector3(0.080, 1.028, -0.070),
-			0.022, 0.020, Vector3(1.0, 1.0, 0.70), 0.004, B_ROOT, Z_G_DUTY),
+			0.022, 0.020, Vector3(1.0, 1.0, 0.70), 0.004 + CLOTH_TOP, B_ROOT, Z_G_DUTY),
 		_sp(Vector3(-0.104, 1.462, -0.086), Vector3(-0.104, 1.434, -0.086),
-			0.017, 0.014, Vector3(1.0, 1.0, 0.60), 0.003, B_COLLAR, Z_G_DUTY)]
+			0.017, 0.014, Vector3(1.0, 1.0, 0.60), 0.003 + CLOTH_TOP, B_COLLAR, Z_G_DUTY)]
 
 	# ---- epaulets. M20: 96 mm long on a shoulder that falls away 34 mm across
 	# that span — the forward corner measured +15.7 mm off the cloth.
 	var ep: Array = []
 	for sx: float in [-1.0, 1.0]:
-		ep.append(_sh(0.003, 0.009,
+		ep.append(_sh(0.003 + CLOTH_TOP, 0.009,
 			Vector3(-0.20, 1.440, -0.10), Vector3(0.20, 1.560, 0.10),
 			[_slx(minf(sx * 0.082, sx * 0.158), maxf(sx * 0.082, sx * 0.158)),
 			 _sly(1.440, 1.556), _slz(-0.050, 0.034)],   # M25 r2: the shoulder top moved down and forward
@@ -2631,19 +2649,74 @@ static func _pieces(w: float, _g: float) -> Array:
 
 	# ---- shield and name tape.
 	out[P_BADGE] = [
-		_sh(0.005, 0.010, Vector3(-0.116, 1.316, -0.22),
+		_sh(0.005 + CLOTH_TOP, 0.010, Vector3(-0.116, 1.316, -0.22),
 			Vector3(-0.044, 1.394, 0.02),
 			[_slx(-0.104, -0.056), _sly(1.326, 1.384), _slz(-9.0, -0.010)],
 			0.008, B_TORSO, Z_G_BADGE),
-		_sh(0.005, 0.008, Vector3(0.020, 1.344, -0.22),
+		_sh(0.005 + CLOTH_TOP, 0.008, Vector3(0.020, 1.344, -0.22),
 			Vector3(0.142, 1.386, 0.02),
 			[_slx(0.032, 0.130), _sly(1.354, 1.376), _slz(-9.0, -0.010)],
 			0.006, B_TORSO, Z_G_TAPE)]
 
 	# ---- the hem of an UNTUCKED shirt.
-	out[P_HEM] = [_sh(0.005, 0.011, Vector3(-0.24, 0.948, -0.26),
+	out[P_HEM] = [_sh(0.005 + CLOTH_TOP, 0.011, Vector3(-0.24, 0.948, -0.26),
 		Vector3(0.24, 1.010, 0.26), [_sly(0.958, 1.000)],
 		0.007, B_ROOT, Z_HIPBAND, 0.005, true, 0.001)]
+
+	# ================= THE CLOTHES THEMSELVES (D-067) =========================
+	# Until now the shirt and the trousers were PAINT on the body; only the
+	# collar, placket, pockets, belt and hem were geometry, and a sleeve was the
+	# arm's own radius. Cloth has volume: it stands off the skin and hangs.
+	# These are constant-offset shells of the body, CLOTH_OFF off and CLOTH_TH
+	# thick, on 6 mm cells (one smooth sheet), weighted to the skin under them
+	# so they move with the gait exactly as the paint did, and painted by the
+	# zone of the skin under them (zone -1), so a shell has no seam where the
+	# body changes column. Edges are cut hard (ke 0.002): a hem is an edge.
+	# THE SHIRT: the full field (the sleeve webs the armpit as cloth does) from
+	# the hem to the neck's foot, cut at the armholes at |x| 0.140 w where the
+	# sleeves take over — both are offsets of the same field, so they meet flush.
+	var neck_out := _slr(0.086, 9.0, 0.0, 0.012)
+	var ax_w := 0.140 * w
+	out[P_SHIRT] = [_sh(CLOTH_OFF, CLOTH_TH, Vector3(-0.30, 1.050, -0.30), Vector3(0.30, 1.520, 0.30),
+		[_slx(-ax_w, ax_w), _sly(1.066, 1.500), neck_out],
+		0.002, B_TORSO, -1, 0.005, false, 0.0, CLOTH_VOX)]
+	var fv: Array = []
+	for sx: float in [-1.0, 1.0]:   # the V-neck's shirt stops at the notch's slopes
+		fv.append(_sh(CLOTH_OFF, CLOTH_TH, Vector3(-0.30, 1.050, -0.30), Vector3(0.30, 1.520, 0.30),
+			[_slx(minf(0.0, sx * ax_w), maxf(0.0, sx * ax_w)), _sly(1.066, 1.500), neck_out,
+			 _sl(Vector3(sx, -V_SLOPE, 0.0), -V_SLOPE * V_APEX, 9.0)],
+			0.002, B_TORSO, -1, 0.005, false, 0.0, CLOTH_VOX))
+	out[P_SHIRT_V] = fv
+	# the tail of an untucked shirt hangs over the waistband: the TRUNK field
+	# (the forearm passes this band; a full-field tail would ring the wrist,
+	# the belt's old bug), carved where the arm hangs against the hip
+	out[P_SHIRT_TAIL] = [_sh(CLOTH_OFF, CLOTH_TH, Vector3(-0.30, 0.950, -0.30), Vector3(0.30, 1.075, 0.30),
+		[_sly(0.958, 1.066)], 0.002, B_ROOT, -1, 0.005, true, 0.004, CLOTH_VOX)]
+	# THE SLEEVES: from the armhole out. A short sleeve stops at 1.265; a long
+	# one is a single piece to the cuff (r4: two pieces met in a ring at the
+	# biceps — every part closes its cut with a wall). One millimetre further
+	# out than the shirt, so on the flank the sleeve is the one you see.
+	var sl: Array = []
+	var sll: Array = []
+	for sx: float in [-1.0, 1.0]:
+		var xin := minf(sx * ax_w, sx * 0.40)
+		var xout := maxf(sx * ax_w, sx * 0.40)
+		var shb := B_SH0 if sx < 0.0 else B_SH1
+		sl.append(_sh(CLOTH_OFF + 0.001, CLOTH_TH, Vector3(-0.40, 1.255, -0.20), Vector3(0.40, 1.520, 0.20),
+			[_slx(xin, xout), _sly(1.265, 1.500)], 0.002, shb, -1, 0.005, false, 0.0, CLOTH_VOX))
+		sll.append(_sh(CLOTH_OFF + 0.001, CLOTH_TH, Vector3(-0.40, 0.935, -0.20), Vector3(0.40, 1.520, 0.20),
+			[_slx(xin, xout), _sly(0.945, 1.500)], 0.002, shb, -1, 0.005, false, 0.0, CLOTH_VOX))
+	out[P_SLEEVE] = sl
+	out[P_SLEEVE_LONG] = sll
+	# THE TROUSERS: one piece, both legs, the full field from the waistband to
+	# the boot, kept inside |x| 0.215 so the wrist that hangs beside the hip is
+	# never ringed (the belt's old bug) — r4: a hip part on the trunk field met
+	# leg parts on the full field with a 6 cm step, and two leg parts opened at
+	# the crotch at full stride; one piece inherits the skin's own weights there.
+	out[P_PANTS] = [_sh(CLOTH_OFF, CLOTH_TH, Vector3(-0.24, 0.160, -0.30), Vector3(0.24, 1.020, 0.30),
+		[_slx(-0.215, 0.215), _sly(0.170, 1.010)], 0.002, B_ROOT, -1, 0.005, false, 0.0, CLOTH_VOX)]
+	out[P_SHORTS] = [_sh(CLOTH_OFF, CLOTH_TH, Vector3(-0.24, 0.670, -0.30), Vector3(0.24, 1.020, 0.30),
+		[_slx(-0.215, 0.215), _sly(0.680, 1.010)], 0.002, B_ROOT, -1, 0.005, false, 0.0, CLOTH_VOX)]
 	return out
 
 
@@ -2684,6 +2757,13 @@ static func _layout(cfg: Dictionary) -> int:
 			m |= 1 << P_BUCKLE
 	if not bool(cfg.get("tucked", false)):
 		m |= 1 << P_HEM
+	# D-067: the clothes themselves — everyone wears the shirt shell and the
+	# trousers' upper part; the rest follows the wardrobe keys.
+	m |= 1 << (P_SHIRT_V if neck == 4 else P_SHIRT)
+	if not bool(cfg.get("tucked", false)):
+		m |= 1 << P_SHIRT_TAIL
+	m |= 1 << (P_SLEEVE_LONG if bool(cfg.get("sleeve_long", false)) else P_SLEEVE)
+	m |= 1 << (P_SHORTS if bool(cfg.get("shorts", false)) else P_PANTS)
 	return m
 
 
@@ -2750,6 +2830,8 @@ static func _dist_grid(bg: Dictionary) -> PackedFloat32Array:
 static func _piece_vox(parts: Array) -> float:
 	var thin := 1e9
 	for pt: Dictionary in parts:
+		if float(pt.get("vox", 0.0)) > 0.0:
+			return float(pt["vox"])   # D-067: cloth says its own cell size
 		if int(pt["t"]) == 0:
 			thin = minf(thin, float(pt["th"]))
 		else:
@@ -2990,6 +3072,12 @@ static func _bake_piece(parts: Array, bg: Dictionary, dg: PackedFloat32Array,
 	var wt := _weights(proj, owner, nbr, nstart, w)
 	var bones: PackedInt32Array = wt[0]
 	var wts: PackedFloat32Array = wt[1]
+	# D-067: a cloth part may INHERIT its zone from the skin under it (zone -1):
+	# one shell over the trunk then paints as the body does — front, back, the
+	# V, a jersey's stripes — with no zone seam anywhere in the cloth.
+	for v in nv:
+		if zone[v] < 0:
+			zone[v] = _zone_of(bones[v * 4], proj[v])
 
 	# ---- per-triangle zone, corners split so all three agree (same rule as
 	# the body, for the same reason: a NEAREST palette lookup on an interpolated
@@ -3189,7 +3277,7 @@ static func _palette_spec(cfg: Dictionary) -> Array:
 	# the elbow — the range a real short sleeve covers.
 	var up: Array = [shirt, 0.92, 0.0, []]
 	if not long_sleeve:
-		up = [skin, sk_r, 0.0, [[1.225 + 0.040 * jit, 1.300, shirt, 0.92, 0.0]]]
+		up = [skin, sk_r, 0.0, [[1.265, 1.300, shirt, 0.92, 0.0]]]   # D-067: the sleeve SHELL ends at 1.265; the paint under it matches
 	pal[Z_UPARM] = up
 	pal[Z_FOREARM] = [shirt if long_sleeve else skin,
 		0.92 if long_sleeve else sk_r, 0.0, []]

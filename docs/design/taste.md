@@ -205,3 +205,10 @@ then two districts at the empty edges, each with a silhouette you can steer by f
 signage (a fair's price list, a developer's fine print), never in the people. Principle: the map
 is a view of a register, and a district is a destination before it is a decoration. Next: Cedar
 Cliff / Deacon Arts (warmth first), traffic on the new roads, the radar reading the atlas.
+
+**Round 12 — 2026-09-13 (D-067).** The milestone the character rounds kept naming: cloth with
+volume. It was cheaper than it looked because the file already had the right architecture for
+a vest; the three wrong passes cost more than the right one, and each left a law in the file
+(three cells across a sheet; one piece per garment; never a full-field shell at wrist height).
+Principle: when a review keeps naming the same fault, the fix is usually structural and usually
+already half-built. Next for people: a lighter fabric (finer cells), a curved armhole, the face.

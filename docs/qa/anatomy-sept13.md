@@ -102,3 +102,12 @@ out of, a 9 cm bounce, the sprint elbow at ~90) landed in the same pass. Still o
 lists, for round 12: a waist-to-hip cinch readable from the front (the belt masks it); the hands
 hang as a paddle; an ankle bone (foot roll), a pelvis bone (hip drop), foot IK — in that order
 of cost.
+
+## Round 12 (D-067): the clothes themselves
+
+The shirt, the sleeves and the trousers are shells now — 10 mm off the skin, 12 mm thick — so
+the measured body underneath is unchanged (cache v28 re-bakes the same v24 field). What changed
+is what the eye measures: shoulders read ~0.51 across in the shirt, a sleeve 0.13 wide, a trouser
+leg that hangs over the boot. Plates and the three failed passes: `docs/qa/evidence/cloth-sept13/`.
+Open from the guild lists: the hands' paddle, an ankle bone, a pelvis bone; new from this round:
+a curved armhole, a lighter fabric.
