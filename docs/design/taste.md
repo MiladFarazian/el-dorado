@@ -1,3 +1,15 @@
+
+**Round 18 — 2026-09-18 (D-073).** The audit's top three, in its order: one notice controller
+(the card 900×220 and clipped, queued, shown when you are stopped, a corner ticket when an
+order goes live; money and respect in a top-right ticker), a crowd of different people (the
+idle seed was zero for every rig in the game; eight stances, hands solved through the rig,
+ranges widened as a non-uniform scale above the skeleton), a neck and a shirt without a hole
+(the collar band 34 mm lower, an oblique armhole cut). Principle: the builders' diagnoses were
+better than their claims — "a straight seam" was two shells abutting on one plane — so the
+plates were judged by the producer against the audit's own crops. Process: three plate passes
+to land the tools (the reticle survived hiding, the probe read the ticker for the card, an
+orphan Label leaked at exit, a coroutine capture); no DNA row moved — this was the quality
+bar, not the card.
 # Taste — how EL DORADO GRANDE decides what to build next
 
 **Owner:** the producer (main session). **Ratified as working practice 2026-09-12** under
@@ -87,7 +99,8 @@ never a feeling. Re-score at the end of every round; a row may only move with ev
 | 19 | Side-content taxonomy | 2 | endless orders, the night board, STRANDED, Comin' Down, the dealership; hobbies and character quests still absent (QA, 2026-09-18) |
 | 20 | Flat difficulty, deep mastery | 2 | the Full Eight (stage3) plus melee's perfect block and counter, and medals on cards (QA, 2026-09-18) |
 
-**Sum 21 / 60.** Rows 7, 14 and 19 are the zeros and the near-zeros; rows 11 and 20 are the
+**Sum 34 / 60** (QA's re-score, 2026-09-18; the line above read 21 until round 18 — a stale
+sum under a fresh table). Rows 3, 4, 6, 7, 13 and 18 are the ones; rows 13 and 18 are the
 cheapest to move because the systems they need already exist.
 
 ## 5. The backlog, in rubric order (re-ranked every round; struck through when landed)

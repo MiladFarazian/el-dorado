@@ -303,11 +303,22 @@ func _handle_release(body: Node) -> void:
 
 ## Public wallet API — race events, missions, and future systems pay through
 ## here so there is exactly one money counter in the game.
+## D-073: transient text goes to the notice controller's ticker (top-right,
+## small, stacked) when it exists; the big centre `_flash` stays as the
+## fallback for a tree without one.
+func _notice(text: String, col: Color) -> void:
+	var n := _peer("notices")
+	if n != null and n.has_method("ticker"):
+		n.call("ticker", text, col)
+	else:
+		_flash(text)
+
+
 func add_money(amount: int, reason: String = "") -> void:
 	money += amount
 	money_changed.emit(money)
 	if reason != "":
-		_flash("%s %s$%s" % [reason, "+" if amount >= 0 else "-", _thousands(absi(amount))])
+		_notice("%s %s$%s" % [reason, "+" if amount >= 0 else "-", _thousands(absi(amount))], Color(0.929, 0.741, 0.388))
 
 
 ## Community standing — earned on the strip and in the neighborhoods, lost by
@@ -316,14 +327,14 @@ func add_respect(amount: int, reason: String = "") -> void:
 	respect += amount
 	respect_changed.emit(respect)
 	if reason != "":
-		_flash("%s  RESPECT %+d" % [reason, amount])
+		_notice("%s  RESPECT %+d" % [reason, amount], Color(0.843, 0.863, 0.851))
 
 
 ## Public banner API — this panel owns the one flash line on screen, so systems
 ## with something to announce that ISN'T money (carjack: "GRAND THEFT AUTO")
 ## come through here instead of standing up a second competing label.
 func flash(text: String) -> void:
-	_flash(text)
+	_notice(text, Color(0.95, 0.55, 0.16))
 
 
 func _deliver(body: Node) -> void:
@@ -332,9 +343,9 @@ func _deliver(body: Node) -> void:
 	_junkers.erase(body); _clear_target_fx(); _target = null
 	body.queue_free()
 	if _junkers.is_empty():
-		_flash("REPO PAID $%d — NEW REPO CONTRACT" % pay); _spawn_fleet()
+		_notice("REPO PAID $%d — NEW REPO CONTRACT" % pay, Color(0.929, 0.741, 0.388)); _spawn_fleet()
 	else:
-		_flash("REPO PAID $%d" % pay); _pick_next_target()
+		_notice("REPO PAID $%d" % pay, Color(0.929, 0.741, 0.388)); _pick_next_target()
 
 func _peer(peer_name: String) -> Node:
 	var sys: Variant = main_ref.get("systems") if main_ref != null else null

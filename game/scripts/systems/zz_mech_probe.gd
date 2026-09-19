@@ -99,6 +99,45 @@ func _shot(nm: String) -> void:
 	print("MECHPROBE shot %s" % nm)
 
 
+## A plate from a camera of the probe's own — the chase camera sits behind the
+## rig, so a crowd AROUND it is out of frame (round 18's takeover plate showed
+## two of fourteen). The game camera is restored after the capture.
+func _shot_from(nm: String, from: Vector3, at: Vector3) -> void:
+	if _shots == "" or DisplayServer.get_name() == "headless":
+		return
+	var prev := get_viewport().get_camera_3d()
+	var cam := Camera3D.new()
+	cam.fov = 55.0
+	add_child(cam)
+	cam.look_at_from_position(from, at, Vector3.UP)
+	cam.make_current()
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	img.save_png(_shots + "/" + nm + ".png")
+	print("MECHPROBE shot %s (own camera)" % nm)
+	if prev != null and is_instance_valid(prev):
+		prev.make_current()
+	cam.queue_free()
+
+
+## True when a row of the card on screen carries `needle` (D-073: the card is
+## the notice controller's; the mission_kit rows are the fallback).
+func _card_has(needle: String) -> bool:
+	var nt := _sys("notices")
+	for key in ["_names", "_vals"]:   # the CARD's columns; `_rows` is the ticker
+		var rows: Variant = nt.get(key) if nt != null else null
+		if rows is Array:
+			for rl: Variant in (rows as Array):
+				if is_instance_valid(rl) and rl is Label and str((rl as Label).text).contains(needle):
+					return true
+	var kit := _sys("mission_kit")
+	var kr: Variant = kit.get("_card_rows") if kit != null else null
+	if is_instance_valid(kr) and kr is Label and str((kr as Label).text).contains(needle):
+		return true
+	return false
+
+
 func _finish() -> void:
 	var fails := 0
 	for r in _rows:
@@ -593,7 +632,10 @@ func _stage_comin() -> void:
 	if m == null or kit == null or repo == null or pol == null or pv == null:
 		_say(false, "stage10 mission systems missing"); _finish(); return
 	match _sub:
-		0:   # TAB into the slab
+		0:   # TAB into the slab (at night: the strip's hour, and the lot's bulbs)
+			var sky10 := _sys("sky_weather")
+			if sky10 != null and sky10.get("time_of_day") is float and float(sky10.get("time_of_day")) < 20.0:
+				sky10.set("time_of_day", 21.5)
 			if str(pv.get("display_name")) == "Candyland Slab":
 				_say(true, "stage10 in the Candyland Slab after %d cycles" % _cycles)
 				pv.global_transform = Transform3D(Basis.IDENTITY, COMIN.BOARD_POS + Vector3(0, 1.0, -5.0))
@@ -629,16 +671,75 @@ func _stage_comin() -> void:
 					_say(false, "stage10 crossed the east gate and no pass counted (state=%s)" % m.get("state")); _finish()
 		3:
 			pv.linear_velocity = Vector3.ZERO
-			if int(m.get("state")) == 3 and _t > 1.5:
+			if int(m.get("state")) == 3 and _t > 5.0:   # D-157: the club has walked in and turned by now
 				_say(true, "stage10 parked on the lot: SLIDE OUT (state=3)")
 				if m.has_method("crowd_count"):   # D-071: the takeover is a crowd
 					var cc := int(m.call("crowd_count"))
 					_say(cc >= 6, "stage10 the club came out: %d on the lot (want >= 6)" % cc)
-					_shot("takeover")
+					# Frame the club, not the Slab: their centroid, from the far side
+					# of the ring so the Slab and its candy sit behind them.
+					var cen := Vector3.ZERO; var nc := 0
+					var club: Variant = m.get("_club")
+					if club is Array:
+						for bv: Variant in (club as Array):
+							if is_instance_valid(bv) and bv is Node3D:
+								cen += (bv as Node3D).global_position; nc += 1
+					# The ring is built around the mission's TAKEOVER_POS (a script
+					# constant), so that is the fallback — never the Slab (18c framed
+					# the Slab and no club).
+					var consts: Dictionary = (m.get_script() as GDScript).get_script_constant_map()
+					var tpos: Variant = consts.get("TAKEOVER_POS", pv.global_position)
+					if nc > 0:
+						cen /= float(nc)
+					elif tpos is Vector3:
+						cen = tpos as Vector3
+					else:
+						cen = pv.global_position
+					var away := cen - pv.global_position; away.y = 0.0
+					if away.length() < 1.0:
+						away = -pv.global_transform.basis.z; away.y = 0.0
+					print("MECHPROBE takeover cam: club=%d cen=%s TAKEOVER_POS=%s slab=%s" % [nc, cen, tpos, pv.global_position])
+					# Where the club actually stands (a number, not a plate): radius from
+					# the lot centre and the ped brain's state/moving flags, per member.
+					if club is Array and tpos is Vector3:
+						var peds10 := _sys("pedestrians")
+						var rs := PackedFloat32Array(); var states := {}
+						for bv: Variant in (club as Array):
+							if is_instance_valid(bv) and bv is Node3D:
+								var dxz := (bv as Node3D).global_position - (tpos as Vector3); dxz.y = 0.0
+								rs.append(dxz.length())
+								var pd: Variant = peds10.call("_find", bv) if peds10 != null and peds10.has_method("_find") else null
+								var k := "%s/%s" % [pd.get("state", "?"), pd.get("moving", "?")] if pd is Dictionary else "nofind"
+								states[k] = int(states.get(k, 0)) + 1
+								# Is the rig DRAWN? (18d: seven stood in the camera's view and the
+								# plate showed none) — the visual root's flags and its meshes' AABBs.
+								var rig10: Variant = pd.get("rig") if pd is Dictionary else null
+								var vis10: Variant = (rig10 as Dictionary).get("vis") if rig10 is Dictionary else null
+								if is_instance_valid(vis10) and vis10 is Node3D:
+									var v3 := vis10 as Node3D
+									var meshes := 0; var drawn := 0; var empty := 0
+									for mi: Node in v3.find_children("*", "MeshInstance3D", true, false):
+										meshes += 1
+										if (mi as MeshInstance3D).is_visible_in_tree(): drawn += 1
+										if (mi as MeshInstance3D).get_aabb().size.length() < 0.001: empty += 1
+									print("MECHPROBE club rig %s: r=%.1f vis=%s in_tree=%s scale=%s y=%.2f meshes=%d drawn=%d emptyAABB=%d" % [k, dxz.length(), v3.visible, v3.is_visible_in_tree(), v3.scale, v3.global_position.y, meshes, drawn, empty])
+								else:
+									print("MECHPROBE club rig %s: r=%.1f NO VIS NODE (rig=%s)" % [k, dxz.length(), typeof(rig10)])
+						rs.sort()
+						var mean10 := 0.0
+						for r10 in rs: mean10 += r10
+						mean10 = mean10 / maxf(float(rs.size()), 1.0)
+						print("MECHPROBE takeover club radii: n=%d min=%.1f mean=%.1f max=%.1f states(state/moving)=%s" % [rs.size(), rs[0] if rs.size() > 0 else -1.0, mean10, rs[rs.size() - 1] if rs.size() > 0 else -1.0, states])
+					_shot_from("takeover", cen + away.normalized() * 13.0 + Vector3(0, 3.5, 0), cen + Vector3(0, 1.0, 0))
+				_sub = 9; _t = 0.0   # 18e: the plate is a coroutine — hold the heat drop
+			elif _t > 9.0:
+				_say(false, "stage10 the takeover never took (state=%s)" % m.get("state")); _finish()
+		9:   # the capture has had its frames (18d's plate showed the mission's
+			# thanks in the ticker: the heat drop below completed the takeover and
+			# sent the club home before the second frame_post_draw)
+			if _t > 0.5:
 				pol.call("add_heat", -10)   # the probe loses them for you
 				_sub = 4; _t = 0.0
-			elif _t > 4.0:
-				_say(false, "stage10 the takeover never took (state=%s)" % m.get("state")); _finish()
 		4:
 			if int(m.get("state")) == 4:
 				var dm := int(repo.get("money")) - _money0; var dr := int(repo.get("respect")) - _respect0
@@ -747,12 +848,24 @@ func _stage_orders() -> void:
 				var tp2 := (tgt2 as Node3D).global_position
 				pv.global_transform = Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), tp2 + Vector3(0, 1.2, -8.0))
 				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				# D-148 (the audit's run 4): the phone open on the bad paper — the tell in red
+				var ph2 := _sys("phone")
+				if ph2 != null and ph2.has_method("show_tab"):
+					ph2.call("show_tab", 0)
+					_shot("phone_paper")   # a coroutine: the capture lands NEXT frame
 				_sub = 7; _t = 0.0
 			elif _t > 3.0:
 				_say(false, "stage11 no bad-paper target"); _finish()
 		7:   # the debtor comes out; leave the paper from where the wrecker stands
 			# (a teleport onto the debtor knocked them down and cost 2 respect: the
 			# probe's doing, not the system's)
+			# Round 18: the phone was put away in the frame it opened, so the plate
+			# never showed it. Close it only once the capture has had its frame.
+			var ph3 := _sys("phone")
+			if _t > 0.4 and ph3 != null and ph3.has_method("toggle"):
+				for _i in 5:
+					if ph3.get("open") == true:
+						ph3.call("toggle")
 			var db2: Variant = o.call("debtor")
 			if db2 is Node3D and is_instance_valid(db2) and _t > 1.0:
 				_sub = 8; _t = 0.0
@@ -938,10 +1051,16 @@ func _stage_chase() -> void:
 					float(tr.call("stuck_for", tgt)) if tgt is RigidBody3D and tr.has_method("stuck_for") else -1.0]); _finish()
 		5:   # release on the pad: the run bonus
 			if int(o.get("state")) == 0:
-				var dm := int(repo.get("money")) - _money0
-				_say(dm >= 450, "stage14 DELIVERED after the run: +$%d (want >= 450: base x 1.5)" % dm)
-				_finish()
+				_sub = 6; _t = 0.0   # D-073: the card is queued, not instant — poll
 			elif _t > 0.5 and _press == "" and int(o.get("state")) == 2:
 				_press = "hook"; _t = -2.0
 			elif _t > 9.0:
 				_say(false, "stage14 the release on the pad did not deliver (state=%s)" % o.get("state")); _finish()
+		6:   # D-073: the card lives in the notice controller, which shows it only
+			# once the wrecker is stationary (or after 4 s) — the row is not there in
+			# the frame the order closes. Poll, then assert with the wait on record.
+			var ran := _card_has("IT RAN")
+			if ran or _t > 6.0:
+				var dm := int(repo.get("money")) - _money0
+				_say(dm >= 450 and ran, "stage14 DELIVERED after the run: +$%d with the IT RAN row on the card (%s, %.1f s)" % [dm, "yes" if ran else "no", _t])
+				_finish()

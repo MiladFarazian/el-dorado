@@ -44,6 +44,23 @@ enum Neck { CREW, SNAP, POLO, DRESS, VEE, HOODED }
 enum Hairdo { BALD, BUZZ, SHORT, WAVY, AFRO, TIED, LONG }
 enum Whiskers { CLEAN, STUBBLE, MUSTACHE, GOATEE, FULL }
 enum Shoe { BOOT, SNEAKER, DRESS, CLOG }
+## HOW A PERSON STANDS (D-129). Nobody stands at attention waiting for a bus.
+## One stance is chosen per rig at build() from the cfg's own numbers — stable
+## for the life of the character, never re-rolled, never a shared loop — and
+## `animate()`'s standing branch poses it. EASY is the neutral living idle the
+## player and the named cast keep; everything else is a person doing something
+## with their hands while they wait.
+enum Stance {
+	EASY,        # weight even, arms hanging, the M24 living idle
+	HIP_L,       # weight on the left leg: that hip rides high, the right knee softens
+	HIP_R,       # ... and the mirror
+	ARMS_X,      # arms folded, one forearm over the other
+	POCKETS,     # both hands in the front pockets, elbows winged a touch
+	HAND_HIP,    # one hand on the hip, the other hanging
+	PHONE,       # phone up at chest height, chin down, other arm slack
+	WIDE,        # feet apart, hands loose at the belt — the way a cop waits
+}
+const STANCE_N := 8
 
 # The Megaplex, in skin tones — deep to pale, warm all the way through.
 const SKIN_TONES: Array[Color] = [
@@ -126,8 +143,16 @@ static func random_config(rng: RandomNumberGenerator) -> Dictionary:
 	var i_pants := rng.randi_range(0, PANTS.size() - 1)
 	var i_hair := rng.randi_range(0, HAIRS.size() - 1)
 	var i_hatc := rng.randi_range(0, HAT_COLORS.size() - 1)
-	var height := rng.randf_range(0.89, 1.07)
-	var frame := rng.randf_range(0.92, 1.12)
+	# D-129: the crowd was one body. These two draws are the ONLY continuous
+	# per-person body axes that reach the screen (`skinned_character` buckets
+	# build and girth into six baked meshes and re-applies the residual as a
+	# non-uniform scale), and they were 18 % and 20 % wide — 1.58 m to 1.89 m,
+	# every frame within a fifth of every other. Texas is wider than that.
+	# 0.86..1.10 is 1.52 m to 1.95 m; 0.88..1.20 spans a rail-thin teenager and
+	# a lineman, and reads as a woman's frame at the bottom of the range.
+	# Draw COUNT and order are unchanged, so no caller's stream shifts.
+	var height := rng.randf_range(0.86, 1.10)
+	var frame := rng.randf_range(0.88, 1.20)
 
 	var r := RandomNumberGenerator.new()
 	r.seed = hash("ped|%d|%d|%d|%d|%d|%.6f|%.6f|%.6f" % [i_skin, i_shirt,
@@ -167,6 +192,7 @@ static func cop_config(rng: RandomNumberGenerator) -> Dictionary:
 	cfg["shoe_color"] = DUTY_BLACK
 	cfg["pocket"] = true
 	cfg["duty"] = true          # badge chip, name tape, belt gear, epaulets
+	cfg["stance"] = Stance.WIDE   # feet apart, thumbs at the belt: the way a cop waits
 	cfg["hairdo"] = Hairdo.BUZZ if cfg["hairdo"] == Hairdo.AFRO else cfg["hairdo"]
 	cfg["whiskers"] = Whiskers.CLEAN if int(cfg["whiskers"]) == Whiskers.FULL \
 		else cfg["whiskers"]
@@ -186,6 +212,10 @@ static func book_config() -> Dictionary:
 		"buckle": true, "pocket": true, "snaps": true, "yoke": true,
 		"shoe": Shoe.BOOT, "shoe_color": Color(0.27, 0.16, 0.09),
 		"hairdo": Hairdo.SHORT, "whiskers": Whiskers.STUBBLE,
+		# Book waits like a man who owns the sidewalk: square, hands loose. The
+		# player keeps the neutral living idle (D-129) — a protagonist whose
+		# arms fold themselves between missions is a protagonist you fight.
+		"stance": Stance.EASY,
 		"eye": Color(0.21, 0.13, 0.07), "gray": 0.0, "skin_rough": 0.74,
 		"brow": 1.08, "nose": 1.05, "jaw": 1.10, "cheek": 1.05,
 		"asym": -0.55,        # left brow rides higher — he was born skeptical
@@ -219,7 +249,7 @@ static func _person(r: RandomNumberGenerator, skin: Color, hair: Color,
 		"gray": gray,
 		"scale": height,
 		"build": frame,
-		"girth": r.randf_range(0.86, 1.30),   # heaviness: radii + torso depth
+		"girth": r.randf_range(0.80, 1.40),   # D-129: was 0.86..1.30 — heaviness: radii + torso depth
 		"hairdo": hairdo,
 		"whiskers": whiskers,
 		# skin is not one material: a weathered roofer and a kid out of an
@@ -235,6 +265,63 @@ static func _person(r: RandomNumberGenerator, skin: Color, hair: Color,
 		# corner). Local RNG, so no caller's stream moves.
 		"asym": r.randf_range(-1.0, 1.0),
 	}
+
+
+## THE RIG'S OWN SEED (D-129). Every per-person number in the cfg goes in, so
+## two characters pose alike only if they ARE the same character. It costs no
+## RNG draw, which is what keeps every caller's stream exactly where it is — and
+## it is stable across saves, reloads and both body scripts, because the cfg is.
+static func rig_seed(cfg: Dictionary) -> int:
+	return hash("rig|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%d|%d|%d|%s" % [
+		float(cfg.get("scale", 1.0)), float(cfg.get("build", 1.0)),
+		float(cfg.get("girth", 1.0)), float(cfg.get("asym", 0.0)),
+		float(cfg.get("brow", 1.0)), float(cfg.get("skin_rough", 0.72)),
+		int(cfg.get("outfit", 0)), int(cfg.get("neck", 0)),
+		int(cfg.get("hairdo", 0)),
+		(cfg.get("shirt", Color.WHITE) as Color).to_html(false)])
+
+
+## How the crowd divides up. Most people waiting have their hands somewhere —
+## folded, pocketed, on a phone — and only a fifth of them just hang. A cfg key
+## always wins, which is how the named cast and the duty archetypes keep their
+## signature (`book_config` EASY, `cop_config` WIDE).
+const STANCE_ODDS: Array[float] = [0.18, 0.15, 0.15, 0.12, 0.15, 0.08, 0.12, 0.05]
+
+
+## Pose personality, decided ONCE per character and written into the rig by
+## `build()`. Both body scripts call this, so a pedestrian stands the same way
+## whichever body it was given. Keys added to the rig (never removed, never
+## read by any caller — the frozen contract is about what callers WRITE):
+##   stance, idle_seed, idle_slouch, idle_chin, idle_yaw, idle_side
+static func seed_rig(rig: Dictionary, cfg: Dictionary) -> void:
+	var r := RandomNumberGenerator.new()
+	r.seed = rig_seed(cfg)
+	rig["idle_seed"] = r.randf() * TAU
+	var st := int(cfg.get("stance", -1))
+	if st < 0:
+		var v := r.randf()
+		var acc := 0.0
+		st = Stance.EASY
+		for i in STANCE_N:
+			acc += STANCE_ODDS[i]
+			if v < acc:
+				st = i
+				break
+	rig["stance"] = st
+	# Posture, per person and constant: a slouch or a straight back, a chin up
+	# or down, and which way they happen to be facing while they wait. A crowd
+	# all squared to the camera is the other half of "five copies of one man".
+	# EASY is the player's and the named cast's stance, so its posture noise is
+	# damped to a quarter: a protagonist whose head sits permanently cocked 19
+	# degrees off centre is a bug report, not a character.
+	var q := 0.25 if st == Stance.EASY else 1.0
+	rig["idle_slouch"] = r.randf_range(-0.035, 0.075) * maxf(q, 0.4)
+	rig["idle_chin"] = r.randf_range(-0.10, 0.075) * maxf(q, 0.4)
+	rig["idle_yaw"] = r.randf_range(-0.34, 0.34) * q
+	rig["idle_side"] = 1.0 if r.randf() < 0.5 else 0.0   # which hand is busy
+	# Solved once, here, not every frame in the animator: the pose is constant
+	# for the life of the character and `animate()` runs it per ped per frame.
+	rig["stance_pose"] = _stance_pose(st, int(rig["idle_side"]))
 
 
 static func _pick_outfit(r: RandomNumberGenerator) -> int:
@@ -408,6 +495,7 @@ static func build(root: Node3D, cfg: Dictionary, feet_y: float) -> Dictionary:
 	root.add_child(vis)
 
 	var rig := {"vis": vis, "phase": 0.0, "bob": 0.0, "lean": 0.0}
+	seed_rig(rig, cfg)
 	var masses := _torso_masses(w, g)
 	_build_legs(vis, rig, cfg, lg)
 	var torso := _build_torso(vis, rig, cfg, w, g, masses)
@@ -2191,10 +2279,86 @@ const IDLE_ELBOW := 0.24; const IDLE_SH := 0.08     # elbows just unlocked, shou
 # toes out ~8°. D-065: the knees sit inboard of the hips now (the femur angles
 # in), so the stance is only a shade wider than the knees.
 const ARM_ABDUCT := 0.12; const TOE_OUT := 0.14; const LEG_ABDUCT := 0.02
-const IDLE_SWAY := 0.035; const IDLE_SWAY_HZ := 0.16
-const IDLE_BREATH := 0.004; const IDLE_BREATH_HZ := 0.27
-const IDLE_HEAD := 0.12; const IDLE_HEAD_HZ := 0.06
+# D-129. These were 0.035 / 0.004 / 0.12 — 2.0 degrees of roll, 4 mm of breath
+# and a head yaw gated by a SECOND sine so its RMS was 3.4 degrees. None of it
+# changes a SILHOUETTE, which is all an 8 m camera can read, so `showcase_people`
+# showed five statues. The sway and the head drift roughly double; the head also
+# takes a per-person fixed yaw (`idle_yaw`) so a crowd is not all squared to the
+# lens, and the amplitude is halved for EASY so the player does not rubberneck.
+const IDLE_SWAY := 0.055; const IDLE_SWAY_HZ := 0.16
+const IDLE_BREATH := 0.006; const IDLE_BREATH_HZ := 0.27
+const IDLE_HEAD := 0.30; const IDLE_HEAD_HZ := 0.085
 const IDLE_SLOUCH := 0.03
+
+## THE STANCE TABLE (D-129 / D-157). Sixteen numbers per stance: for each side
+## (0 = the −x limb, 1 = +x) hip pitch, hip abduction, extra knee bend, shoulder
+## pitch, shoulder YAW and shoulder abduction (both multiplied by the side's
+## sign, so the table is written once and mirrors itself), and elbow flexion
+## (< 0 keeps the idle's); then the torso's roll and the head's pitch.
+## Godot composes Node3D.rotation as Ry·Rx·Rz, so the yaw swings the ELBOW'S
+## BEND AXIS: that is the one number that turns a forearm across a chest, into
+## a pocket or onto a hip, and it is why every pose here is three numbers and
+## not a bone chain. Every hand position below was solved forward through the
+## rig's own offsets (shoulder 0.192 w / 1.46, elbow −0.30, forearm 0.30) and
+## lands where a hand goes: folded at y 1.26, pockets at (0.20, 0.91),
+## hip at (0.151, 0.970), phone at (0.105, 1.377, −0.299).
+const ST_HIP := 0; const ST_ABD := 1; const ST_KNEE := 2; const ST_SHX := 3
+const ST_SHY := 4; const ST_SHZ := 5; const ST_EL := 6
+const ST_STRIDE := 7          # floats per side
+const ST_TORSO := 14; const ST_HEAD := 15
+
+static func _stance_pose(st: int, busy: int) -> PackedFloat32Array:
+	var p := PackedFloat32Array()
+	p.resize(16)
+	p.fill(0.0)
+	p[ST_EL] = -1.0
+	p[ST_STRIDE + ST_EL] = -1.0
+	var free := 0 if st == Stance.HIP_R else 1     # the unweighted leg
+	match st:
+		Stance.HIP_L, Stance.HIP_R:
+			# Contrapposto without a pelvis bone: the free leg's foot slides
+			# forward and out, its knee unlocks, the weighted knee locks, and
+			# the torso rolls over the leg that is carrying him.
+			var w := free * ST_STRIDE
+			var o := (1 - free) * ST_STRIDE
+			p[w + ST_HIP] = 0.075
+			p[w + ST_ABD] = 0.060
+			p[w + ST_KNEE] = 0.22
+			p[o + ST_KNEE] = -0.04
+			p[ST_TORSO] = 0.055 if free == 1 else -0.055
+		Stance.ARMS_X:
+			# One forearm rides over the other: side 0 sits higher and further
+			# forward, so the two never share a plane.
+			p[ST_SHX] = 0.10; p[ST_SHY] = 0.95; p[ST_SHZ] = -0.02; p[ST_EL] = 1.95
+			p[ST_STRIDE + ST_SHX] = 0.02; p[ST_STRIDE + ST_SHY] = 0.95
+			p[ST_STRIDE + ST_SHZ] = -0.02; p[ST_STRIDE + ST_EL] = 1.78
+			p[ST_TORSO] = 0.02
+		Stance.POCKETS:
+			for s in 2:
+				var b := s * ST_STRIDE
+				p[b + ST_SHX] = -0.06; p[b + ST_SHY] = 0.58
+				p[b + ST_SHZ] = 0.09; p[b + ST_EL] = 0.70
+		Stance.HAND_HIP:
+			var b := busy * ST_STRIDE
+			p[b + ST_SHX] = -0.28; p[b + ST_SHY] = 0.95
+			p[b + ST_SHZ] = 0.18; p[b + ST_EL] = 1.05
+			p[ST_TORSO] = -0.035 if busy == 1 else 0.035   # the weight goes onto the hip he is holding
+			p[(1 - busy) * ST_STRIDE + ST_KNEE] = 0.16
+		Stance.PHONE:
+			var b := busy * ST_STRIDE
+			p[b + ST_SHX] = 0.34; p[b + ST_SHY] = 0.42; p[b + ST_EL] = 1.95
+			p[(1 - busy) * ST_STRIDE + ST_SHX] = -0.02
+			p[(1 - busy) * ST_STRIDE + ST_EL] = 0.32
+			p[ST_HEAD] = 0.28                       # chin down, at the screen
+		Stance.WIDE:
+			for s in 2:
+				var b := s * ST_STRIDE
+				p[b + ST_ABD] = 0.055
+				p[b + ST_SHX] = -0.20; p[b + ST_SHY] = 0.80
+				p[b + ST_SHZ] = 0.14; p[b + ST_EL] = 0.95
+			p[ST_HEAD] = -0.04                      # chin up: he is watching you
+	return p
+
 
 static func animate(rig: Dictionary, speed: float, delta: float,
 		moving: bool, grounded := true) -> void:
@@ -2209,9 +2373,20 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 	rig["phase"] = fmod(phase, TAU)
 	var it := float(rig.get("idle_t", 0.0)) + delta
 	rig["idle_t"] = it
+	# D-129, THE line. This used to read `phase * 7.31 + base_y * 13.7` — and
+	# `build()` seeds phase to 0.0 while `base_y` is not written until the
+	# BOTTOM of this function, so on the first call every rig in the game
+	# computed fmod(0.0) == 0.0, cached it, and never recomputed. The whole
+	# population breathed, swayed and turned its head on one phase. `build()`
+	# now writes a real seed (see `seed_rig`); this fallback only catches a rig
+	# assembled by hand, and it uses the vis node's own position so two of them
+	# still differ.
 	if not rig.has("idle_seed"):
-		rig["idle_seed"] = fmod(float(rig.get("phase", 0.0)) * 7.31 + float(rig.get("base_y", 0.0)) * 13.7, TAU)
+		var vp: Node3D = rig["vis"]
+		rig["idle_seed"] = fmod(absf(vp.position.x) * 7.31 + absf(vp.position.z) * 13.7
+			+ float(rig.get("phase", 0.0)) * 3.17, TAU)
 	var seed: float = float(rig["idle_seed"])
+	var pose_id := int(rig.get("stance", Stance.EASY))
 	var walking := moving and speed > 0.15 and grounded
 	var k := 1.0 - exp(-(BLEND_GAIT if walking else BLEND) * delta)
 	var lift := 0.0
@@ -2232,6 +2407,9 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 	var eb := 0.0
 	var land_amp := 0.0
 	var lead := SWING_LEAD_WALK
+	# The stance's sixteen numbers, empty unless this rig is standing in one.
+	var st := PackedFloat32Array()
+	var drift := 1.0 + 0.055 * sin((it * 0.11 + seed * 0.83) * TAU)
 	if walking:
 		hip_amp = lerpf(WALK_HIP, RUN_HIP, run) * stride
 		hip_bias = lerpf(WALK_HIP_BIAS, RUN_HIP_BIAS, run) * stride
@@ -2256,12 +2434,25 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 		var breath := sin((it * IDLE_BREATH_HZ + seed) * TAU)
 		sway = IDLE_SWAY * sin((it * IDLE_SWAY_HZ + seed * 0.37) * TAU)
 		lift = IDLE_BREATH * (0.5 + 0.5 * breath)
-		lean = IDLE_SLOUCH
-		head_y = IDLE_HEAD * sin((it * IDLE_HEAD_HZ + seed * 0.61) * TAU) * sin((it * 0.043 + seed) * TAU)
-		head_x = -0.02 + 0.01 * breath
+		lean = IDLE_SLOUCH + float(rig.get("idle_slouch", 0.0))
+		var ha := IDLE_HEAD * (0.5 if pose_id == Stance.EASY else 1.0)
+		head_y = float(rig.get("idle_yaw", 0.0)) \
+			+ ha * sin((it * IDLE_HEAD_HZ + seed * 0.61) * TAU) * sin((it * 0.043 + seed) * TAU)
+		head_x = -0.02 + 0.01 * breath + float(rig.get("idle_chin", 0.0))
 		sh_base = IDLE_SH + 0.015 * breath
 		el_base = IDLE_ELBOW
 		idle_knee = 0.04
+		# The stance. Held with a tiny per-person drift rather than a loop, so
+		# two people folding their arms on the same street are not a chorus
+		# line: `drift` is one slow sine on the rig's own seed, and everything
+		# it touches moves by a degree or two.
+		if pose_id != Stance.EASY:
+			if not rig.has("stance_pose"):
+				rig["stance_pose"] = _stance_pose(pose_id, int(rig.get("idle_side", 0.0)))
+			var sp: PackedFloat32Array = rig["stance_pose"]
+			st = sp
+			sway += st[ST_TORSO] * drift
+			head_x += st[ST_HEAD] * drift
 	var support := 0.0   # the longest leg's vertical reach: the one on the ground
 	for side in 2:
 		var sgn := 1.0 if side == 0 else -1.0
@@ -2271,11 +2462,16 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 		var knee: Node3D = rig["knee_%d" % side]
 		var sh: Node3D = rig["sh_%d" % side]
 		var el: Node3D = rig["el_%d" % side]
+		var so := side * ST_STRIDE
+		var posed := st.size() == 16
 		var hip_x := hip_bias + hip_amp * s if walking else hip_amp * 0.35 * sgn
+		if posed:
+			hip_x += st[so + ST_HIP] * drift      # a foot forward, or one planted
 		hip.rotation.x = lerp_angle(hip.rotation.x, hip_x, k)
 		var out_x := signf(hip.position.x) if absf(hip.position.x) > 0.001 else sgn
 		hip.rotation.y = lerp_angle(hip.rotation.y, -out_x * TOE_OUT, k)      # toes out
-		hip.rotation.z = lerp_angle(hip.rotation.z, out_x * LEG_ABDUCT, k)   # a shade wider than the knees
+		var abd := LEG_ABDUCT + (st[so + ST_ABD] if posed else 0.0)
+		hip.rotation.z = lerp_angle(hip.rotation.z, out_x * abd, k)   # a shade wider than the knees
 		var bend := 0.0
 		if walking:
 			# SWING (the thigh moving forward, cos > 0): the heel comes up toward
@@ -2290,6 +2486,8 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 			bend = 0.5
 		else:
 			bend = idle_knee + 0.03 * maxf(-sway * sgn * 20.0, 0.0)   # the unweighted knee softens
+			if posed:
+				bend = maxf(bend + st[so + ST_KNEE] * drift, 0.0)
 		# JOINT SIGN LAW (M16 fix — a limb hangs down -Y, so a POSITIVE
 		# rotation.x swings it toward -Z = FORWARD):
 		#   knee flexion is BACKWARD -> negative (heel to butt)
@@ -2299,12 +2497,26 @@ static func animate(rig: Dictionary, speed: float, delta: float,
 		var reach := THIGH_LEN * cos(hip.rotation.x) + SHIN_LEN * cos(hip.rotation.x + knee.rotation.x)
 		support = maxf(support, reach)
 		var arm := -arm_amp * s
-		sh.rotation.x = lerp_angle(sh.rotation.x, sh_base + arm, k)
 		var sh_out := signf(sh.position.x) if absf(sh.position.x) > 0.001 else sgn
-		sh.rotation.z = lerp_angle(sh.rotation.z, sh_out * ARM_ABDUCT, k)   # the arm hangs off the flank, not on it
+		var sh_x := sh_base + arm
+		var sh_z := ARM_ABDUCT
+		var sh_y := 0.0
+		var el_x := el_base
+		if posed:
+			sh_x += st[so + ST_SHX] * drift
+			sh_z += st[so + ST_SHZ] * drift
+			sh_y = st[so + ST_SHY] * drift
+			if st[so + ST_EL] >= 0.0:
+				el_x = st[so + ST_EL] * drift
+		sh.rotation.x = lerp_angle(sh.rotation.x, sh_x, k)
+		sh.rotation.z = lerp_angle(sh.rotation.z, sh_out * sh_z, k)   # the arm hangs off the flank, not on it
+		# The yaw is what folds a forearm across a chest or drops a hand into a
+		# pocket (Ry·Rx·Rz: it turns the elbow's bend axis). It must be driven
+		# on EVERY path, walking included, or a stance leaks into the gait.
+		sh.rotation.y = lerp_angle(sh.rotation.y, sh_out * sh_y, k)
 		var front := clampf(arm / maxf(arm_amp, 0.01), 0.0, 1.0) if walking else 0.0
 		var back := clampf(-arm / maxf(arm_amp, 0.01), 0.0, 1.0) if walking else 0.0
-		el.rotation.x = lerp_angle(el.rotation.x, el_base + ef * front - eb * back, k)
+		el.rotation.x = lerp_angle(el.rotation.x, el_x + ef * front - eb * back, k)
 	var torso: Node3D = rig["torso"]
 	torso.rotation.x = lerp_angle(torso.rotation.x, lean, k)
 	torso.rotation.z = lerp_angle(torso.rotation.z, sway, k)
@@ -2344,6 +2556,12 @@ static func aim_pose(rig: Dictionary, delta: float) -> void:
 	sh_l.rotation.x = lerp_angle(sh_l.rotation.x, 1.15, k)
 	el_l.rotation.x = lerp_angle(el_l.rotation.x, 0.5, k)
 	sh_l.rotation.z = lerp_angle(sh_l.rotation.z, -0.35, k)
+	# D-129: the idle stance yaws the shoulders (it is what folds a forearm
+	# across a chest). A man raising a gun unfolds his arms first, so the yaw
+	# has to be unwound HERE too — otherwise a ped who was on his phone aims
+	# sideways for the half second the blend takes.
+	sh_r.rotation.y = lerp_angle(sh_r.rotation.y, 0.0, k)
+	sh_l.rotation.y = lerp_angle(sh_l.rotation.y, 0.0, k)
 
 
 # ============================== PLUMBING =====================================

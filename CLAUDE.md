@@ -192,9 +192,22 @@ Standing rules the loop exists to enforce:
   people on Juárez Boulevard after 40 s; the phone opens on an order), and the chase (a forced
   run, the brain driving, blocked ahead, stopped on the boom, hooked, the run bonus), the takeover crowd and the loop's cues. Prints
   `MECH PROBE: PASS (n/n)`; `--mech-only=N` runs one stage. Windowed with `--mech-shots=/abs/dir` it also saves `full_eight.png`,
-  `brake_night.png`, `busted.png`, `brawl.png`, `mission_card.png`. Run it after any change to police/on_foot/
+  `brake_night.png`, `busted.png`, `brawl.png`, `mission_card.png`, `order_push.png`, `order_debtor.png`,
+  `takeover.png` (night, from the probe's own camera in front of the Slab — `_shot_from`) and
+  `phone_paper.png`. **A probe `_shot` is a coroutine**: the capture lands next frame, so never undo
+  what the plate shows in the same frame (round 18's phone plate had no phone). **A card is queued**
+  by the notice controller (D-073): poll for its row, never assert it in the frame the order closes. Run it after any change to police/on_foot/
   full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board/
   mission_*/mission_kit.
+- **One owner for transient text (D-073):** `systems/notices.gd` — `card(title, subtitle, rows, medal)`
+  (900×220, clipped, centred at 30 % height under the police band, queued one at a time, shown
+  when the player is stationary or after 4 s, shrunk to a corner ticket when an order goes live),
+  `ticker(text, colour)` (top-right, three deep), `banner_band()`, `card_state()`; `mission_kit.card`
+  forwards to it and repo_board's money/respect flashes go through it. **The HUD owns the
+  bottom-centre stack** (objective, verb hint, prompt — 17b/18b): a system with a prompt exposes
+  it (`tow_hook.hint_text()`) and never draws its own label there. **The sweep hides every
+  CanvasLayer before EVERY capture and parks it off-screen** (`offset`, D-160, round 18): combat writes its
+  layer's `visible` every frame, so hiding alone lost twice.
 - **Missions speak through `mission_kit.gd`** (D-063): `say(speaker, line, s)` and
   `card(title, subtitle, rows, medal)`. The dispatcher is the LONGHORN app in Bolo Capital's
   push-notification voice (canon: "quotas and an app"); do not invent a named dispatcher.

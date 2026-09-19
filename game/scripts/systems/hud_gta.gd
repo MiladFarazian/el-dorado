@@ -390,6 +390,13 @@ func _update_bottom(delta: float, actor: Node3D, on_foot: bool) -> void:
 		if v != null:
 			var dn := str(v.get("display_name")) if "display_name" in v else "VEHICLE"
 			prompt = "E — ENTER %s" % dn.to_upper()
+	else:
+		# D-073: the hook prompt is a driving prompt, and the HUD is the sole owner
+		# of the bottom-centre stack (17b). tow_hook's own label sat 15 px above
+		# the objective line and the two overprinted at the takeover.
+		var th := _peer("tow_hook")
+		if th != null and th.has_method("hint_text"):
+			prompt = str(th.call("hint_text"))
 	_prompt_lbl.text = prompt
 
 

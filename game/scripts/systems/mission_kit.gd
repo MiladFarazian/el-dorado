@@ -6,17 +6,21 @@ extends Node
 ## bonuses that landed, the time, a medal. Text only; the satire is in the copy.
 ## Missions call say()/card() through main.systems; both are queued and timed
 ## here so two jobs never shout over each other. Inert in smoke mode.
+##
+## D-153: the CARD is no longer drawn here. card() forwards to notices.gd, which
+## owns the screen's transient text and decides where and when a card is allowed
+## to exist (upper third, 900x220 max, held until the player stops, shrunk to a
+## corner ticket if a new objective goes live). The API below is unchanged: a
+## mission still calls say() and card() on mission_kit and never thinks about
+## placement. The app panel bottom-right is still ours.
 
 const LAYER := 16                      # over the missions' 14, under the cards at 30
 const PANEL_W := 420.0; const PANEL_H := 96.0; const MARGIN := 18.0
 const APP_NAME := "LONGHORN · RECOVERY"
-const CARD_H := 190.0
 const FADE := 0.35
 const C_BG := Color(0.06, 0.07, 0.09, 0.88)
 const C_HEAD := Color(0.94, 0.78, 0.30)
 const C_TEXT := Color(0.95, 0.93, 0.86)
-const C_CARD := Color(0.03, 0.03, 0.04, 0.78)
-const C_MEDAL := {"GOLD": Color(0.98, 0.82, 0.30), "SILVER": Color(0.82, 0.84, 0.88), "BRONZE": Color(0.80, 0.52, 0.30)}
 
 var main_ref: Node = null
 var _ui: CanvasLayer = null
@@ -27,12 +31,6 @@ var _queue: Array[Dictionary] = []
 var log: Array = []   # D-069: {speaker, line, t}, newest last, twelve deep — read by the phone
 var _line_left := 0.0
 var _line_total := 0.0
-var _card: ColorRect = null
-var _card_title: Label = null
-var _card_sub: Label = null
-var _card_rows: Label = null
-var _card_medal: Label = null
-var _card_left := 0.0
 
 
 func setup(main: Node) -> void:
@@ -53,21 +51,13 @@ func say(speaker: String, line: String, seconds := 4.5) -> void:
 
 
 ## PUBLIC (missions): the end card. `rows` is [[label, value], ...]; `medal` GOLD/SILVER/BRONZE or "".
+## Unchanged signature, unchanged call sites; notices.gd decides where it lands
+## and when (D-153). With no notices system loaded a mission simply gets no card.
 func card(title: String, subtitle: String, rows: Array, medal := "", seconds := 6.0) -> void:
-	if _card == null:
+	var notices := _peer("notices")
+	if notices == null or not notices.has_method("card"):
 		return
-	_card_title.text = title
-	_card_sub.text = subtitle
-	var lines: Array[String] = []
-	for r: Variant in rows:
-		if r is Array and (r as Array).size() >= 2:
-			lines.append("%s    %s" % [str((r as Array)[0]), str((r as Array)[1])])
-	_card_rows.text = "\n".join(lines)
-	_card_medal.text = medal
-	_card_medal.add_theme_color_override("font_color", C_MEDAL.get(medal, C_HEAD))
-	_card_left = seconds
-	_card.modulate.a = 0.0
-	_card.visible = true
+	notices.call("card", title, subtitle, rows, medal, seconds)
 
 
 ## PUBLIC (probe): lines still to show, including the one on screen.
@@ -75,8 +65,13 @@ func lines_queued() -> int:
 	return _queue.size() + (1 if _line_left > 0.0 else 0)
 
 
+## PUBLIC (probe): a card is LIVE — waiting for the player to stop, on screen,
+## or shrunk to its corner ticket. notices.card_state() names which.
 func card_visible() -> bool:
-	return _card != null and _card.visible
+	var notices := _peer("notices")
+	if notices == null or not notices.has_method("card_state"):
+		return false
+	return str(notices.call("card_state")) != "none"
 
 
 func _process(delta: float) -> void:
@@ -96,12 +91,6 @@ func _process(delta: float) -> void:
 		_line_total = float(q["s"]); _line_left = _line_total
 		_panel.modulate.a = 0.0
 		_panel.visible = true
-	if _card != null and _card.visible:
-		_card_left -= delta
-		var ca := minf(_card_left / (FADE * 2.0), 1.0)
-		_card.modulate.a = clampf(ca, 0.0, 1.0)
-		if _card_left <= 0.0:
-			_card.visible = false
 
 
 func _build() -> void:
@@ -116,22 +105,17 @@ func _build() -> void:
 	_line = _label("", 15, C_TEXT); _line.position = Vector2(12, 28)
 	_line.size = Vector2(PANEL_W - 24, PANEL_H - 34)
 	_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; _panel.add_child(_line)
-	_card = ColorRect.new(); _card.color = C_CARD
-	_card.set_anchors_preset(Control.PRESET_CENTER)
-	_card.offset_left = -900.0; _card.offset_right = 900.0
-	_card.offset_top = -CARD_H * 0.5 - 40.0; _card.offset_bottom = CARD_H * 0.5 - 40.0
-	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE; _card.visible = false; _ui.add_child(_card)
-	var box := VBoxContainer.new()
-	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 4)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE; _card.add_child(box)
-	_card_title = _label("", 44, C_TEXT); _card_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_card_sub = _label("", 18, C_HEAD); _card_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_card_rows = _label("", 16, C_TEXT); _card_rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_card_medal = _label("", 22, C_HEAD); _card_medal.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	for l in [_card_title, _card_sub, _card_rows, _card_medal]:
-		box.add_child(l)
+
+
+## Peers are optional and resolved late: systems load alphabetically, so
+## `notices` does not exist yet when this one is set up.
+func _peer(peer_name: String) -> Node:
+	var sys: Variant = main_ref.get("systems") if main_ref != null else null
+	if sys is Dictionary and (sys as Dictionary).has(peer_name):
+		var n: Variant = (sys as Dictionary)[peer_name]
+		if n is Node and is_instance_valid(n):
+			return n
+	return null
 
 
 func _label(text: String, size: int, col: Color) -> Label:

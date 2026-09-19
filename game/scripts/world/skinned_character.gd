@@ -231,7 +231,7 @@ static var _bake_n := 0
 static var _no_disk := false               # tools set this to force a real bake
 ## Bump when the field, the mesher or the vertex format changes, so a stale
 ## user:// bake can never outlive the code that made it.
-const CACHE_VER := 28   # 28: the clothes as shells, r4 — one field, inherited zones, 12 mm cloth on 4 mm cells, one piece per garment (D-067); 24: r2 — knees 28 mm in, knee r52, lats inboard, pecs a touch wider, deltoid ball-and-taper (D-065); 22: knees inboard, deltoid lowered, chest 0.33 (D-065); 21: boots, pecs, scapulae, a rounder deltoid, a lumbar curve (D-062); 20: the trunk rebuilt as a rib cage, r2 (D-061); 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
+const CACHE_VER := 29   # 29: a neck — the trapezius mound off the neck axis, the collar band 34 mm lower, and an oblique armhole that closes the hole at the armpit (D-102, D-156); 28: the clothes as shells, r4 — one field, inherited zones, 12 mm cloth on 4 mm cells, one piece per garment (D-067); 24: r2 — knees 28 mm in, knee r52, lats inboard, pecs a touch wider, deltoid ball-and-taper (D-065); 22: knees inboard, deltoid lowered, chest 0.33 (D-065); 21: boots, pecs, scapulae, a rounder deltoid, a lumbar curve (D-062); 20: the trunk rebuilt as a rib cage, r2 (D-061); 18: leaves layered over the stand, pocket flaps, placket 5 mm (D-054); 17: tailored collar, placket and pockets replace voxel-cut shells (Codex).
 
 
 # ============================== PUBLIC API ===================================
@@ -245,10 +245,26 @@ static func build(root: Node3D, cfg: Dictionary, feet_y: float) -> Dictionary:
 	var vis := Node3D.new()
 	vis.name = "Body"
 	vis.position = Vector3(0, feet_y, 0)
-	vis.scale = Vector3(s, s, s)
+	# D-129: SIX BAKED MESHES CANNOT BE A POPULATION. `_mesh_for` quantises
+	# build into two buckets and girth into three and bakes at the bucket's
+	# canonical (cw, cg) — and because the skin is bound from the REST
+	# transforms, the per-character `w` carried in the bone offsets has no
+	# visual effect whatsoever. So `random_config`'s frame and girth draws were
+	# being thrown away and every ped in a bucket was the same man.
+	# The RESIDUAL goes back on as a non-uniform scale on the one node above the
+	# skeleton: x takes the frame and some of the girth, z takes the girth alone
+	# (a heavy man is deeper, not just wider), and y stays the height draw, so
+	# the feet origin and the 1.75 m collider envelope are untouched. Clamped to
+	# +-6 %, past which a head starts to read as stretched. Combined with the
+	# buckets the population now spans 0.91..1.13 across the shoulders.
+	var canon := _canon(w, g)
+	var rx := clampf(pow(w / canon.x, 0.60) * pow(g / canon.y, 0.45), 0.94, 1.06)
+	var rz := clampf(pow(g / canon.y, 0.55), 0.94, 1.06)
+	vis.scale = Vector3(s * rx, s, s * rz)
 	root.add_child(vis)
 
 	var rig := {"vis": vis, "phase": 0.0, "bob": 0.0, "lean": 0.0}
+	FACTORY.seed_rig(rig, cfg)   # stance, idle seed, posture — D-129
 
 	# ---- proxy joints: byte-for-byte the factory's hierarchy and pivots, so
 	# every caller that reaches into the rig keeps working unchanged.
@@ -375,6 +391,25 @@ static func build(root: Node3D, cfg: Dictionary, feet_y: float) -> Dictionary:
 	for side in 2:
 		_build_hand(
 			joints[B_EL0 if side == 0 else B_EL1], -1.0 if side == 0 else 1.0, hand_material)
+
+	# ---- the phone. A stance that holds an invisible object reads as a man
+	# studying his own fingernails, so the PHONE stance brings the object: one
+	# box in the palm of the busy hand, parented to that elbow so it rides the
+	# forearm through the gait as well as the idle (people walk and text).
+	# 72 x 146 x 9 mm — a big-screen slab, which is what everybody carries.
+	if int(rig.get("stance", 0)) == FACTORY.Stance.PHONE:
+		var pside := int(rig.get("idle_side", 0.0))
+		var slab := MeshInstance3D.new()
+		slab.name = "Phone"
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.072, 0.146, 0.009)
+		slab.mesh = bm
+		slab.position = Vector3((-1.0 if pside == 0 else 1.0) * 0.048, -0.334, -0.024)
+		var pm := StandardMaterial3D.new()
+		pm.albedo_color = Color(0.09, 0.09, 0.11)
+		pm.roughness = 0.24
+		slab.material_override = pm
+		joints[B_EL0 if pside == 0 else B_EL1].add_child(slab)
 
 	# ---- the sync. Callers never learn the skeleton exists.
 	var sync := SkinSync.new()
@@ -634,14 +669,28 @@ static func _prims(w: float, g: float) -> Array:
 	# deltoid's 1.475. A horizontal bar here, at any radius, either mounds
 	# the neck or leaves a dip before the shoulder cap — the puffed sleeve of
 	# body8/after/back.png.
+	# D-102 r2: the inner end was at 0.060 w / 1.462 with r 40, so it topped out
+	# at 1.502 — 40 mm of trapezius standing right beside the neck AXIS, and
+	# that, not the neck's radius, is why the collar probe found the body at
+	# r 85 at y 1.530 and the neck only from ~1.55 up. The chin is at 1.556.
+	# A neck that only exists for its top 26 mm cannot be seen, whatever it is
+	# painted. The inner end moves OUTBOARD to 0.086 w and DOWN to 1.444
+	# (crown 1.482, just under the trunk's 1.488 shoulder line): the slope
+	# still runs neck -> acromion, it just stops climbing the neck. The outer
+	# end and k are untouched, so the measured deltoid span at 1.425 does not
+	# move.
 	for ts: float in [-1.0, 1.0]:
-		out.append(_cap(Vector3(ts * 0.060 * w, 1.462, 0.012), Vector3(ts * 0.178 * w, 1.422, 0.006),
-			0.040, 0.040, Vector3(1, 1, 1.05), 0.030, B_COLLAR, 0))   # D-061: ends at the acromion (0.192)
+		out.append(_cap(Vector3(ts * 0.086 * w, 1.444, 0.012), Vector3(ts * 0.178 * w, 1.422, 0.006),
+			0.038, 0.040, Vector3(1, 1, 1.05), 0.030, B_COLLAR, 0))   # D-061: ends at the acromion (0.192)
 	# neck. M23 (D-102): r 47/57 -> 58/66 mm, deeper than wide. At 47 mm the
 	# neck read as a stalk under the head at `face`; an adult neck is ~38 cm
 	# around (r ~60 mm) and the collar ring below grows with it.
-	out.append(_cap(Vector3(0, 1.605, 0.006), Vector3(0, 1.462, 0.012),
-		0.058, 0.062, Vector3(1, 1, 1.12), 0.026, B_HEAD, 0))   # M25: base 66 -> 62, less flare
+	# D-102 r2: rooted 30 mm lower (1.462 -> 1.432) so the column passes THROUGH
+	# the shoulder mass instead of standing on top of it, with a slightly
+	# fuller base (62 -> 64) for the sternocleidomastoid flare. Free neck, chin
+	# to the shoulder line: 1.488 -> 1.556 = 68 mm.
+	out.append(_cap(Vector3(0, 1.605, 0.006), Vector3(0, 1.432, 0.014),
+		0.058, 0.064, Vector3(1, 1, 1.12), 0.024, B_HEAD, 0))   # M25: base 66 -> 62, less flare
 	# ---------- garment features, as FIELD not as parts ----------
 	# A collar, a belt welt and two cuffs. The factory spends 6-10 separate
 	# MeshInstance3Ds on these and each one is a rim that can lift off the
@@ -906,17 +955,28 @@ static func _field(fp: PackedFloat32Array, p: Vector3) -> float:
 
 
 # ============================== THE BAKE =====================================
+## The canonical (build, girth) this character's mesh is actually BAKED at.
+## `build()` needs the same answer to put the residual back on as scale, and two
+## copies of these thresholds would have drifted apart inside a milestone.
+static func _canon(w: float, g: float) -> Vector2:
+	var cw: float = BUCKET_W[0 if w < 1.02 else 1]
+	var cg: float = BUCKET_G[0 if g < 1.00 else (1 if g < 1.15 else 2)]
+	return Vector2(cw, cg)
+
+
 static func _mesh_for(w: float, g: float) -> ArrayMesh:
-	# Six buckets cover the whole population: build is drawn from [0.92, 1.12]
-	# and girth from [0.86, 1.30]. Bucketing is what makes the bake a fixed cost
-	# instead of a per-pedestrian cost.
+	# Six buckets cover the whole population: build is drawn from [0.88, 1.20]
+	# and girth from [0.80, 1.40]. Bucketing is what makes the bake a fixed cost
+	# instead of a per-pedestrian cost; `build()` re-applies the residual as a
+	# non-uniform scale so the quantisation is not visible (D-129).
 	var bw := 0 if w < 1.02 else 1
 	var bg := 0 if g < 1.00 else (1 if g < 1.15 else 2)
 	var key := "%d_%d" % [bw, bg]
 	if _mesh_cache.has(key):
 		return _mesh_cache[key]
-	var cw: float = [0.97, 1.07][bw]
-	var cg: float = [0.93, 1.07, 1.22][bg]
+	var canon := _canon(w, g)
+	var cw := canon.x
+	var cg := canon.y
 	# Disk cache. The bake is deterministic, so the SECOND boot pays nothing.
 	# This is a build artifact in user://, not an authored asset — the pipeline
 	# stays "generated in code", it just stops re-deriving the same bytes.
@@ -2466,16 +2526,23 @@ static func _pieces(w: float, _g: float) -> Array:
 	# Heights (v10): 1.525..1.578 — 53 mm, a stand with its fold, not the 78 mm
 	# turtleneck the first cut was; the points hang 63 mm from its foot and
 	# stop just above the placket's top snap (1.452).
+	# D-102 r2, AND THIS IS THE DEFECT: the band's top edge was 1.542 and the
+	# CHIN IS AT 1.556 (head joint 1.540 + HEAD_YB 0.016). Fourteen millimetres.
+	# Every collared archetype in the game wore its collar up under its jaw, so
+	# "the head sits on the shirt" was literal. With the trapezius off the neck
+	# axis (see `_prims`) the neck is thin enough to take a band 34 mm lower:
+	# 1.468..1.508, a 40 mm stand that still flares onto the mound at its foot
+	# where the r 92 wall stops it. Skin from the band's top to the jaw: 48 mm.
 	pts.append(_sh(0.004, 0.006,
-		Vector3(-0.11, 1.495, -0.11), Vector3(0.11, 1.552, 0.12),
-		[_sly(1.505, 1.542), _slr(0.0, 0.092, 0.0, 0.012)],
+		Vector3(-0.125, 1.452, -0.125), Vector3(0.125, 1.522, 0.135),
+		[_sly(1.468, 1.508), _slr(0.0, 0.092, 0.0, 0.012)],
 		0.004, B_COLLAR, Z_G_COLLAR))
 	for sx: float in [-1.0, 1.0]:
 		pts.append(_sh(0.002 + CLOTH_TOP, 0.004,   # M23: 4/9 -> 2/4 mm — a collar point is cloth, not a pillow; D-067: on the cloth
-			Vector3(minf(sx * 0.024, sx * 0.076) - 0.01, 1.455, -0.20),
-			Vector3(maxf(sx * 0.024, sx * 0.076) + 0.01, 1.540, 0.02),
+			Vector3(minf(sx * 0.024, sx * 0.076) - 0.01, 1.440, -0.20),
+			Vector3(maxf(sx * 0.024, sx * 0.076) + 0.01, 1.512, 0.02),
 			[_slx(minf(sx * 0.024, sx * 0.076), maxf(sx * 0.024, sx * 0.076)),
-			 _sly(1.462, 1.532), _slz(-9.0, -0.010)],
+			 _sly(1.452, 1.504), _slz(-9.0, -0.010)],
 			0.007, B_COLLAR, Z_G_COLLAR))
 	out[P_COLLAR_PTS] = pts
 
@@ -2487,15 +2554,15 @@ static func _pieces(w: float, _g: float) -> Array:
 			Vector3(-0.085, 1.392, -0.20), Vector3(0.085, 1.520, 0.02),
 			[_sl(Vector3(sx * 1.0, -V_SLOPE, 0.0), -V_SLOPE * V_APEX - 0.011,
 				-V_SLOPE * V_APEX + 0.011),
-			 _sly(1.402, 1.512), _slz(-9.0, -0.010)],
+			 _sly(1.402, 1.492), _slz(-9.0, -0.010)],   # D-102 r2: 1.512 climbed the now-visible neck — a scrub top is not a choker
 			0.006, B_COLLAR, Z_G_ACCENT))
 	out[P_COLLAR_VEE] = vee
 
 	# ---- hood, DOWN: a roll of cloth behind the neck. Up is on the head, and
 	# the head is not part of this migration yet.
 	out[P_HOOD] = [_sh(0.020 + CLOTH_TOP, 0.032,
-		Vector3(-0.14, 1.372, -0.04), Vector3(0.14, 1.556, 0.26),
-		[_slx(-0.115, 0.115), _sly(1.380, 1.548), _slz(0.010, 9.0)],
+		Vector3(-0.14, 1.372, -0.04), Vector3(0.14, 1.526, 0.26),
+		[_slx(-0.115, 0.115), _sly(1.380, 1.516), _slz(0.010, 9.0)],   # D-102 r2: the roll topped out at 1.548, 8 mm under the jaw
 		0.014, B_COLLAR, Z_G_HOOD)]
 
 	# ---- chest pockets, with a flap. THE floating panel of M16: mounted on a
@@ -2677,13 +2744,33 @@ static func _pieces(w: float, _g: float) -> Array:
 	# sleeves take over — both are offsets of the same field, so they meet flush.
 	var neck_out := _slr(0.086, 9.0, 0.0, 0.012)
 	var ax_w := 0.140 * w
+	# D-156, THE ARMHOLE HOLE. The shirt was cut at |x| <= 0.140 w and the
+	# sleeve at |x| >= 0.140 w: two shells ABUTTING on one plane, each closing
+	# its cut with a wall the k = 0.005 smooth-max rounds AWAY from that plane.
+	# Two retreating walls leave a slit, and where the surface is near
+	# tangential to the cut — the armpit — the slit opens into the lens in
+	# `cloth-sept13/after/torso.png`. Worse, the plane is in the wrong place
+	# under the armpit: the trunk's own offset shell reaches x 0.195 at y 1.19
+	# (measured span 0.324 x build, + CLOTH_OFF + CLOTH_TH) and the SHORT sleeve
+	# does not start until 1.265, so 45 mm of flank carried no garment at all.
+	# So the shirt's armhole is now an OBLIQUE cut that tracks the flank: it
+	# passes under the sleeve's inner edge by 30 mm at the hem, 46 mm at the
+	# armpit and 86 mm at the shoulder, and it clears the hanging forearm's own
+	# shell (inner face 0.188 w - 0.010) by 9 mm at its lowest, so a shirt still
+	# cannot ring a wrist. The seam the eye sees is the sleeve's edge, which now
+	# lands ON cloth instead of across a gap.
+	var ax_c := 0.130 * w        # metres outboard per metre of height
+	var ax_d := 0.0314 * w       # so |x| <= ax_d + ax_c * y
+	var armhole: Array = [_sl(Vector3(1.0, -ax_c, 0.0), -9.0, ax_d),
+		_sl(Vector3(1.0, ax_c, 0.0), -ax_d, 9.0)]
 	out[P_SHIRT] = [_sh(CLOTH_OFF, CLOTH_TH, Vector3(-0.30, 1.050, -0.30), Vector3(0.30, 1.520, 0.30),
-		[_slx(-ax_w, ax_w), _sly(1.066, 1.500), neck_out],
+		[armhole[0], armhole[1], _sly(1.066, 1.500), neck_out],
 		0.002, B_TORSO, -1, 0.005, false, 0.0, CLOTH_VOX)]
 	var fv: Array = []
 	for sx: float in [-1.0, 1.0]:   # the V-neck's shirt stops at the notch's slopes
 		fv.append(_sh(CLOTH_OFF, CLOTH_TH, Vector3(-0.30, 1.050, -0.30), Vector3(0.30, 1.520, 0.30),
-			[_slx(minf(0.0, sx * ax_w), maxf(0.0, sx * ax_w)), _sly(1.066, 1.500), neck_out,
+			[_slx(minf(0.0, sx * 9.0), maxf(0.0, sx * 9.0)), armhole[0], armhole[1],
+			 _sly(1.066, 1.500), neck_out,
 			 _sl(Vector3(sx, -V_SLOPE, 0.0), -V_SLOPE * V_APEX, 9.0)],
 			0.002, B_TORSO, -1, 0.005, false, 0.0, CLOTH_VOX))
 	out[P_SHIRT_V] = fv
@@ -2694,17 +2781,25 @@ static func _pieces(w: float, _g: float) -> Array:
 		[_sly(0.958, 1.066)], 0.002, B_ROOT, -1, 0.005, true, 0.004, CLOTH_VOX)]
 	# THE SLEEVES: from the armhole out. A short sleeve stops at 1.265; a long
 	# one is a single piece to the cuff (r4: two pieces met in a ring at the
-	# biceps — every part closes its cut with a wall). One millimetre further
-	# out than the shirt, so on the flank the sleeve is the one you see.
+	# biceps — every part closes its cut with a wall). The inner clip stays at
+	# 0.140 w and the SHIRT comes out to meet it (see the armhole block above):
+	# moving the sleeve inboard instead was tried on paper and fails on the long
+	# sleeve, whose y-range reaches 0.945 — an inner clip at 0.118 w is inboard
+	# of the hip's own shell (0.155) all the way down, which hangs a floating
+	# cloth tab over the waistband at 1.010..1.066 where the shirt has not
+	# started yet. D-156: 2 mm proud of the shirt now rather than 1, because the
+	# two shells overlap over the whole shoulder instead of abutting on a plane,
+	# and 1 mm of separation across 86 mm of near-parallel cloth is a stipple
+	# waiting for a distant camera. 2 mm also reads as the armhole seam it is.
 	var sl: Array = []
 	var sll: Array = []
 	for sx: float in [-1.0, 1.0]:
 		var xin := minf(sx * ax_w, sx * 0.40)
 		var xout := maxf(sx * ax_w, sx * 0.40)
 		var shb := B_SH0 if sx < 0.0 else B_SH1
-		sl.append(_sh(CLOTH_OFF + 0.001, CLOTH_TH, Vector3(-0.40, 1.255, -0.20), Vector3(0.40, 1.520, 0.20),
+		sl.append(_sh(CLOTH_OFF + 0.002, CLOTH_TH, Vector3(-0.40, 1.255, -0.20), Vector3(0.40, 1.520, 0.20),
 			[_slx(xin, xout), _sly(1.265, 1.500)], 0.002, shb, -1, 0.005, false, 0.0, CLOTH_VOX))
-		sll.append(_sh(CLOTH_OFF + 0.001, CLOTH_TH, Vector3(-0.40, 0.935, -0.20), Vector3(0.40, 1.520, 0.20),
+		sll.append(_sh(CLOTH_OFF + 0.002, CLOTH_TH, Vector3(-0.40, 0.935, -0.20), Vector3(0.40, 1.520, 0.20),
 			[_slx(xin, xout), _sly(0.945, 1.500)], 0.002, shb, -1, 0.005, false, 0.0, CLOTH_VOX))
 	out[P_SLEEVE] = sl
 	out[P_SLEEVE_LONG] = sll
@@ -3291,9 +3386,15 @@ static func _palette_spec(cfg: Dictionary) -> Array:
 	# (collar7/r3 showcase: a red tee with a red neck). Above the neckline the
 	# paint is skin for those; the collared styles keep cloth, which the band
 	# shell (P_COLLAR_PTS, 1.525..1.578) hides anyway.
-	var collar_bands: Array = [[1.523, 1.576, skin, sk_r, 0.0]]
+	# D-102 r2: 1.523 -> 1.502 for a collared style (6 mm under the band shell's
+	# new top edge at 1.508, so the paint boundary is hidden by cloth), and
+	# 1.500 -> 1.486 for CREW / V / HOODED, whose neckline IS this boundary —
+	# there is no band to hide it. 1.486 is the trapezius crown, which is where
+	# a tee's ribbing sits. Skin from there to the chin at 1.556: 70 mm crew,
+	# 54 mm collared.
+	var collar_bands: Array = [[1.502, 1.576, skin, sk_r, 0.0]]
 	if neck == 0 or neck == 4 or neck == 5:
-		collar_bands.append([1.500, 1.576, skin, sk_r, 0.0])
+		collar_bands.append([1.486, 1.576, skin, sk_r, 0.0])
 	pal[Z_COLLAR] = [shirt.darkened(0.06), 0.90, 0.0, collar_bands]
 
 	# ---------------- garment columns ----------------

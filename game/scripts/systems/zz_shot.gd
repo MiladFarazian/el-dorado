@@ -152,11 +152,14 @@ func _build_mat_test() -> void:
 		p.global_position = Vector3(325.6 + 1.3 * float(k), 0.05, 511.0)
 		var cfg: Dictionary = factory.cop_config(rng) if k == 6 \
 			else factory.random_config(rng)
-		factory.build(p, cfg, 0.0)
+		# D-073: build() leaves a rig in the bind pose; the stance chosen at
+		# build only lands in animate(). One call with dt 1.0 (k = 0.999994)
+		# settles it, so the row shows eight people and not eight statues.
+		factory.animate(factory.build(p, cfg, 0.0), 0.0, 1.0, false)
 	var book := Node3D.new()
 	main_ref.add_child(book)
 	book.global_position = Vector3(324.2, 0.05, 511.0)
-	factory.build(book, factory.book_config(), 0.0)
+	factory.animate(factory.build(book, factory.book_config(), 0.0), 0.0, 1.0, false)
 
 
 func setup(main: Node) -> void:
@@ -196,13 +199,7 @@ func _process(_d: float) -> void:
 	if _f < 40 or _busy:
 		return  # let the city, traffic, and dressing settle first
 	if _idx == 0 and _cam == null:
-		for n in (main_ref as Node).get_children():
-			if n is CanvasLayer:
-				(n as CanvasLayer).visible = false
-		for sys: Node in (main_ref.get("systems") as Dictionary).values():
-			for c in sys.get_children():
-				if c is CanvasLayer:
-					(c as CanvasLayer).visible = false
+		_hide_layers()
 		_build_mat_test()
 		_cam = Camera3D.new()
 		# D-080: Camera3D defaults to 75 deg VERTICAL fov, which at 16:9 is a
@@ -249,7 +246,22 @@ func _watchdog(shot_name: String, tok: int) -> void:
 	_busy = false
 
 
+## D-160: EVERY CanvasLayer, however deep — the combat reticle sat three levels
+## down and was baked into every plate at screen centre. Hiding them once at
+## boot was not enough (round 18): combat re-shows its own layer the moment it
+## goes active, so the sweep hides them again before EVERY capture.
+func _hide_layers() -> void:
+	for n: Node in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		var cl := n as CanvasLayer
+		cl.visible = false
+		# combat writes `_ui.visible = active` EVERY frame, after this runs (18b's
+		# sweep still carried the dot); nothing writes `offset`, so park the
+		# layer a hundred thousand pixels off the plate as well.
+		cl.offset = Vector2(100000.0, 100000.0)
+
+
 func _settle_and_save(shot_name: String) -> void:
+	_hide_layers()
 	_token += 1
 	var tok := _token
 	_watchdog(shot_name, tok)

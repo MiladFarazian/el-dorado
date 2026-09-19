@@ -39,7 +39,7 @@ var _target_anchor_local := Vector3.ZERO   # hooked end, in target local space
 var _taut_length := 0.0                    # hook-time distance + slack (m)
 var _cable: MeshInstance3D = null
 var _ui: CanvasLayer = null
-var _hint_label: Label = null
+var _hint := ""   # the boom prompt; hud_gta prints it (hint_text()); "" = none
 var _snap_label: Label = null
 var _snap_timer := 0.0
 
@@ -92,22 +92,18 @@ func _process(delta: float) -> void:
 		_snap_label.modulate.a = clampf(_snap_timer / (SNAP_FLASH_TIME * 0.5), 0.0, 1.0)
 		if _snap_timer <= 0.0:
 			_snap_label.visible = false
-	if _hint_label == null or not is_instance_valid(_hint_label):
-		return
 	if main_ref != null and main_ref.get("on_foot") == true:
-		_hint_label.visible = false  # the hook prompt is a driving prompt
+		_hint = ""   # the hook prompt is a driving prompt
 		return
 	var player := _player()
 	if player != null and hooked_body != null and is_instance_valid(hooked_body):
 		var d := _rear_anchor(player).distance_to(hooked_body.to_global(_target_anchor_local))
-		_hint_label.text = "F — RELEASE   chain %.1f m" % d
-		_hint_label.visible = true
+		_hint = "F — RELEASE   chain %.1f m" % d
 	elif player != null and _nearest_towable(player) != null:
-		_hint_label.text = "F — HOOK" if _has_boom(player) \
+		_hint = "F — HOOK" if _has_boom(player) \
 			else "NO BOOM — THE WRECKER DOES THAT"
-		_hint_label.visible = true
 	else:
-		_hint_label.visible = false
+		_hint = ""
 
 
 # ============================== HOOK / RELEASE ===============================
@@ -261,21 +257,17 @@ func _update_cable(player: RigidBody3D) -> void:
 
 
 # ============================== UI ===========================================
+## PUBLIC (hud_gta): the driving prompt for the boom, "" when there is none.
+func hint_text() -> String:
+	return _hint
+
+
 func _build_ui() -> void:
 	_ui = CanvasLayer.new()
 	_ui.layer = 20
 	add_child(_ui)
-	_hint_label = Label.new()
-	_hint_label.set_anchors_and_offsets_preset(
-		Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 56)
-	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_hint_label.add_theme_font_size_override("font_size", HINT_FONT_SIZE)
-	_hint_label.add_theme_color_override("font_color", Color(0.95, 0.92, 0.8))
-	_hint_label.add_theme_constant_override("outline_size", 6)
-	_hint_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	_hint_label.visible = false
-	_ui.add_child(_hint_label)
+	# D-073: the boom prompt is a String (`hint_text()`), printed by hud_gta in the
+	# bottom-centre stack; an orphan Label here leaked four RID pools at exit.
 	_snap_label = Label.new()
 	_snap_label.text = "SNAPPED"
 	_snap_label.set_anchors_and_offsets_preset(

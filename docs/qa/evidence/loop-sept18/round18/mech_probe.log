@@ -1,0 +1,124 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+RENDER: tier=budget sdfgi=on c3 cell0.75 r16 l16 ssr=on s12 volfog=on 48x48 aa=off+taa sky=custom(m16)+scatter shadow=450m/pcss0.53deg grade=lut32 exposure=tod
+STREET WEAR: 390 lids, 280 drains, 790 patches, 3 draw calls
+SKIN MICRO: skin 256^2 in 126 ms
+SKIN MICRO: cloth 256^2 in 107 ms
+TALL TOM: 17 m tall at (868.0, 1.35, 258.0)
+CEDAR CLIFF: 45 houses, 14 storefronts, 31 labels
+DOWNTOWN TYPES: 108 towers = corp 22 / deco 13 / slab 25 / brick 21 / deck 14 / signblock 10 / site 3 — 5344 instances in 17 MultiMeshes + 142 signs
+HOSPITAL NIGHT: 14 lights (mast 6, canopy 4, wash 3, door 1), 8 pools, 0 shadow maps, 3 draw calls, built in 0.1 ms
+POOLS: arterial=536 (42 intersection box washes, D-070) soft=312 inst=8 (3 draw calls, 0 lights, 0 per-frame work)
+SUBURB NIGHT: 492 lights (porch 245, flood 67, tv 24, head 156), 0 shadow maps, built in 1.1 ms
+SURFACES: materials=930 shaders=7 normalmapped=64 roughmapped=61 standard=874 shadermat=56 geom=8141 std_nm=14 std_rm=5
+MECHPROBE PASS stage0 parked wrecker drift over 8 s: 0.000 m (0.000 m along its nose, speed now 0.000 m/s; want < 0.02)
+MECHPROBE PASS stage1 last_reason published: PROBE CRIME
+MECHPROBE PASS stage1 banner subline shows the reason
+MECHPROBE PASS stage1 evaded clears the reason
+MECHPROBE PASS stage2 rope charged from speed: 0.305 after 3 s at 18.0 m/s
+MECHPROBE PASS stage2 headlamp spots bound to the ride: 2
+MECHPROBE PASS stage2 tail lamp material is private to the player's ride
+MECHPROBE PASS stage2 brake lamps flare on S: energy 6.50 (idle 1.5, brake 6.5)
+MECHPROBE PASS stage2 horn plays while H is held
+MECHPROBE PASS stage2 brake lamps settle on release: energy 1.50
+MECHPROBE PASS stage2 horn stops on release
+MECHPROBE PASS stage3 fired from the key path (special)
+MECHPROBE PASS stage3 time scale 0.35 (want 0.35)
+MECHPROBE PASS stage3 audio scale 0.55 (want 0.55)
+MECHPROBE PASS stage3 grip bonus 1.30 (want 1.30)
+MECHPROBE PASS stage3 chain held
+MECHPROBE PASS stage3 ended on its own after 2.8 game-s (8.0 real-s)
+MECHPROBE PASS stage3 time restored 1.00
+MECHPROBE PASS stage3 audio restored 1.00
+MECHPROBE PASS stage3 grip restored 1.00
+MECHPROBE PASS stage3 chain released
+MECHPROBE PASS stage3 cooldown armed 6.0 s
+MECHPROBE PASS stage4 cruiser pulled alongside and busted a still Book after 8.3 s (closest 5.2 m, at the bust 5.2 m, cruiser speed 0.03)
+MECHPROBE PASS stage4 heat at the bust 1 (want 1; last reason: PROBE: LOITERING)
+MECHPROBE PASS stage4 the card says BUSTED.
+MECHPROBE PASS stage4 wrecker on the impound lot: 3.7 m from the pad
+MECHPROBE PASS stage4 Book on foot on the lot
+MECHPROBE PASS stage4 heat cleared
+MECHPROBE PASS stage4 fine paid: $0 -> $-150 (want -150 at 1 star(s))
+MECHPROBE PASS stage5 the favor was spent (favors=0)
+MECHPROBE PASS stage5 the card carries the favor line: LONGHORN IMPOUND. Somebody you towed made a call. Bail's covered.
+MECHPROBE PASS stage5 no fine with a favor owed: $-150 -> $-150
+MECHPROBE PASS stage5 heat cleared
+MECHPROBE PASS stage6 spawn_now placed a stranded driver: STRANDED · COACH PRUITT
+MECHPROBE PASS stage6 one dead sedan, one driver (1/1), active=true
+MECHPROBE PASS stage6 a beacon marks it (9 beacon(s) in the world)
+MECHPROBE PASS stage6 unanswered, they called somebody else: 0 left, active=false
+MECHPROBE PASS stage7 a towed box slides onto the impound pad (z -3.9 m from centre after 2.2 s, y 0.54)
+MECHPROBE PASS stage8 fists up, a brave man 1.3 m in front
+MECHPROBE PASS stage8 the jab landed (hits=1) and he squared up (state=3, BRAWL=3)
+MECHPROBE PASS stage8 his punch landed unguarded: -6 hp after 0.6 s (want 6)
+MECHPROBE PASS stage8 guard held: -3 hp (want 3, half)
+MECHPROBE PASS stage8 perfect block: 0 hp lost, perfect=true
+MECHPROBE PASS stage8 he is staggered (stunned=true)
+MECHPROBE PASS stage8 the counter put him down (state=2, DOWN=2)
+MECHPROBE PASS stage9 rolled into dispatch: ORDER accepted (state=1) after 0.0 s
+MECHPROBE PASS stage9 the app spoke (2 lines queued)
+MECHPROBE PASS stage9 hooked: DELIVER (state=3)
+MECHPROBE PASS stage9 the Porchlight drone is up
+MECHPROBE PASS stage9 the owner came out of the house (1 follower)
+MECHPROBE PASS stage9 delivered: CONTRACT COMPLETE (state=4) after 0.0 s
+MECHPROBE PASS stage9 payout with every bonus: $950 (want 950 = 600 + no clips 150 + window 100 + no heat 100)
+MECHPROBE PASS stage9 the contract card is up
+MECHPROBE PASS stage10 in the Candyland Slab after 3 cycles
+MECHPROBE PASS stage10 rolled up to the board in the slab: CRUISE (state=1)
+MECHPROBE PASS stage10 Candyland spoke (7 lines queued)
+MECHPROBE PASS stage10 pass complete at x=770: TAKEOVER (state=2), heat 1
+MECHPROBE PASS stage10 the Task Force lit a star
+MECHPROBE PASS stage10 parked on the lot: SLIDE OUT (state=3)
+MECHPROBE PASS stage10 the club came out: 14 on the lot (want >= 6)
+MECHPROBE takeover cam: club=14 cen=(340.3037, 0.802354, 521.9548) TAKEOVER_POS=(340.0, 0.0, 522.0) slab=(340.0007, 1.139264, 521.978)
+MECHPROBE club rig 5/false: r=7.5 vis=true in_tree=true scale=(0.849544, 0.86229, 0.838695) y=0.01 meshes=22 drawn=22 emptyAABB=0
+MECHPROBE club rig 5/true: r=8.2 vis=true in_tree=true scale=(0.94657, 0.89299, 0.939277) y=-0.02 meshes=21 drawn=21 emptyAABB=0
+MECHPROBE club rig 5/false: r=8.2 vis=true in_tree=true scale=(1.087214, 1.042623, 1.026708) y=0.00 meshes=20 drawn=20 emptyAABB=0
+MECHPROBE club rig 5/true: r=7.6 vis=true in_tree=true scale=(1.034819, 1.008081, 0.961585) y=-0.02 meshes=23 drawn=23 emptyAABB=0
+MECHPROBE club rig 2/true: r=8.7 vis=true in_tree=true scale=(0.986855, 0.974132, 0.97248) y=0.37 meshes=21 drawn=21 emptyAABB=0
+MECHPROBE club rig 5/true: r=6.9 vis=true in_tree=true scale=(1.094944, 1.052581, 1.101457) y=-0.03 meshes=18 drawn=18 emptyAABB=0
+MECHPROBE club rig 5/true: r=7.3 vis=true in_tree=true scale=(1.001243, 1.00315, 0.985374) y=-0.04 meshes=24 drawn=24 emptyAABB=0
+MECHPROBE club rig 5/false: r=8.3 vis=true in_tree=true scale=(0.872079, 0.867514, 0.815463) y=0.00 meshes=27 drawn=27 emptyAABB=0
+MECHPROBE club rig 5/false: r=8.1 vis=true in_tree=true scale=(0.999174, 1.016602, 1.055751) y=-0.00 meshes=17 drawn=17 emptyAABB=0
+MECHPROBE club rig 5/false: r=7.0 vis=true in_tree=true scale=(0.927053, 0.881397, 0.920031) y=0.00 meshes=22 drawn=22 emptyAABB=0
+MECHPROBE club rig 5/false: r=7.5 vis=true in_tree=true scale=(1.118461, 1.055152, 1.118461) y=0.00 meshes=23 drawn=23 emptyAABB=0
+MECHPROBE club rig 5/true: r=7.9 vis=true in_tree=true scale=(0.915402, 0.900039, 0.936769) y=-0.05 meshes=20 drawn=20 emptyAABB=0
+MECHPROBE club rig 5/false: r=7.3 vis=true in_tree=true scale=(0.911699, 0.906153, 0.918081) y=0.00 meshes=20 drawn=20 emptyAABB=0
+MECHPROBE club rig 2/true: r=11.9 vis=true in_tree=true scale=(1.002262, 1.042088, 0.979563) y=0.37 meshes=20 drawn=20 emptyAABB=0
+MECHPROBE takeover club radii: n=14 min=6.9 mean=8.0 max=11.9 states(state/moving)={ "5/false": 7, "5/true": 5, "2/true": 2 }
+MECHPROBE PASS stage10 COMPLETE: +$250, respect +6 (want 250, >= 4)
+MECHPROBE PASS stage10 the Candyland card is up
+MECHPROBE PASS stage11 the app pushed an order (push_now)
+MECHPROBE PASS stage11 PUSHED (state=1): 'ORDER 4492 · OTIS PRUITT · 2012 BRISKET · 218 m'
+MECHPROBE PASS stage11 loop_audio carries 11 cues (want >= 11)
+MECHPROBE PASS stage11 loop_audio plays the delivered cue on demand
+MECHPROBE PASS stage11 the phone opens on the order (409 chars)
+MECHPROBE PASS stage11 the phone closes after three tabs
+MECHPROBE PASS stage11 the target is towable and rings on the radar
+MECHPROBE PASS stage11 the debtor came out to meet him
+MECHPROBE PASS stage11 hooked: HOOKED (state=2): 'HAUL TO IMPOUND · 547 m'
+MECHPROBE PASS stage11 DELIVERED: +$675 (want >= 300), deliveries 1, rank 1
+MECHPROBE PASS stage11 the RECOVERED card is up
+MECHPROBE PASS stage11 the app pushed a bad-paper order
+MECHPROBE PASS stage11 walked away from the bad paper (walk_away)
+MECHPROBE PASS stage11 VOIDED: respect +3 (want >= 3), paper burned 1
+MECHPROBE PASS stage12 Boone Trucks stocks 3 rigs
+MECHPROBE PASS stage12 signed a 96-month note on the Brisket, $0 down
+MECHPROBE PASS stage12 the Brisket is his now (1 -> 2 rigs)
+MECHPROBE PASS stage12 nothing drafted at signing
+MECHPROBE PASS stage12 the first draft came out: -$392
+MECHPROBE PASS stage12 two missed drafts: LONGHORN recovered the Brisket (1 rigs)
+MECHPROBE PASS stage12 the wrecker is still his
+MECHPROBE PASS stage12 bought the sedan for cash ($5100 left, want 5100)
+MECHPROBE PASS stage13 five spur routes qualified from the atlas (5)
+MECHPROBE PASS stage13 spur traffic on the boulevard after 40 s: 15 shells
+MECHPROBE PASS stage13 the boulevard's sidewalks have people: 10 (want >= 2)
+MECHPROBE PASS stage14 the app pushed an order that will run (push_now flee)
+MECHPROBE PASS stage14 FLEEING (state=3): 'CATCH THE VANTAGE · 14 m · 0 km/h'
+MECHPROBE PASS stage14 the traffic brain is driving the car
+MECHPROBE PASS stage14 the car ran 46 m in 4.5 s (want > 12)
+MECHPROBE PASS stage14 boxed in and hooked: HOOKED (state=2) after 7.2 s
+MECHPROBE PASS stage14 the brain let go of the car
+MECHPROBE PASS stage14 DELIVERED after the run: +$675 with the IT RAN row on the card (yes, 0.0 s)
+MECH PROBE: PASS (94/94)
