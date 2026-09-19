@@ -72,7 +72,7 @@ the tree — with its "before" being that copy minus only its own edits — to p
 trustworthy number at all. Before dispatching, list each mission's files and check for
 intersection. If two missions need one file, run them in series.
 
-**A FIX CYCLE AND A QA CYCLE MAY NEVER OVERLAP** (QA cycle 2, D-084). Eleven world
+**A FIX CYCLE AND A QA CYCLE MAY NEVER OVERLAP** (QA cycle 2, D-084). **An audit is a frozen tree even when the audit is read-only** (D-072: the producer kept editing under a read-only audit and QA filed it as D-084 recurring; hand QA a named commit and touch nothing until it reports). Eleven world
 files were rewritten under an audit in eleven minutes; three gate boots and a full
 39-shot sweep ran against a tree that did not parse, and QA had to fall back to a
 frozen byte-copy to finish. Either hold all writes until QA reports, or hand it a

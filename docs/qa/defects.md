@@ -4,401 +4,634 @@ Single source of truth for what is wrong with EL DORADO GRANDE right now.
 Owned and rewritten by the **QA Director** each cycle. Fix order is S1 → S2 → S3.
 Bar: `docs/qa/quality-bar.md`.
 
-**Cycle:** 3 (verification cycle), 2026-08-11.
+**Cycle:** 7 — the ruling cycle on waves D-056…D-071. **2026-09-18.**
 
-> **CYCLE 6 INTERIM — PRODUCER-MEASURED, 2026-09-06.** No QA Director pass has run since
-> wave 6 landed (both cycle-3 QA launches died to the watchdog; the wave-6 model change
-> routes measurement to cheap runners and judgement to the producer). Until QA rewrites
-> this ledger, the following entry is the highest-severity known defect and outranks
-> everything below it.
->
-> ### D-100  [S1]  The M23 light pipeline (the shipped default) fails bar §4b at 10 of 10 perf stations
-> - **Area:** performance / rendering
-> - **Evidence:** `perf_harness --perf-repeat=3`, quiet machine, single Godot instance,
->   best-of-three medians. New default: downtown_day 21.88 ms, downtown_night 24.37,
->   suburb_day 17.54, suburb_night 17.59, freeway_day 19.90, freeway_night 18.75,
->   hospital_day 19.05, hospital_night 19.23, hospital_door_day 23.61,
->   hospital_door_night 23.81 — **every station over 16.67 ms**. `--env-legacy` from the
->   same tree: 7.72 / 8.26 / 5.56 / 6.25 / 6.67 / 7.14 / 4.80 / 6.25 / 10.00 / 11.11 —
->   10 of 10 pass, and downtown matches its historical 8.33 ms baseline (the run is
->   quiet). Cost is flat across stations (17.5 ms floor at 671 draws) → fixed
->   full-screen/volume passes, not geometry. Logs: scratchpad `meas7/perf_new.log`,
->   `meas7/perf_legacy.log`; table in `docs/decisions.md` D-040.
-> - **Bar violated:** §4b "≥60 fps at every station, best of ≥3, quiet machine".
-> - **Status:** RESOLVED PENDING QA (2026-09-06).
->
-> **PRODUCER-CLAIMED CLOSURES, PENDING QA VERIFICATION (2026-09-06, wave 6).** A builder
-> may never close its own defect; these are claims with evidence pointers, for QA to rule on:
-> - **D-025** (no shadow beyond 300 m): shadows to 450 m over four cascades in the shipped
->   budget tier (900 m under `--env-photo`). Evidence: `meas7/plates_default/aerial.png`.
-> - **D-031, D-032, D-033, D-034, D-035, D-037** (the "HUD lies" family): closed by
->   construction in `hud_gta.gd` / `debug_hud.gd` / `combat.gd` / `main.gd` — see D-041.
->   Evidence: `hud7/plates/hud_vehicle.png`, `hud_foot.png`.
-> - **D-034 (decisions)** the race_event MIX veil: migrated to beacon_kit, sign test in
->   `docs/tech/rendering/light-pipeline.md` §7.
-> - **D-079** (night brightness): re-measure under the budget tier still owed.
->
-> **NEW, PRODUCER-FILED (severity proposed):**
-> - **D-101 [S2] The factory's swept shoulder girdle is the "pillow shoulders"** —
->   `character_factory.gd:571-586`, proven by D-036 §02–03. Argument for the skinned flip.
-> - **D-102 [S3] Skinned neck** — PRODUCER-CLAIMED IMPROVED 2026-09-06: neck prim r 47/57 →
->   58/66 mm, collar ring grown (`plates_skinned3/face.png`, D-045). The head remains the
->   factory's. QA to rule.
-> - **D-103 [S3] Foot officers during a search** — PRODUCER-CLAIMED FIXED: officers converge on
->   `police.search_center` while `search_active` (D-045). Gated; no runtime plate (needs a
->   scripted pursuit probe).
-> - **D-104 [S3] Lit windows at noon** — PRODUCER-CLAIMED FIXED in two halves (tower/storefront
->   materials, then the four `_facade()` builders); `meas7/plates_default3/sky_wide.png` shows
->   uniform dark glass at 13:00. QA to rule.
-> - **D-103 [S3] Foot officers path to the true player position during a police search**
->   (`foot_cops.gd` reads the player directly); cruisers honour line of sight, officers do
->   not. Fix: police publishes `pursuit_target`, officers read it.
-> - **D-104 [S3] Lit-window emission is on at noon** in both legacy and new towers
->   (`sky_wide` plates, both arms) — the night ramp has no daylight suppression.
-> - **D-105 [S4] `race_event` D-036 (race left RUNNING forever on foot)** still open.
-> - **D-107 [S1] Every skinned body and garment rendered inside out** — the bake's triangle
->   winding was Godot's back face (D-051), so the outer skin was culled and the far wall's inside
->   drawn with inward normals. PRODUCER-CLAIMED FIXED 2026-09-06 (corner swap at both index
->   assemblies, cache v9). Proof: `--shot --shot-debug=normals` at `face`, chest pixel (880,640):
->   before (205,144,27) = facing away; factory body (154,132,229); after (148,167,246) — the
->   former dark-strip pixel went (159,71,17) → (96,181,238). QA to rule; every skinned plate
->   changes. Bar §1 gained a "Facing" row for it.
-> - **D-108 [S2] The collar is two detached tabs on a knife-edge neckline** (D-050 crop) —
->   PRODUCER-CLAIMED REWORKED: one shell, a 4 mm-off stand within r 85 of the neck axis from
->   1.500 to 1.578, points tucked under it (`collar7/collar_probe.gd`: 10,655 vertices within
->   80 mm of the axis, was 1,492). v10: stand 1.525–1.578 (53 mm) with the points hanging
->   63 mm from its foot; crew/V/hooded necks paint skin above 1.500 instead of a turtleneck.
->   What it is now: a stand collar with two tabs. What it is not yet: a fold-over leaf with an
->   open front — that needs the neck-base mound resolved finer than the 18 mm body voxel.
->   QA to rule on the r4 `face`/`side`/`back` plates.
-> - **D-109 [S3] The factory head's rigid neck showed through the skinned neck** — its flat cap
->   at 1.445 was the "tube set into a hole". PRODUCER-CLAIMED FIXED: `skinned_body` flag makes
->   `_build_head` skip neck, nape and both neck muscles. (Root cause of the visibility: D-107.)
-> - **D-110 [S3] Eye whites read startled** (sclera 0.84 with 0.13 emission, 36 mm wide) —
->   PRODUCER-CLAIMED ADJUSTED: sclera 0.74/0.71/0.68, emission 0.06, 34 mm; iris 12.8 mm with a
->   14.8 mm limbal ring; catchlight 3.0 mm. QA to rule at `face`.
-> - **D-111 [S3] Body skin and cloth had no surface, and the neck changed shading where the
->   factory head met the body** (StandardMaterial3D body vs skin-shader head) — PRODUCER-CLAIMED
->   FIXED: the palette shader (`city_shaders.PALETTE_SHADER`) with class-keyed pore/cloth
->   micro-normals on a bind-pose UV2 and the head's subsurface terms on skin rows; head gets a
->   triplanar pore normal. Seam-split UV2 (a bright line ran down the spine before). QA to rule.
-> - **D-112 [S4] `tools/measure_skin.gd` measured winding with the wrong-handed law** and
->   reported 99.9% agreement on inside-out meshes. FIXED with D-107 (now (c−a)×(b−a)).
-> - **D-113 [S3] Four flat-trim garment vertices over the 5 mm rim bar after the body pass** —
->   belt 2 of 3,600 (max 26.6 mm at (0.171, 1.056, 0.002), the waist's side) and apron 2 of
->   12,209 (27.9 mm at (−0.038, 1.125, −0.148)). Both trunk-field shells; the body's waist
->   narrowed under them (D-053). `docs/qa/evidence/character-body/garment-clearance.log`.
-> - **D-114 [S4] Fingertips ragged at the 18 mm body voxel** — the hand is a paddle (D-053);
->   its tips are ~45 mm thick and still show marching artefacts at `gait`. Separate fingers
->   need a finer voxel around the hands or rigid hand parts.
-> - **D-115 [ruling needed] Codex's two passes are self-certified only** — session flow
->   (`docs/qa/session-flow.md`, 34 checks in `tools/session_test.gd`) and the face pass
->   (`docs/qa/character-design.md`). Gated by Codex (boot, smoke ×2) and re-gated here
->   (D-053 gate), but no QA Director ruling. Their evidence folders are under
->   `docs/qa/evidence/`.
-> - **D-116 [S4] `tools/skin_rim.gd` cannot grade the tailored pieces** — collar, placket and
->   both pockets ship as explicit fabric meshes (D-054), not shells; the tool now prints
->   TAILORED and skips them. A clearance measure for fabric grids (distance of each vertex to
->   the body along its normal) does not exist yet.
-> - **D-117 [S3] The surface beard read as a flat patch** (codex9/review/cast.png: a bandage
->   moustache on a dark head, a mask beard on a light one) — PRODUCER-CLAIMED FIXED: per-vertex
->   hair/skin stubble mix, feather widened from 7% to 22% of the patch. QA to rule at `cast`.
-> - **D-118 [S3] Heat had no reason** — a star lit and the player was never told why (DNA §4
->   "legible"; the checklist's row 11 scored 1). PRODUCER-CLAIMED FIXED 2026-09-12 (D-056):
->   `police.add_heat(n, reason)`, 16 call sites named, the reason drawn under WANTED for 2.6 s,
->   `police.last_reason` public. Evidence: `evidence/mechanics-sept12/busted.png` (banner
->   "WANTED / PROBE: LOITERING"), `mech_probe_headless.log` stage 1 (3/3). QA to rule.
-> - **D-119 [S2] There was no second fail state** — evade or die; a player who stopped with the
->   law on him was shot at (heat ≥ 2) or rammed forever (heat 1). PRODUCER-CLAIMED FIXED (D-056):
->   `systems/arrest.gd` + `on_foot.arrest(fine)` — still for 1.8 s with an officer at 2.6 m or a
->   stopped cruiser within 5 m → BUSTED card → the impound lot beside the wrecker, heat 0, fine
->   $150/star, not healed, not repaired. Evidence: `mech_probe_*.log` stage 4 (6/6: card, lot
->   3.7 m from the pad, on foot, heat 0, $-150), `busted.png`. **Known gap, filed with it:** at
->   heat 1 cruisers ram rather than pull alongside, so the cruiser path needs a wedged cruiser;
->   the officer path (heat ≥ 2) is clean. QA to rule on both.
-> - **D-120 [S3] The player's ride had no brake lamps, reverse lamps, working headlamps, or a
->   horn** (bar §4 "every verb has feedback": braking had none). PRODUCER-CLAIMED FIXED (D-056):
->   `systems/vehicle_lamps.gd` (private lamp materials — the builder's cache is fleet-wide —
->   brake 1.5 → 6.5, reverse white, night headlamps 5.0 + two shadowless spots), horn on H in
->   `vehicle_audio.gd`, walkers ahead bolt (`pedestrians.honk_at`). Evidence: probe stage 2
->   (7/7: energy 6.50 on S, 1.50 on release, horn plays/stops, 2 spots bound). Traffic lamps
->   remain D-045. The night plate: `evidence/mechanics-sept12/round2/brake_night.png` (22:00,
->   tail lamps flared, both spots lighting the road). QA to rule.
-> - **D-121 [S3] `vehicle_damage.gd` assigned a freed cruiser to a typed variable** — every
->   heat clear with a tracked cruiser (the hospital respawn included) logged `SCRIPT ERROR:
->   Trying to assign invalid previously freed instance` at line 61; the §5 boot gate never
->   sees it because the gate never clears heat. PRODUCER-CLAIMED FIXED: checked as a Variant
->   before the cast. Evidence: `mech_probe_headless.log` (the error at probe3, gone at probe4).
-> - **D-122 [S2] The protagonist's canon special ability did not exist** (story bible §4: "The
->   Full Eight"; checklist row 20 scored 1). PRODUCER-CLAIMED LANDED (D-056):
->   `systems/full_eight.gd` + `data/mechanics/full_eight.json` + the rope in `hud_gta.gd`.
->   Evidence: probe stage 3 (11/11: key path fires; 0.35 / 0.55 / ×1.30 / chain held; ends at
->   8.0 real-s; all four restored; cooldown 6 s), `full_eight.png` (veil + rope). Tuning is a
->   first guess; QA to rule on feel at the `car_34` vantage with the veil up.
-> - **D-123 [S3] At one star a cruiser could only "arrest" by ramming and wedging** (the gap
->   D-119 filed against itself). PRODUCER-CLAIMED FIXED 2026-09-12 (D-057): PULLOVER_* in
->   `police.gd` — a still target at heat ≤ 2 gets a gap-scaled, braking approach that parks at
->   5 m and holds; first cut lit "RAMMED A CRUISER" on contact, second cut busts at heat 1.
->   Evidence: `evidence/mechanics-sept12/round2/mech_probe_headless.log` stage 4 (closest 5.2 m,
->   0.03 m/s, heat 1 at the bust, fine $150), `--wanted-probe` unchanged. QA to rule.
-> - **D-124 [S2] No random events; nothing the player did was ever remembered** (checklist rows
->   14 and 19 at 0/1). PRODUCER-CLAIMED LANDED (D-057): `systems/random_events.gd` — STRANDED,
->   a towable dead sedan + waiting driver + beacon at an open curb when the world is quiet; the
->   tow pays $220 + 2 respect and a favor that covers the next bail (persisted in the save).
->   Evidence: probe stages 5–6 (favor spent, $0 fine, the line on the card; spawn 1/1 with a
->   beacon; TTL despawn). No in-play plate yet — the event needs a quiet 75 s drive; QA to
->   take one. QA to rule.
-> - **D-125 [S4] Pedestrians ignored a wanted man standing next to them.** PRODUCER-CLAIMED
->   FIXED (D-057): heat ≥ 2 within 12 m → flee straight away. No probe row (needs a ped in
->   range); QA to check by hand at 2★ on a downtown block.
-> - **D-126 [S2] The impound pad blocked the delivery** — Milad, playing Hook and Ladder
->   2026-09-13: "the area to drop off the vehicle was blocking the vehicle." Root cause: the pad
->   was a 24 cm StaticBody3D slab with 22 cm lips; a towed box cannot climb a step.
->   PRODUCER-CLAIMED FIXED (D-058): the pad is visual-only paint, flush. Evidence:
->   `evidence/mechanics-sept13/mech_probe_headless.log` stage 7 — before: the box stops at
->   z −7.2 m (the slab face); after: on the pad in 2.2 s. QA to rule by delivering the Brisket.
-> - **D-127 [S3] Melee had no opponent and a guard that blocked nothing** (`GUARD_DAMAGE_MULT`
->   "read by nobody yet"; a landed jab did nothing visible). PRODUCER-CLAIMED FIXED (D-058):
->   brave pedestrians square up and punch (6 hp, 1.1 s), guard halves, perfect guard counters,
->   soft lock and step-in, stride cap while swinging. Evidence: probe stage 8 (7/7),
->   `evidence/mechanics-sept13/brawl.png`. QA to rule by hand on a downtown block at fists.
-> - **D-128 [S2] Every car crept forward at rest** — Milad, 2026-09-13: "all cars drift forward
->   when they shouldn't." Measured: 3.27 m in 8 s, settling at 0.50 m/s (the rolling-resistance
->   threshold). Root cause: no static friction in the tyre model; springs along body up.
->   PRODUCER-CLAIMED FIXED (D-059): park hold + rolling resistance from rest. Evidence:
->   `evidence/mechanics-sept13/round4/drift_before.log` (3.270 m) / `drift_after.log` (0.000 m);
->   probe stage 0 guards it. QA to rule with a parked car on the frontage slope.
-> - **D-129 [S2] Characters stood in an A-pose and walked in a shuffle** (the "super shit" note;
->   review `full.png`: arms straight; `gait.png`: 8° hips at a stroll). PRODUCER-CLAIMED FIXED
->   (D-059): `animate()` rewritten — stride saturates at 1.4 m/s, torso twist, elbow on the
->   forward arm, a living idle. Evidence: `round4/gait_before.png` → `gait_after.png`,
->   `full_before.png` → `full_after.png`. QA to rule at `gait` and `full`; the idle still hangs
->   its hands open (D-114 territory).
-> - **D-130 [S3] The downtown roadway was a clean plane with paint on it** (the "not detailed"
->   note; `street_detail.png`). PRODUCER-CLAIMED IMPROVED (D-059): `street_wear.gd` — 230 lids,
->   280 drains, 460 tar patches, three draw calls. Evidence: `round4/street_detail_before.png` →
->   `street_detail_after.png`. QA to rule; the frontage roads and the suburb remain clean.
-> - **D-131 [S3] The hands hung as paddles** — straight fingers at rest (review `hand.png`,
->   2026-09-13 morning). PRODUCER-CLAIMED FIXED (D-060): proximal ~15°, middle ~40° flexion in
->   `character_hands.gd`. Evidence: `evidence/mechanics-sept13/round5/hand_before.png` →
->   `hand_after.png`. QA to rule at `hand`.
-> - **D-132 [S3] The lips read as a smudge at `face`** despite 3–4 mm crowns. PRODUCER-CLAIMED
->   IMPROVED (D-060): deeper, slightly wider vermilion multipliers. Evidence: `round5/face_before.png`
->   → `face_after.png`. QA to rule.
-> - **D-133 [S4] The brawler's punch was a lean; traffic never honked.** PRODUCER-CLAIMED FIXED
->   (D-060): `_brawl_arms` (guard, cock, drive, sag) and `traffic._honk_check` (2.4 s blocked → horn).
->   Evidence: `round5/brawl.png` (arms up); the honk is unprobed — QA by hand at a light.
-> - **D-130 update:** the frontage strips now carry wear too (390 lids, 790 patches). Suburb still clean.
-> - **D-134 [S2] The body was a tube with a coat hanger on it** — Milad, 2026-09-13: "character
->   still looks unnatural, design better with more realistic body structure." Measured
->   (`tools/body_measure.gd`): trunk 0.27 m wide ribs-to-belt with no taper; arm inside the chest
->   radius. PRODUCER-CLAIMED IMPROVED (D-061): rib cage 0.324 → waist 0.288, shoulders 0.468,
->   lats, shoulder pivot 0.192, posture. Evidence: `evidence/mechanics-sept13/round6/` (before/after
->   `full`, `front`, `body_side`, `back`, `showcase_people`; `measure_before.md` / `measure_after.md`),
->   `docs/qa/anatomy-sept13.md`. QA to rule; open: deltoid still square in the sleeve, boots.
-> - **D-135 [S3] The boots were loaves** — three round masses of one height on a sole (review
->   `body_side.png`, every plate since M22). PRODUCER-CLAIMED FIXED (D-062): shaft, sloping vamp,
->   low toe box, heel block, welted sole; measured 0.30 long × 0.09 wide with the toe below instep
->   height. Evidence: `evidence/mechanics-sept13/round7/body_side_before.png` → `_after.png`,
->   `measure_after.md`. QA to rule at `body_side` and `full`.
-> - **D-134 update (D-062):** pecs, scapulae, lumbar curve, a rounder deltoid on top of D-061's
->   rib cage. `round7/front_*`, `back_*`. The deltoid still reads square in the painted sleeve.
-> - **D-136 [S2] The missions were bare loops** — no briefing, nobody spoke, nothing happened at the
->   house, a flash for an ending (Milad, 2026-09-13: "improve details of missions").
->   PRODUCER-CLAIMED IMPROVED (D-063): `mission_kit.gd` (the LONGHORN app voice, the contract card
->   with bonuses and a medal), the owner who comes out and calls it in, fail lines, clip counting.
->   Evidence: probe stage 9 (8/8), `evidence/mechanics-sept13/round8/mission_card.png`. QA to rule
->   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
-> - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
->   and a gold ring on a live mission target. QA to rule at `--hudshot`.
-> - **D-151 [S2] The loop was silent** — no push chime, no cash, no note dropping. PRODUCER-CLAIMED
->   LANDED (D-071): `loop_audio.gd`, eleven procedural cues on the loop's signals. Evidence: probe
->   rows in stage 11. QA to rule by ear at a push, a delivery, a draft; the bad-paper flat note.
-> - **D-152 [S2] The takeover was a parking spot** (open since D-064). PRODUCER-CLAIMED LANDED
->   (D-071): the club comes out, four rides, the lines, the bulbs. Evidence: probe stage 10
->   (`crowd_count >= 6` at SLIDE OUT). QA to rule by driving the strip at night in the Slab.
-> - **D-150 [S1] The target never left.** Every debtor reaction kept the car parked; the Hook had
->   nothing to catch. PRODUCER-CLAIMED LANDED (D-070): the FLEE reaction — the traffic brain drives
->   the car (`traffic.adopt`), the wrecker hooks it on the move, ×1.5 on delivery; boxed-in and
->   lost cases close cleanly. Evidence: probe stage 14. QA to rule by forcing a run
->   (`push_now(false, true)` from a debug key is not bound — drive until one runs, one in five).
-> - **D-146 [S2] The new roads carried no traffic** (Juárez Boulevard, the parkway, the Cliff
->   streets) — a district with no cars reads as a set. PRODUCER-CLAIMED LANDED (D-069): `KIND_SPUR`
->   lanes from the atlas, five routes, a merge onto the grid at Juárez's north end. Evidence: probe
->   stage 13 (spur census ≥ 1 shell after 40 s parked on the boulevard). QA to rule by driving
->   Juárez end to end at noon: cars both ways, none nose-to-nose for more than nine seconds.
-> - **D-147 [S2] Nobody lived in the districts** (pedestrians spawned downtown only).
->   PRODUCER-CLAIMED LANDED (D-069): eight spawn zones from `ped_zones.json`. Evidence: probe
->   stage 13 (`zone_count("cliff_boulevard") >= 2`). QA to rule on the boulevard on foot.
-> - **D-148 [S2] The Paper could only be read in a four-second push.** PRODUCER-CLAIMED LANDED
->   (D-069): the phone (P), the LONGHORN tab with the tell in red. Evidence: probe rows "the phone
->   opens on the order". QA to rule at a bad-paper order with the phone open — is the tell legible
->   at 720p, does the note list overflow the column.
-> - **D-149 [S3] Boone Trucks had a voice and no one behind it.** PRODUCER-CLAIMED LANDED (D-069):
->   Wade at the showroom door, a greeting within nine metres. Evidence: `boone_wade` plate.
-> - **D-143 [S1] There was no game loop.** Past the three scripted missions and nine derelict
->   junkers, nothing pushed the player to do anything, nobody was in it, and money bought nothing.
->   PRODUCER-CLAIMED LANDED (D-068): `repo_orders.gd` — orders without end from the app, a debtor
->   at every one, the Paper as a choice, five ranks, a quota; persisted. Evidence: probe stage 11
->   (10/10), `docs/qa/evidence/loop-sept18/`. QA to rule by driving the wrecker for ten quiet
->   minutes: at least eight orders, a bad one among them, a debtor who calls it in.
-> - **D-144 [S2] Money had no sink and TAB handed out the whole fleet.** PRODUCER-CLAIMED LANDED
->   (D-068): Boone Trucks — a note or cash, TAB cycles only what Book owns, the note drafts daily,
->   two misses and LONGHORN takes it back. Evidence: probe stage 12 (8/8), `boone_lot` plate. QA
->   to rule at the lot on foot (the prompt, the hold, the card) and after two in-game days broke.
-> - **D-145 [S3] The south-west was prairie.** PRODUCER-CLAIMED LANDED (D-068): Cedar Cliff and
->   the Deacon Arts District on Juárez Boulevard. Evidence: `cliff_boulevard`, `gilead_bottoms`
->   plates. QA to rule by driving the boulevard end to end; open: no traffic, no people there yet.
-> - **D-142 [S1] The shirt and the trousers were paint on the skin** — a sleeve was the arm's own
->   radius, a trouser leg the shin's; every review since D-050 called it "coat hanger on two
->   pipes". PRODUCER-CLAIMED LANDED (D-067): constant-offset shells 10 mm off, 12 mm thick, one
->   piece per garment, zones and weights inherited from the skin beneath. Evidence:
->   `docs/qa/evidence/cloth-sept13/after/{torso,full,back,sprint_side}.png`. QA to rule at
->   `torso` / `showcase_people` and by sprinting; known: the armhole is a straight seam.
-> - **D-140 [S2] The city map named three places on a 2 km square** and drew the rest of the
->   world as nothing: no church, stadium, compute ranch, water tower, hospital dot, strip or
->   dirt road, and a hard-coded job legend that had gone stale. PRODUCER-CLAIMED FIXED (D-066):
->   the map draws from `data/world/atlas.json` (8 districts, 15 roads, 11 places), the legend
->   from the session's list. Evidence: `docs/qa/evidence/world-sept13/map_after.png`
->   (`--mapshot`). QA to rule at M in a full-size window, where the place names show.
-> - **D-141 [S2] The east strip and the north-west corner were prairie** with no destination in
->   them; the world's edges had nothing to drive to. PRODUCER-CLAIMED LANDED (D-066): the Lone
->   Star Fairgrounds (gate, wheel, Tall Tom, midway, lots) and Harvest Hills™ (parkway, monument,
->   billboard, mud lanes, ~60 lots in five stages, sales trailer). Evidence: `world-sept13/plates/`
->   at `fair_gate`, `fair_wheel_night`, `harvest_edge`. QA to rule by driving Fair Drive and the
->   parkway; open: no traffic on either.
-> - **D-138 [S1] The sprint was a walk with a lean.** `character_review.gd` gait strips
->   (`docs/qa/evidence/gait-sept13/before/sprint_side.png`): at 6.5 m/s the legs barely open,
->   the arms hang, no knee lift, 7.5 steps a second. Causes in `animate()`: a fixed 1.74 m stride,
->   a 12/s pose blend passing 45 % of a 3.75 Hz signal, knee flexion windowed 140 degrees late
->   (in stance, not swing). PRODUCER-CLAIMED FIXED (D-065): stride 0.75 + 0.5·speed, 40/s gait
->   blend, swing-phase knee with a loading and a landing bend, elbows ~90 at a run, pendulum
->   height for the walk, sink/flight for the run. Evidence: `gait-sept13/after/*_side.png`. QA to
->   rule by sprinting Book down Howdy St and at the strips.
-> - **D-139 [S2] The legs stood as an A-frame and the shoulder was a pad.** `front.png`: knees
->   wider than the hips (centres ±0.106 + 2.6 degrees of abduction), the deltoid widest at the
->   acromion corner. PRODUCER-CLAIMED FIXED (D-065): knees 28 mm inboard of the hips (bones and
->   field), abduction halved, knee r62 → 52, deltoid centre 1.418 → 1.395 tapering r50 → 38.
->   Measured: knee 0.108 (target 0.11), knee outer span 0.252 (was ~0.34), shoulders 0.468
->   unchanged. Known: the armpit renders as a one-cell slot. QA to rule at `front` / `full` / `back`.
-> - **D-137 [S3] The game had two missions and no Slow Lane** (the story bible's non-negotiable
->   verb set: Hook, Saddle, Slow Lane, Paper — the strip existed as a loop, not a job).
->   PRODUCER-CLAIMED LANDED (D-064): `mission_comin_down.gd`, three passes, the Task Force tail,
->   the takeover, the card. Evidence: probe stage 10 (8/8). QA to rule by driving it in the Slab
->   at night; open: the takeover has no crowd.
-> - **D-114 update:** PRODUCER-CLAIMED RESOLVED by Codex's 3 mm hand meshes (palm, thumb, four
->   fingers on the forearm joints; `character_hands.gd`). The paddle is gone. QA to rule at `hand`.
-> - **D-108 update:** the collar is now a tailored stand with fold-over points (Codex v17,
->   finished v18) — neither tabs nor turtleneck. QA to rule at the new `collar` review view.
-> - **D-106 [ruling needed] The audio-at-quit leak is 10, not ≤6, in WINDOWED runs.**
->   `--verbose` on a windowed `--hudshot` exit lists exactly 5 `AudioStreamWAV` + 5
->   `AudioStreamPlaybackWAV` and nothing else (`gate7/verbose_leaks.txt`) — the same
->   D-023 mechanism, more streams live at quit than a headless boot has. Headless 900-frame
->   boots (the §5 gate) measure 0–6. The producer has NOT widened the row (integrity rule);
->   QA to rule whether §5's exception should read "audio-at-quit instances of any count
->   with zero error lines" or stay at 6 with the gate defined as headless. Ablation priced each pass (SDFGI ~6 ms,
->   TAA ~1.4, volumetric fog ~1.3, SSR <1; the 8192 atlas + Soft High filter unablated).
->   A budget tier (SDFGI c3/0.75 m/16 rays/light every 16 f, fog 48³, SSR 12, 4096 atlas
->   Soft Low over 450 m, TAA only) measures **10/10 stations under 16.67 ms across all
->   three repeats**, worst `hospital_door_night` 15.31 (15.31/16.22/16.39), mean 11.65.
->   It is now the DEFAULT; the full set is `--env-photo`. Decision: D-042. Verification
->   run of the flipped default queued (`meas7/perf_default.log`).
+## HOW THIS CYCLE WAS RUN, AND WHAT THAT COSTS THE RULINGS
 
+**Read-only.** The producer held the gate, so QA started **no Godot process**: no boot, no
+sweep, no `parse_all`, no probe. Every ruling below is made from (a) the probe logs and gate
+tables the rounds filed, (b) the plates they filed, read at judgement crops with a pixel
+analyser, and (c) the source at HEAD. Where a ruling needs a run QA could not make, it says
+**PLAUSIBLE-UNVERIFIED** and names the exact command and assertion. **No claim was upgraded to
+FIXED on a builder's word.**
 
-**Build audited — READ THIS BEFORE READING ANY NUMBER BELOW.** The project tree
-was being **rewritten while this audit ran** (the MultiMesh `cast_shadow` sweep:
-`city_dressing.gd` 01:34, `facade_kit` 01:35, `suburb_dressing` 01:36,
-`wild_dressing` 01:36, `scenic_dressing` 01:37, `plaza_dressing` 01:37,
-`freeway_dressing` 01:39, `landmarks` 01:40, `greybox_city` 01:40,
-`perf_harness` 01:45). Three of my gate boots and one whole 39-shot sweep ran
-against a tree that **did not parse** — see D-074 and D-084.
+**Build audited: `d499c08` — "Round 16b (D-071): one objective line on screen", 19:32.**
 
-Everything below was therefore measured on a **frozen byte-copy taken at 01:28**,
-before the sweep began. That copy is identical to the live tree in every file
-carrying a claim under verification — `downtown_types.gd`, `vehicle_body_builder.gd`,
-`raycast_vehicle.gd`, `interactables.gd`, `streetlight_glow.gd`,
-`hospital_night.gd`, `zz_shot.gd`, all five vehicle JSONs, `character_factory.gd`
-— checked by md5, file by file. It differs only in the eleven files the sweep is
-touching. **No claim was graded against a file the sweep had already moved.**
+**D-084 HAPPENED AGAIN.** At audit time `git status` showed uncommitted edits to
+`game/scripts/systems/repo_orders.gd`, `save_load.gd`, `session.gd` and
+`game/data/mechanics/repo_orders.json` — the D-072 NEW GAME work — landing while this audit
+ran. A fix cycle and a QA cycle overlapped for the third recorded time. Rulings are against
+committed HEAD, not the dirty tree, and any claim that lands in those four files after
+19:32 is **not** covered here. See D-084.
 
-**Evidence base (all taken by QA this cycle, nothing carried on a builder's word):**
-39 screenshots (full `zz_shot` set re-shot from the frozen copy, zero error
-lines), 9 crops at 2–5× NEAREST, photometry over all six night vantages, a
-vertex-level in-engine probe reading the **real ArrayMesh vertices** of all eight
-vehicle shells in vehicle-local space, a 120-frame prop-freeze probe run on three
-consecutive boots, an **A/B collider census with and without `downtown_types.gd`**,
-a downward physics ray under each of the six rooftop signs, `--perf --perf-repeat=3`
-(10 stations × 3 passes × 300 measured frames), `--smoke` ×3 + ×1 live, and a
-**randomised interleaved 80-boot leak experiment** plus 10 stream-split boots.
-All probes were added to the frozen copy, never to the project tree.
-
-**Method note.** Seven of the eight claims on the producer's list are **verified
-genuinely fixed** — four of them proven by a measurement the builder did not run.
-One (D-026) is no longer photographable and is re-scoped rather than closed.
-**Three new S2s were found that nobody reported**, one of them a bar row the
-producer reported as passing.
+**A second, quieter version of the same problem:** the plates filed as round 16's evidence
+were rendered by a build that HEAD no longer contains — `order_push.png` shows
+`LONGHORN DISPATCH RE-ARM 22s`, a string `d499c08` deleted. **Evidence older than the commit it
+is filed under cannot close a defect**, and two of this cycle's rulings had to be softened for it.
 
 ---
 
 ## COUNTS
 
-| Severity | Open | Change |
+| Severity | Open | Note |
 |---|---|---|
-| **S1 BLOCKER** | 0 | — both CI gates PASS on the live tree as of 01:51 |
-| **S2 MAJOR** | 19 | 19 → 19 (4 closed, 1 downgraded, 5 new) |
-| **S3 MINOR** | 32 | 26 → 32 (2 closed, 1 in, 7 new) |
-| **S4 POLISH** | 5 | 5 → 5 (1 closed, 1 new) |
-| **Total open** | **56** | **50 → 56** (7 closed, 13 opened) |
-| FIXED (verified this cycle) | 7 | kept below for one cycle, then deleted |
-| WONTFIX | 2 | D-012 (now RULED, see below), D-022 |
-| NOT REPRODUCED | 1 | D-071 |
-| CLOSED unreproduced | 1 | D-008, after three cycles |
+| **S1 BLOCKER** | 1 | D-100 only — and only because no quiet-machine perf run has happened since the budget tier shipped |
+| **S2 MAJOR** | 35 | 17 ruled/filed this cycle + 18 carried from cycle 3, unverified |
+| **S3 MINOR** | 53 | 21 ruled/filed this cycle + 32 carried, unverified |
+| **S4 POLISH** | 10 | 5 + 5 carried |
+| **Total open** | **99** | 44 in this cycle's scope + 55 carried |
+| FIXED (verified this cycle) | 25 | listed below, deleted next cycle |
+| WONTFIX / RULED / NOT REPRODUCED | 4 | D-012, D-022, D-071, D-106 |
 
-By area: vehicles 6, characters 11, world 16, feel 19, ci/audit-infrastructure 4.
+By area (this cycle's 44): characters 16, feel/HUD 12, world 8, ci/measurement 7, vehicles 1.
 
-**Gates.**
-- `--smoke` ×3 on the frozen copy, **byte-identical**, exactly the baseline:
-  `SMOKE PASS | pos=(193.000000, 1.097957, 517.465332) moved=40.5m speed=16.7m/s`
-  (md5 of all three logs `09732a3e…`). Live tree after the sweep: same line. **PASS.**
-- `--headless --quit-after 900` ×90 (80 experiment + 10 split-stream), zero error
-  lines and zero nonzero exits **except** the three that caught the sweep mid-edit
-  (D-084). Leak rate ruled below. **PASS** under the documented carve-out.
-- `--perf --perf-repeat=3`: **one station FAILS the §4b row** — see D-073.
-- **Live tree re-checked at 01:57, after the sweep landed:** 12 boots with stderr
-  captured — **1 dirty (inside the ruled 13 % interval), zero error lines**, and
-  `--smoke` PASS on the frozen baseline line. The sweep's edits parse and the
-  gates hold. Its *visual and draw-call effect* is unmeasured (D-086).
+**Gates (as filed by the rounds, not re-run by QA).** `round16/gate_quick.md`: parse 95/95,
+lint 0, `--smoke` ×2 byte-identical on the D-059 baseline line, boot 900 `ERROR=0 WARN=0`,
+`SESSION TEST: PASS (0 failures)`. **Perf: not run — `machine LOADED load=5.22`.** Every gate
+since round 13 has refused perf under load (5.22 / 5.6 / 7.98). §4b has therefore been
+un-adjudicated for nine rounds.
 
 ---
 
-## THE THREE DEFECTS MOST HURTING THE GAME
+## THE THREE DEFECTS MOST HURTING THE GAME RIGHT NOW
 
-**1 · D-076 + D-029 + D-030 — the face got worse.** A **gold-tan ellipsoid now
-sits on Book's left cheek**, its edge cutting across his near eye, at the `face`
-vantage's own distance. Behind it, unchanged from two cycles ago: the mid-face is
-one forward-projecting muzzle with no nostrils, and the far eye is still the
-larger of the two and the only one showing sclera. This is the defect Milad
-opened the character programme with, and this cycle it acquired a new one.
+**1 · D-154 + D-153 — the HUD has no traffic controller, and it is the first thing a player
+sees.** In the two plates the producer filed to prove the loop works
+(`round16/plates/order_push.png`, `order_debtor.png`) there are **five text elements on screen
+at once**: a finished mission's contract card, a green EVADED banner, repo_board's gold respect
+flash, the LONGHORN app panel, and **two mission objective labels overprinting each other
+character-for-character**. The card is an 1800×190 78 %-alpha band across the full width of the
+frame that runs for 6 s of live driving — in `order_debtor.png` it hides the target vehicle the
+objective is sending the player to. Milad does not need a crop to see this one.
 
-**2 · D-073 — the post-death respawn frame does not hold 60 fps.**
-`hospital_door_night` measures **54.0 fps** (18.52 ms median, p95 18.52, worst
-26.73) on the **best of three passes**, with a 1 % spread across passes — this is
-not a contention artefact. It is the one frame in the game no player can avoid.
-**This directly refutes "nothing under 60 fps."**
+**2 · D-129 + D-157 + D-102 — the crowd is still five copies of one man standing at
+attention.** `loop-sept18/plates/showcase_people.png`: five pedestrians, one pose — feet
+together, arms straight down, no weight shift, no head turn, one body, and **no neck on any of
+them**. `round16/plates/takeover.png`: the "club" that was supposed to come out for the takeover
+is a row of ambient walkers crossing an empty daylight lot, evenly spaced, same stride phase,
+none of them looking at the Slab. The animation work landed on the *player*; the crowd never got
+it, and the crowd is what fills the frame.
 
-**3 · D-039 + D-009 — the Slab, now that it finally has vantages.** From
-`slab_side` the car reads as an **open convertible**: the near glass renders
-essentially invisible and there is no interior mass, so you see the street
-straight through the cabin and the roof reads as a plate floating on two
-hairlines. From `slab_rear` the tail is **six stacked horizontal bands** with the
-decklid badge **buried in the sheet metal**, its glyph tops sheared off.
+**3 · D-156 + D-142 — the shirt has a hole in it.** At the `torso` vantage
+(`cloth-sept13/after/torso.png`, crop x310-420/y270-400 at 5×) there is a lens-shaped **void
+between the sleeve and the body panel at the armpit** that you see straight through into the
+garment's dark interior, with a ragged marching-cubes stair along its cut. The cloth pass
+turned paint into volume — a genuine S1 kill — and left an open hole at the one joint the
+`torso` vantage exists to photograph.
 
-Runner-up: **D-015** — the repo beacon is still a salmon column over the sky,
-re-photographed this cycle in `face`, `showcase_people` and `slab_side`.
+Runner-up: **D-100**, unresolved for nine rounds because nobody has had a quiet machine.
 
 ---
 
-# S2 — MAJOR
+# S1 — BLOCKER
+
+### D-100  [S1]  The shipped light pipeline has not been adjudicated against §4b since the budget tier landed
+- **Area:** performance / ci
+- **Evidence:** the budget tier's own 10/10 pass is a wave-6 producer measurement. Every gate
+  since: `round13/gate_quick.md` `LOADED load=7.98`, `round14` `5.22`, `round16` `LOADED
+  load=5.22, top 33.3% Virtualization.framework`. `gate.sh --full` refuses perf under load and
+  has refused it nine rounds running.
+- **Bar violated:** §4b "≥ 60 fps at every station, best of ≥ 3, **on an otherwise quiet machine**".
+- **Suspected cause:** not a code defect — a process one. The machine is never quiet.
+- **Run that decides it:** `ps -Ao %cpu,comm | sort -rn | head` (load < 2), then
+  `cd game && tools/gate.sh --full`; assert 10/10 stations < 16.67 ms at `best`.
+- **Status:** OPEN (PLAUSIBLE-UNVERIFIED — QA may not start a Godot process this cycle)
+
+---
+
+# S2 — MAJOR (ruled or filed this cycle)
+
+### D-153  [S2]  The contract card is a full-width opaque band over live play, and it hides the objective it just replaced
+- **Area:** feel
+- **Evidence:** `docs/qa/evidence/loop-sept18/round16/plates/order_debtor.png` — the COMIN' DOWN
+  card is up while the player drives a live order; its veil (`mission_kit.gd:_build`,
+  `offset_left = -900 … offset_right = 900`, `C_CARD = Color(0.03,0.03,0.04,0.78)`, `CARD_H 190`)
+  covers the middle of the frame full-width and **the dark-red target vehicle is behind it**.
+  Same veil in `order_push.png`, where it blanks two thirds of the world. Default life 6.0 s,
+  not skippable, no input dismisses it.
+- **Bar violated:** §4 "every verb has feedback" is satisfied; §4 "no dead ends" / §4 "the HUD
+  never lies" is not — the HUD is telling the player to drive to a target it is covering.
+- **Suspected cause:** `game/scripts/systems/mission_kit.gd`, `card()` + `_build()` — a centred
+  `ColorRect` 1800 px wide with no gameplay-aware placement and no dismiss.
+- **Status:** OPEN
+
+### D-154  [S2]  Five HUD elements can be on screen at once, with nothing arbitrating between them
+- **Area:** feel
+- **Evidence:** `round16/plates/order_push.png` — simultaneously: the mission card (layer 16),
+  the police EVADED banner (`police.gd:151`), repo_board's flash "GAVE THEM THE WEEK RESPECT +1"
+  (`repo_board.gd:319`), the LONGHORN app panel bottom-right (`mission_kit` layer 16), and two
+  overprinted mission objective labels. Five owners, five layers, zero coordination.
+- **Bar violated:** §4 "The HUD never lies" (an unreadable HUD cannot report anything) and §1's
+  spirit — a judgement plate that cannot be read.
+- **Suspected cause:** every system stands up its own `CanvasLayer` and its own label; there is
+  no HUD manager. Owners: `mission_kit.gd`, `police.gd`, `repo_board.gd`, `slab_cruise.gd`,
+  `hud_gta.gd`, three `mission_*.gd`.
+- **Status:** OPEN
+
+### D-156  [S2]  There is an open hole through the shirt at the armpit
+- **Area:** characters
+- **Evidence:** `docs/qa/evidence/cloth-sept13/after/torso.png`, crop x310–420 / y270–400 at 5×
+  (scratchpad `t_armhole.png`): a lens-shaped void ≈10×40 px in a 960-wide plate between the
+  sleeve and the body panel, showing the garment's unlit interior, with a ragged stair along the
+  cut edge. The builder filed this as "the armhole is a straight seam"; at the `torso` vantage it
+  is not a seam, it is a hole.
+- **Bar violated:** §1 "Surface intersections — no z-fight stipple, no visible seam where two
+  masses cross"; §3 "No floating geometry — nothing intersects or hovers visibly".
+- **Suspected cause:** `game/scripts/world/skinned_character.gd` — the garment shell's armhole
+  cut; the sleeve and the trunk piece close their cuts with walls that do not meet.
+- **Status:** OPEN
+
+### D-157  [S2]  The takeover's "club" is a row of identically-posed ambient walkers on an empty lot
+- **Area:** characters / feel
+- **Evidence:** `round16/plates/takeover.png`, crop x80–700 / y270–400 (scratchpad
+  `tk_crowd.png`): five of the fourteen are visible, spaced ≈8 m apart on a straight line, **all
+  in the same walking pose at the same stride phase**, none facing the Slab, none near a car, no
+  bulbs. The probe row that certified it asserts only a count
+  (`stage10 the club came out: 14 on the lot (want >= 6)`). The plate is also **daylight**, so
+  D-152's claimed bulbs are untested at the vantage the claim names.
+- **Bar violated:** §1 "Crowd variety — no two adjacent peds read as the same person".
+- **Suspected cause:** `game/scripts/systems/mission_comin_down.gd` spawns crowd members through
+  `pedestrians.gd`'s ordinary walker and gives them no gathering behaviour or pose set.
+- **Status:** OPEN
+
+### D-168  [S2]  The far eye is a lidless white almond sitting on the silhouette of the head
+- **Area:** characters
+- **Evidence:** `cloth-sept13/plates/face.png`, crop x520–700 / y180–340 at 4× (scratchpad
+  `f_midface.png`): the near eye is correct — lid, lash line, iris, limbal ring, catchlight. The
+  far eye, at the head's silhouette edge, is a bare pale almond with a grey iris and **no upper
+  lid, no socket, no brow shadow** — it reads as an eye painted on the side of the skull.
+- **Bar violated:** §1 "Mid-face at 4× zoom reads as a face, not a snout"; this is the surviving
+  half of D-030 ("the two eyes disagree with perspective").
+- **Suspected cause:** `game/scripts/world/character_factory.gd` — the eye is built as two layers
+  (sclera + iris under a lid) at a fixed local orientation; at grazing angle the lid geometry no
+  longer covers the sclera.
+- **Status:** OPEN
+
+### D-108  [S2]  There is still no collar — the shirt has a placket and two pockets and a plain crew neckline
+- **Area:** characters
+- **Evidence:** `cloth-sept13/after/torso.png` and `cloth-sept13/plates/face.png`: the neckline is
+  a smooth crew curve; no stand, no leaf, no fold-over points, nothing at all, on a garment that
+  carries a visible placket with four buttons and two chest pockets. **No `collar` review plate
+  has ever been filed** — the D-108 update says "QA to rule at the new `collar` review view" and
+  that view's output is not in `docs/qa/evidence/`.
+- **Bar violated:** §1 silhouette at 1 m from `face`/`torso`.
+- **Suspected cause:** `skinned_character.gd` `_tailored_piece` / the garment catalogue — either
+  the collar piece is not emitted for this archetype, or it is emitted inside the body field.
+- **Run that decides it:** `cd game && /Applications/Godot.app/Contents/MacOS/Godot --script res://tools/character_review.gd -- --out=/abs/dir`, the `collar` and `collar_normals` views.
+- **Status:** OPEN
+
+### D-129  [S2]  The crowd stands in one pose — the living idle landed on the player only
+- **Area:** characters
+- **Evidence:** `docs/qa/evidence/loop-sept18/plates/showcase_people.png` (round 13, the newest
+  in-game crowd plate): five pedestrians, **feet together, arms straight down at the sides, head
+  level, identical in all five** — no weight shift, no head turn, no idle breath, and the same
+  body under different shirts. This is D-047 with the arms lowered.
+- **Bar violated:** §1 "Crowd variety — no two adjacent peds read as the same person".
+- **Suspected cause:** `character_factory.animate()`'s idle is driven for the player actor;
+  `pedestrians.gd` walkers at rest hold a static pose.
+- **Status:** OPEN (the *player's* gait is FIXED — see D-138)
+
+### D-134  [S2]  The body has a rib cage now, but the shoulders miss the bar and the legs are one mass to mid-thigh
+- **Area:** characters
+- **Evidence:** `gait-sept13/measure_after.txt` — the taper is real (rib trunk 0.324 → waist
+  0.288, lats, pecs, lumbar). Three things are not: **shoulders (deltoid line) x-span 0.468 m at
+  nominal**, 12 mm under the bar's 0.48 floor (see D-163); **crotch 0.840 → mid-thigh 0.650 is a
+  single 0.360-wide mass** (`masses: 1: 0.360` at both 0.840 and 0.760), which under a 10 mm
+  garment shell is why `cloth-sept13/after/full.png` reads as a skirt from the front; and
+  `showcase_people.png` gives five people one body.
+- **Bar violated:** §1 "Chest width incl. arms 0.48–0.56 m at nominal".
+- **Suspected cause:** `skinned_character.gd` `_prims` — the thigh capsules and the deltoid line.
+- **Status:** OPEN (PARTIAL — moved a long way, does not meet the bar)
+
+### D-139  [S2]  The A-frame is fixed; the shoulder and the armpit are not
+- **Area:** characters
+- **Evidence:** `measure_after.txt`: knee 0.108 each, knee outer span 0.252 (was ≈0.34), ankles
+  under the knees — the A-frame is gone and measured. The deltoid is still 0.468 (D-163) and the
+  "armpit renders as a one-cell slot" the builder filed against itself is now an actual
+  through-hole in the garment (D-156).
+- **Bar violated:** §1 chest width; §1 surface intersections.
+- **Status:** OPEN (PARTIAL)
+
+### D-142  [S2]  The clothes are volume now, but the sleeve is a leg-of-mutton and the trousers are a column
+- **Area:** characters
+- **Evidence:** `cloth-sept13/after/torso.png`: the sleeve's diameter at the bicep is ≈130 px
+  against a 190 px body panel — two thirds of the whole chest — and it hangs past the belt line
+  while the shirt hem stops above it. `after/full.png`: the two trouser legs read as one navy
+  bell from waist to mid-calf. Plus the armhole hole (D-156).
+- **Bar violated:** §1 silhouette at `torso` / `full`.
+- **Suspected cause:** `skinned_character.gd`, the sleeve and trouser shell radii (constant
+  10 mm offset applied to an already-thick arm field).
+- **Status:** OPEN — **downgraded from S1**: the "paint on skin" S1 is genuinely dead.
+
+### D-140  [S2]  The map draws the world now — and its labels collide and truncate at the shipped window size
+- **Area:** world
+- **Evidence:** `loop-sept18/plates/map.png` at 1280×720 (the project default):
+  `HARVEST HILLS™STONEBRIDLE RANCH` runs together with no gap; `OVERFLOW CAMPUS` is overprinted
+  by marker 2 **and** the player arrow; `Cattleman's Trust Tow…`, `Iglesia Baut…` truncate at the
+  district box edge; `Gilead Bottoms` collides with `Teatro Estrella`. Of 15 declared roads, four
+  are legible as lines. The structural claim (8 districts, 11 places, a session-derived legend,
+  a 500 m bar) is met.
+- **Bar violated:** §3 "Landmark legibility — each district has ≥1 structure nameable from a
+  screenshot"; the map is the wayfinding instrument and it is not readable.
+- **Suspected cause:** `game/scripts/ui/city_map.gd` — labels are drawn at their place's position
+  with no collision resolution and no clipping policy. See also D-167.
+- **Status:** OPEN (PARTIAL)
+
+### D-151  [S2]  The loop's eleven audio cues are proven to exist, not to fire
+- **Area:** feel / audio
+- **Evidence:** the only probe rows are `stage11 loop_audio carries 11 cues (want >= 11)` and
+  `loop_audio plays the delivered cue on demand`. Neither touches a loop signal. Nothing in the
+  evidence shows a cue firing at a push, a delivery, a draft or bad paper, and a log cannot
+  answer "by ear".
+- **Bar violated:** §4 "Every verb has feedback — sound + visual + camera response on every action".
+- **Run that decides it:** a probe row per signal — fire `repo_orders.pushed` / `delivered` /
+  `dealer.drafted` / `paper_bad`, assert the matching `AudioStreamPlayer` is playing within 0.3 s.
+- **Status:** OPEN (PLAUSIBLE-UNVERIFIED)
+
+### D-152  [S2]  The takeover has a count, not a scene
+- **Area:** feel / world
+- **Evidence:** see D-157. `stage10 the club came out: 14 on the lot (want >= 6)` passes; the
+  plate shows nobody gathered, nobody looking at the car, and no bulbs (daylight).
+- **Status:** OPEN (PARTIAL)
+
+### D-148  [S2]  The phone works; nobody has ever photographed it
+- **Area:** feel
+- **Evidence:** mechanism proven — `stage11 the phone opens on the order (351 chars)`,
+  `the phone closes after three tabs`, `phone.gd:32-36` three tabs. **No phone plate exists in
+  `docs/qa/evidence/`**, so the two questions the defect actually asks — is the red tell legible
+  at 720p, does the note list overflow the column — are untested.
+- **Run that decides it:** `cd game && /Applications/Godot.app/Contents/MacOS/Godot -- --hudshot`
+  with the phone open on a bad-paper order.
+- **Status:** OPEN (PLAUSIBLE-UNVERIFIED on legibility; mechanism FIXED)
+
+### D-128  [S2]  Parked cars hold on flat ground; the slope is still untested
+- **Area:** vehicles
+- **Evidence:** `stage0 parked wrecker drift over 8 s: 0.000 m` in rounds 14, 15 and 16
+  (before: `drift_before.log` 3.270 m). The probe parks on flat asphalt. Milad's report was
+  "all cars drift forward"; the frontage grade is where a park hold fails.
+- **Run that decides it:** the same 8 s hold with the wrecker parked on the frontage slope;
+  assert < 0.02 m.
+- **Status:** OPEN (PARTIAL — the flat case is genuinely FIXED)
+
+### D-141  [S2]  The two new edge districts are built and empty
+- **Area:** world
+- **Evidence:** the build is real — `TALL TOM: 17 m tall at (868.0, 1.35, 258.0)`,
+  `world-sept13/plates/{fair_gate,tall_tom,fair_wheel_night,harvest_edge}.png`. Neither Fair Drive
+  nor Pioneer Vision Parkway carries traffic; the spur work (D-146) covered Juárez and the Cliff.
+- **Status:** OPEN (PARTIAL — the prairie claim is FIXED, the emptiness is not)
+
+### D-101  [S2]  (reworded) The factory body's swept shoulder girdle is still the "pillow shoulders" — but it is no longer the default
+- **Area:** characters
+- **Evidence:** `character_factory.gd:571-586` unchanged; reachable only via `--factory` since
+  D-050. It remains a comparison arm, not a shipped surface.
+- **Status:** OPEN (no longer player-facing; close it when `--factory` is retired)
+
+---
+
+# S3 — MINOR (ruled or filed this cycle)
+
+### D-155  [S3]  Two missions' objective labels claim the identical HUD slot, with no arbiter
+- **Area:** feel
+- **Evidence:** `mission_hook_and_ladder.gd:471` and `mission_comin_down.gd:294` are byte-identical
+  placements: `PRESET_CENTER_BOTTOM, offset_left -420, offset_right 420, offset_top -240,
+  offset_bottom -210`. `round16/plates/order_push.png` shows both drawing at once: colour
+  separation of the crop (scratchpad `c2.png` / `sep_pink.png`) resolves cream (242,237,219 =
+  H&L's `Color(0.95,0.92,0.8)`) reading `LONGHORN DISPATCH RE-ARM 22s` over pink (229,147,206 =
+  Comin' Down's `CANDY.lightened(0.35)` = 232,149,209). `d499c08` blanked both COMPLETE strings;
+  **the shared slot is untouched**, so any two missions RUNNING together reproduce it.
+- **Bar violated:** §4 "The HUD never lies".
+- **Suspected cause:** as cited — two files, one hard-coded slot, no owner. `hud_gta.gd:358-362`
+  already solves this for its own line by yielding; the missions do not yield to each other.
+- **Status:** OPEN
+
+### D-160  [S3]  The combat reticle is baked into every plate in the judgement sweep
+- **Area:** ci / measurement
+- **Evidence:** a 2×3 pure-white block at (599–600, 336–338) — exact screen centre of a
+  1200×675 plate — in **5 of 5** plates tested (`showcase_people`, `face`, `cliff_boulevard`,
+  `boone_lot`, `gilead_bottoms`), plus a 5×1 dash at (719–723, 337) = the spread ring at r≈119 px.
+  At the `face` vantage it lands on the subject's chest.
+- **Bar violated:** the bar's first law — a plate is the instrument; a constant artefact in the
+  instrument corrupts every §1/§3 judgement and every `plates_diff.py` comparison.
+- **Suspected cause:** `combat.gd:1236-1239` builds `_dot` (a 4×4 white `ColorRect`) and `_cross`;
+  `zz_shot.gd:200-205` hides `CanvasLayer`s only at root depth 1 and 2, and combat's is deeper.
+  **`zz_shot.gd` is the producer's file — QA reports, does not edit.**
+- **Status:** OPEN
+
+### D-162  [S3]  Bar §1's head-height row has gone unmeasured for nine rounds — the tool has no head
+- **Area:** characters / measurement
+- **Evidence:** `game/tools/body_measure.gd:10-14` — the row list runs
+  `shoulders (deltoid line) 1.425` down to `wrist 0.930`. **There is no crown row, no chin row and
+  no total-height row.** The head is the factory's rigid head, outside the body field, so the tool
+  cannot see it. A silhouette measure off `cloth-sept13/after/full.png` (subject rows 51–506,
+  chin ≈131, crown hidden by the hat) puts the ratio at **6.6–7.0 heads**, i.e. at or below the
+  bar's floor — but that estimate is not a measurement and must not be quoted as one.
+- **Bar violated:** §1 "Head height = total height ÷ 7.0–7.8 (hat excluded)".
+- **Suspected cause:** `game/tools/body_measure.gd`.
+- **Status:** OPEN
+
+### D-163  [S3]  Shoulders measure 0.468 m at nominal — 12 mm under the bar floor — and the bar row does not say which height it grades
+- **Area:** characters / bar integrity
+- **Evidence:** `gait-sept13/measure_after.txt`: `shoulders (deltoid line) 0.468`,
+  `upper chest 0.468`, `chest (nipple line) 0.504`, and the widest span at any height is `0.540`
+  (waist/hips/wrist, because the hands splay). Bar §1 says "Chest width incl. arms 0.48–0.56 m at
+  NOMINAL". Graded at the deltoid line it **fails by 12 mm**; graded at the nipple line or at the
+  widest span it passes. D-134, D-139 and D-061 all quote 0.468 as if it were a pass.
+- **Bar violated:** §1 "Chest width incl. arms" — indeterminately, which is itself the defect.
+- **Ask of the producer:** pin the row the way the Ø:H denominator and the sill reference were
+  pinned (bar amendment log, 2026-08-10). QA's reading is bideltoid breadth = the deltoid line;
+  on that reading the body fails and D-134/D-139 stay open on this number alone.
+- **Status:** OPEN
+
+### D-164  [S3]  A probe row names "base × 1.5" and asserts something that cannot fail for it
+- **Area:** ci
+- **Evidence:** `game/scripts/systems/zz_mech_probe.gd:942` —
+  `_say(dm >= 450, "stage14 DELIVERED after the run: +$%d (want >= 450: base x 1.5)" % dm)`.
+  `repo_orders.gd:47` `BASE_PAY := {"sedan": 300, "pickup": 450}`; a pickup delivered **without**
+  the run bonus pays `450 × 1.5 (distance) × 1.0 = $675`, which passes `>= 450`. The two filed
+  runs differ ($1013 for a Brisket, $675 for a Vantage) and both pass, so the row cannot
+  distinguish a working bonus from a missing one.
+- **Bar violated:** §5's spirit — a gate that cannot fail is not a gate.
+- **Suspected cause:** as cited. The correct assertion is
+  `dm == round(BASE_PAY[cls] * dist_bonus * rank_mult * flee_bonus)`, or at minimum
+  `dm >= 1.4 × the same order delivered unfled`.
+- **Status:** OPEN
+
+### D-165  [S3]  `Lambda capture at index 0 was freed` inside the flee stage
+- **Area:** ci / feel
+- **Evidence:** `round16/mech_probe_windowed.log:111`, between
+  `stage14 the app pushed an order that will run` and `stage14 FLEEING` —
+  `ERROR: Lambda capture at index 0 was freed. Passed "null" instead.
+  at: call (modules/gdscript/gdscript_lambda_callable.cpp:110)`.
+  The headless run of the same stage is clean, so it is timing-dependent. **The §5 boot gate
+  cannot see it** — the gate never pushes an order, which is the same blind spot D-121 had.
+- **Bar violated:** §5 "zero error lines".
+- **Suspected cause:** a lambda in the flee path capturing the debtor or the car and outliving it
+  — `repo_orders.gd` around `_flee_start` / `traffic.adopt`, or `traffic.gd`'s adopt callback.
+- **Status:** OPEN
+
+### D-158  [S3]  Boone Trucks is a truck dealership with no trucks on the lot
+- **Area:** world
+- **Evidence:** `loop-sept18/plates/boone_lot.png` — the sales apron is bare asphalt from the
+  kerb to the showroom; the pennant string, two signs and a showroom are there and **not one
+  vehicle**. The probe says `stage12 Boone Trucks stocks 3 rigs`: the stock exists in data only.
+- **Bar violated:** §3 "Landmark legibility" / the promise-of-interactivity read — the one place
+  in the game whose whole purpose is vehicles shows none.
+- **Suspected cause:** `game/scripts/systems/dealer.gd` — stock is a data list; no display
+  vehicles are spawned on the lot.
+- **Status:** OPEN
+
+### D-159  [S3]  The Boone pylon sign's own frame member splits every line of its text
+- **Area:** world
+- **Evidence:** `loop-sept18/plates/boone_lot.png`, crop x965–1105 / y175–320 at 5×
+  (scratchpad `bl_sign.png`): a red frame column runs down the **middle of the sign face**,
+  eating a character-wide slice out of all four lines — `BOONE|TRUCKS`, `APPREC|TE YOU!`,
+  `96 MONT|0 DO`, `- YOUR SIGNAT|S YOU|EDIT`. A streetlight mast also cuts the bottom-right corner.
+- **Bar violated:** §3 "Landmark legibility — nameable from a screenshot".
+- **Suspected cause:** `dealer.gd` / `sign_kit.gd` — the text is laid across a two-panel sign as
+  one string, so the frame between the panels lands inside the glyph run.
+- **Status:** OPEN
+
+### D-161  [S3]  A downed pedestrian lies interpenetrated by a knocked-over fire hydrant
+- **Area:** world / characters
+- **Evidence:** `round16/plates/takeover.png`, crop x880–1080 / y300–420 at 4× (scratchpad
+  `tk_down.png`): a prone pedestrian on the asphalt with a bright red hydrant passing **through**
+  his torso at an angle, the jet running. Nothing in the takeover script knocks anybody down, so
+  this is ambient traffic hitting a ped and a hydrant on the shared kerb.
+- **Bar violated:** §3 "No floating geometry — nothing intersects or hovers visibly".
+- **Suspected cause:** unknown — needs a repro. Candidates: `pedestrians.gd`'s downed state has
+  no collision against props, or `interactables.gd`'s knocked hydrant keeps its collider where
+  the ped body already is.
+- **Status:** OPEN
+
+### D-026 update  [S3]  The hydrant jet is worse than "a column of cards" — it is a 20 m stack of unshaded white quads
+- **Area:** world
+- **Evidence (new, this cycle):** `round16/plates/takeover.png`, crop x930–1060 / y140–330 at 4×
+  (scratchpad `tk_jet.png`): individually rectangular, hard-edged, unlit white quads scattered
+  from the hydrant to **third-storey height of the building behind**, with no falloff, no
+  softening and no arc. Re-photographed from an ordinary gameplay vantage, not a hunting crop.
+- **Status:** OPEN (the original D-026 entry is carried below; this is its current evidence)
+
+### D-166  [S3]  Cedar Cliff's mid-distance signage reads as blank saturated colour blocks over the carriageway
+- **Area:** world
+- **Evidence:** `loop-sept18/plates/cliff_boulevard.png`, crop x420–700 / y300–400 at 4×
+  (scratchpad `cc_awn.png`): a row of flat single-colour rectangles (maroon, brown, purple,
+  green, navy) on thin poles, **no glyphs on any of them**, threaded on a black horizontal member
+  that spans the full frame; two of them read as standing over the roadway rather than over a
+  storefront. Near-field signage in the same plate (`MERCADO REYES`, `TEATRO · ESTRELLA`) reads
+  correctly, so this is a distance behaviour.
+- **Bar violated:** §3 "No floating geometry"; §3 "Street furniture density" (a cue every ≤30 m
+  that carries no information is not a cue).
+- **Suspected cause:** unknown — `cedar_cliff.gd` `_awning_xf`/`_awning_col` (flat coloured
+  awnings) or `SIGN.FASCIA` panels whose glyph texture has mipped away. **Do not guess: this needs
+  the boulevard driven windowed to separate the two.**
+- **Run that decides it:** a windowed plate from the boulevard at 60 m and at 20 m from the same
+  panel; if the glyphs appear at 20 m it is mip/LOD, if not it is geometry.
+- **Status:** OPEN
+
+### D-167  [S3]  The pause map's place and district labels collide and truncate at 1280×720
+- **Area:** world / ui
+- **Evidence:** see D-140's list, from `loop-sept18/plates/map.png`.
+- **Suspected cause:** `game/scripts/ui/city_map.gd` — no label collision pass, no leader lines,
+  no per-zoom label budget.
+- **Status:** OPEN
+
+### D-171  [S3]  In a full sprint stride the arms never swing behind the torso
+- **Area:** characters
+- **Evidence:** `gait-sept13/after/sprint_side.png`, all 8 phase frames: both hands stay forward
+  of the belt line in every frame; no frame drives an elbow back past the ribs. The rest of the
+  run is right — measured crown oscillation 12 px on a 338 px figure = **6.2 cm of bounce**, legs
+  split 60–70°, knee bent at landing.
+- **Bar violated:** §4 "every verb has feedback" at the animation level; §1 silhouette from `side`.
+- **Suspected cause:** `character_factory.animate()` — the arm swing's rearward amplitude, or an
+  elbow-forward clamp left in from the walk.
+- **Status:** OPEN
+
+### D-117  [S3]  The surface beard is a hard-edged polygon with a rectangular seam inside it
+- **Area:** characters
+- **Evidence:** `cloth-sept13/plates/face.png`, the left pedestrian, crop x0–110 / y230–360 at 5×
+  (scratchpad `f_ped2.png`): the beard is a sharply-bounded dark quad from the ear down the
+  jawline to the chin with a **straight diagonal boundary across the cheek**, and a lighter
+  rectangular sub-panel with a dotted seam visible inside it; the moustache is a separate pale
+  sliver that does not join it. The 22 % feather is in the source
+  (`character_factory.gd:1515` `minf(minf(u,1-u)*4.5, minf(v,1-v)*4.5)`) and not in the render.
+- **Bar violated:** §1 "Mid-face at 4× reads as a face".
+- **Suspected cause:** `character_factory.gd:_beard_surface` — the feather is applied to the
+  displacement (`r += lerpf(-0.0006, 0.0010, feather)`) but the **colour** boundary is not
+  feathered with it, and the patch's own UV grid shows through as a seam.
+- **Status:** OPEN
+
+### D-102  [S3]  Nobody in this game has a neck
+- **Area:** characters
+- **Evidence:** `cloth-sept13/plates/face.png` (the hero: jaw runs into the shirt with ≈15 px of
+  throat and no sternocleidomastoid), `after/torso.png` (same), and **all five** figures in
+  `loop-sept18/plates/showcase_people.png`, where the head sits directly on the shoulder mass.
+  The prim radii did grow (47/57 → 58/66 mm, D-045); the read did not change.
+- **Bar violated:** §1 "Silhouette at 1 m reads as a person from `face`, `torso`".
+- **Suspected cause:** the neck column's *length*, not its radius: the head's chin sits at
+  roughly the clavicle. `skinned_character.gd` `_prims` neck segment + the factory head's mount
+  height (`character_factory.gd`, `_build_head` at 1.445).
+- **Status:** OPEN
+
+### D-110  [S3]  Eye whites are calm now; the far eye is not (split)
+- **Area:** characters
+- **Evidence:** `character_factory.gd:74` `SCLERA := Color(0.74, 0.71, 0.68)` with the M24 note,
+  emission down to 0.06; the near eye at 4× reads correctly. The remaining half is D-168.
+- **Status:** OPEN (PARTIAL — near eye FIXED, far eye filed as D-168)
+
+### D-111  [S3]  Skin has a surface; cloth does not
+- **Area:** characters
+- **Evidence:** boot census `SURFACES: materials=947 shaders=7 normalmapped=72 roughmapped=69`;
+  pores read at 4× on `face.png` and the head/neck no longer change shading at the join — that
+  half is done. `cloth-sept13/after/torso.png` is a **uniform matte panel**: no weave, no fold,
+  no drape, no wear, one value across the whole chest.
+- **Bar violated:** §1 "Surface intersections" / the `torso` read.
+- **Suspected cause:** `city_shaders.PALETTE_SHADER`'s cloth micro-normal is keyed on the skinned
+  body's UV2; the D-067 garment shells are new geometry and may not carry that UV2.
+- **Status:** OPEN (PARTIAL)
+
+### D-113  [S3]  The garment rim measurement describes garments that no longer exist
+- **Area:** characters / measurement
+- **Evidence:** the 26.6 mm belt and 27.9 mm apron vertices were measured before D-067 rebuilt
+  every garment as a constant-offset shell. The number is stale, not wrong.
+- **Run that decides it:** `cd game && /Applications/Godot.app/Contents/MacOS/Godot --headless --script res://tools/skin_rim.gd`; assert max proud ≤ 5 mm on every shell.
+- **Status:** OPEN (PLAUSIBLE-UNVERIFIED)
+
+### D-130  [S3]  The suburb road is still a clean plane
+- **Area:** world
+- **Evidence:** downtown and the frontage are FIXED — boot line
+  `STREET WEAR: 390 lids, 280 drains, 790 patches, 3 draw calls`, lids visible in the asphalt of
+  `boone_lot.png`. `street_wear.gd`'s zones do not cover the suburb.
+- **Bar violated:** §3 "Street furniture density — a cue every ≤ 30 m".
+- **Status:** OPEN (PARTIAL)
+
+### D-131  [S3]  The resting hand has no current plate
+- **Area:** characters
+- **Evidence:** the newest `hand` plate is `mechanics-sept13/round5/hand_after.png`, three rounds
+  and two cache versions before `character_hands.gd` and the garment shells. At `torso` the hand
+  is a pale mitten below the cuff with no finger separation visible.
+- **Run that decides it:** `character_review.gd -- --out=/abs/dir`, the `hand` view.
+- **Status:** OPEN (PLAUSIBLE-UNVERIFIED) — supersedes the D-114 "paddle is gone" claim
+
+### D-145  [S3]  Cedar Cliff is built; its mid-distance read is not
+- **Area:** world
+- **Evidence:** `CEDAR CLIFF: 45 houses, 14 storefronts, 31 labels` + `cliff_boulevard.png`.
+  The prairie claim is FIXED. The remainder is D-166.
+- **Status:** OPEN (PARTIAL)
+
+### D-149  [S3]  Wade is not at the vantage a player arrives at
+- **Area:** world
+- **Evidence:** `round14/plates/boone_wade.png` exists; `loop-sept18/plates/boone_lot.png` — the
+  plate taken at the lot's own vantage — contains no figure at all.
+- **Run that decides it:** re-shoot `boone_lot` with Wade in frame, or move the greeting radius.
+- **Status:** OPEN (PLAUSIBLE-UNVERIFIED)
+
+### D-084 update  [S2→ carried]  A fix wave ran against the tree during this audit, for the third time
+- **Area:** ci / process
+- **Evidence:** `git status` at audit time: `M game/scripts/systems/repo_orders.gd`,
+  `M save_load.gd`, `M session.gd`, `M game/data/mechanics/repo_orders.json` (the D-072 NEW GAME
+  work) — uncommitted, during a declared QA window. Separately, round 16's filed plates were
+  rendered by a build HEAD no longer contains (`LONGHORN DISPATCH RE-ARM 22s`, deleted in
+  `d499c08`).
+- **Bar violated:** the loop's own rule (CLAUDE.md, D-084): a fix cycle and a QA cycle may never
+  overlap.
+- **Status:** OPEN (process; the producer owns it)
+
+---
+
+# S4 — POLISH (ruled this cycle)
+
+### D-114  [S4]  Fingertips at the body voxel — claim of resolution not photographed
+- **Area:** characters · **Evidence:** `character_hands.gd` exists (3 mm field meshes on the
+  forearm joints) but no post-cloth `hand` plate. · **Status:** OPEN (see D-131)
+
+### D-116  [S4]  `skin_rim.gd` still cannot grade the tailored pieces
+- **Area:** characters / measurement · **Evidence:** `game/tools/skin_rim.gd:84` still prints
+  `TAILORED (explicit fabric mesh; not a shell, not graded here)`. No clearance measure for a
+  fabric grid exists. · **Status:** OPEN
+
+### D-125  [S4]  Pedestrians fleeing a wanted man is code with no witness
+- **Area:** feel · **Evidence:** `pedestrians.gd:477` with `HOT_HEAT := 2; HOT_RADIUS := 12.0`
+  (`:36`). No probe row, no plate. · **Run:** 2 stars, ped at 10 m, assert FLEE within 1 s. ·
+  **Status:** OPEN (PLAUSIBLE-UNVERIFIED)
+
+### D-133  [S4]  The brawler swings; traffic's horn is still unwitnessed
+- **Area:** feel · **Evidence:** punch proven at `stage8` + `brawl.png`; `traffic._honk_check`
+  has no probe row and no plate. · **Status:** OPEN (PARTIAL)
+
+### D-105  [S4]  `race_event` can be left RUNNING forever on foot
+- **Area:** feel · **Evidence:** none either way this cycle. · **Status:** OPEN (carried)
+
+---
+
+# FIXED — verified by QA this cycle, 2026-09-18. Delete after cycle 8.
+
+Verified from the filed probe rows, boot census lines and source at `d499c08`, each cited in
+`scratchpad/loop17/qa_findings.md`. **None was accepted on a builder's assertion.**
+
+- **D-107 [S1] FIXED** — skinned bodies render right way out. `cloth-sept13/after/torso.png`:
+  a correct light terminator across the sleeve, and the only unlit interior in the frame is seen
+  *through* the armhole void — which is what an outward-facing one-sided mesh looks like.
+- **D-109 [S3] FIXED** — `character_factory.gd:1574` `skinned_body` guard; no tube seam at `face`.
+- **D-112 [S4] FIXED** — winding law corrected to `(c−a)×(b−a)` with D-107.
+- **D-103 [S3] FIXED** — `foot_cops.gd:212-213` reads `police.search_center` while
+  `search_active`; `police.gd:222-223` publishes it.
+- **D-104 [S3] FIXED** — `downtown_types.gd:103` `DAY_E: [0.10, 0.10, 0.10, 1.05, 1.15]`;
+  `facade_kit.gd:307-308` drives `set_night_level` in every arm.
+- **D-025 [S2] FIXED** — boot census, every round: `RENDER: … shadow=450m/pcss0.53deg`.
+- **D-118 [S3] FIXED** — stage1 3/3 (reason published, drawn under WANTED, cleared on evade).
+- **D-119 [S2] FIXED** — stage4 6/6 across four rounds: card, lot 3.7 m, on foot, heat 0, $−150.
+- **D-120 [S3] FIXED** — stage2 7/7: 6.50 → 1.50, 2 spots, private lamp material, horn on/off.
+- **D-121 [S3] FIXED** — `vehicle_damage.gd:63-65` Variant-checks before the cast.
+- **D-122 [S2] FIXED** — stage3 11/11 (0.35 / 0.55 / ×1.30 / chain / 8.0 s / 4 restores / 6 s).
+- **D-123 [S3] FIXED** — stage4 `closest 5.2 m … cruiser speed 0.03`, heat 1 at the bust.
+- **D-124 [S2] FIXED** — stage5 4/4 + stage6 4/4; persisted `save_load.gd:159/204`.
+- **D-126 [S2] FIXED** — stage7: `-7.2 m` before, on the pad in 2.2 s after.
+- **D-127 [S3] FIXED** — stage8 7/7 (jab, square-up, −6, −3, perfect 0, stagger, counter).
+- **D-132 [S3] FIXED against the row** — bar §1 grades mid-face at 4×, and at 4× the vermilion,
+  philtrum and nasolabial read (`f_midface.png`). At 1:1 the mouth is still a smear; the row is 4×.
+- **D-135 [S3] FIXED** — `measure_after.txt` instep 0.085 / vamp 0.050 / sole 0.020, depth 0.288,
+  span 0.216: shaft, vamp below instep height, welt. Visible in `after/full.png`.
+- **D-136 [S2] FIXED (content)** — stage9 8/8: 2 lines, drone, owner out, card, $950 = 600+150+100+100.
+- **D-055 update [S3] FIXED by construction** — `hud_gta.gd:460-468` draws D, N and the gold ring.
+- **D-137 [S3] FIXED** — stage10 8/8 end to end.
+- **D-138 [S1] FIXED** — `gait-sept13/after/sprint_side.png`: legs split 60–70°, heel to seat,
+  bent-knee landing, elbows ≈90°, 6.2 cm measured bounce. (Arm rearward swing filed as D-171.)
+- **D-143 [S1] FIXED (system)** — stage11 in three rounds, persisted `save_load.gd:163`.
+- **D-144 [S2] FIXED (system)** — stage12 8/8; notes persisted `save_load.gd:173-176`.
+- **D-146 [S2] FIXED** — stage13 `five spur routes qualified (5)`, `12 shells` after 40 s.
+- **D-147 [S2] FIXED** — stage13 `the boulevard's sidewalks have people: 10`.
+- **D-150 [S1] FIXED** — stage14 in rounds 15 and 16, headless and windowed (brain drives, 23 m in
+  4.5 s, hooked on the move, ×1.5). The error line it threw is filed separately as D-165.
+- **D-115 (session-flow half) FIXED** — `SESSION TEST: PASS (0 failures)` in three consecutive
+  gates. The face-pass half stays open as D-117 and D-108.
+
+### D-106  [RULED 2026-09-18 — §5 stays as written]  Audio-at-quit leak is 10 in windowed runs
+The §5 row is defined on the **headless 900-frame boot**, and that boot measures 0–6. A bar row
+is not widened to cover a measurement it does not take. If windowed leaks matter, add a row for
+windowed runs and measure it; do not launder the headless row into covering them.
+
+---
+
+# CARRIED FORWARD — cycle 3's open ledger, NOT re-verified this cycle
+
+**Read this before reading anything below.** These 60 entries were filed and measured by the
+cycle-3 QA pass (2026-08-11). This cycle was read-only and scoped to D-107…D-152, so **not one
+of them was re-measured.** They are kept verbatim because the ledger's rule is that an OPEN entry
+may only be deleted by the QA Director who personally verified it fixed — and this cycle
+verified none of them. Their numbers describe the tree at cycle 3; several are almost certainly
+stale and a few are almost certainly worse.
+
+Three notes from this cycle that bear on them:
+- **D-025 is closed** (moved to the FIXED list above): the boot census reads
+  `shadow=450m/pcss0.53deg` in every round's log.
+- **D-031 … D-037, the "HUD lies" family**, carry wave-6 producer-claimed closures "by
+  construction in `hud_gta.gd`". This cycle did not have scope to rule them, and D-153/D-154 are
+  evidence that the HUD's *presentation* problems are not closed even where its *truthfulness* is.
+  They stay OPEN. `--hudshot` decides them.
+- **D-026** (hydrant jet) and **D-047** (identical A-pose) were both re-photographed this cycle
+  and are worse than their entries describe: see the D-026 update and D-129 / D-157 above.
+
+## S2 — MAJOR (carried from cycle 3, unverified)
 
 ### D-015  [S2]  The objective beacon is still a visible column in the judgement vantages
 - **Area:** world
@@ -1144,203 +1377,3 @@ re-photographed this cycle in `face`, `showcase_people` and `slab_side`.
 - Three cycles, no reproduction at any daylight vantage, no vantage ever supplied.
   Closed. Re-file with a screenshot if it is real.
 
----
-
-# FIXED THIS CYCLE — verified by QA, delete after cycle 4
-
-### D-021  [FIXED verified 2026-08-11]  Tyre vs arch lip, fleet-wide — inside the ORIGINAL 25 mm ceiling
-- **Independent vertex-level probe**, reading the real `ArrayMesh` vertices of
-  every mesh in each shell, transformed into the vehicle's own local frame — a
-  different method from both my cycle-2 Python mirror and the builder's harness.
-  Lip = max |x| over meshes named `Arch`; tyre = `track/2 + wheel_width/2`.
-
-  | shell | lip − tyre | ≤ 25 mm? | ≤ 40 mm? |
-  |---|---|---|---|
-  | Sunbelt Vantage | **22.0 mm** | ✔ | ✔ |
-  | Dorado PD Interceptor | **22.0** | ✔ | ✔ |
-  | Baron Brisket | **22.0** | ✔ | ✔ |
-  | Longhorn Wrecker | **22.0** | ✔ | ✔ |
-  | Candyland Slab | **22.0** | ✔ | ✔ |
-  | ambient sedan | **22.0** | ✔ | ✔ |
-  | ambient truck | **22.0** | ✔ | ✔ |
-  | junker | **22.9** | ✔ | ✔ |
-
-  **8 of 8 PASS at 25 mm.** The Slab has moved 55.4 → 22.0 mm. Measured against
-  the tyre's *rendered* outer face rather than the nominal one, the five heroes are
-  better still — the lathed tyre's bead stands 12.0 mm proud of `track/2 + w/2`, so
-  the real lip-to-tread figure on every hero is **10.0 mm**.
-- **The mechanism is a genuine invariant, not a per-model patch.** `BEAM_INSET`
-  clamps the tub half-width to `tyre − 22 mm`, so `_arch_mesh`'s guard line
-  `x = max(x, skin + 0.002)` can never again exceed `tyre + 0.020` and `LIP_CAP`
-  binds for the first time. Every future profile inherits it.
-- **The two track changes are sound.** Slab 1.65 → 1.80 and Vantage 1.62 → 1.70
-  are non-smoke models; the Wrecker's frozen track was correctly left alone and its
-  bodywork moved instead. Rollover margin moved the safe way on both.
-- **Residue filed as D-082** (wrecker/junker flank 25.6 / 25.1 mm outboard).
-
-### D-023  [FIXED verified 2026-08-11]  Downtown is architecturally uniform — one building, repeated
-- **The screenshots are a different city.** `street_north` now carries, in one
-  frame: a cream masonry block under a rooftop BLUR+ billboard on steel legs, a
-  brown pre-war brick with punched windows and a corbelled cornice, a green-grey
-  mid-century ribbon slab with solid end walls, a pale corporate tower with
-  expressed corner fins, and two further brick and limestone masses. `plaza` adds
-  a black-glass curtain box and two deco ziggurats with lanterns. Against cycle
-  1's "every tower a rectangular prism in the same dark brown with the same beige
-  window grid", this row is not arguable.
-- **NO COLLIDER CHANGED — proven, not asserted.** I built a second sandbox with
-  `downtown_types.gd` removed from `EXTRA_LAYERS` and ran an identical collider
-  census on both:
-  ```
-  WITH    downtown_types: staticbodies=688 shapes=790 boxvol=8147452.955 digest=638643.397309
-  WITHOUT downtown_types: staticbodies=688 shapes=790 boxvol=8147452.955 digest=638643.397309
-  ```
-  Identical to six decimal places on a digest of every shape's world position and
-  size. `--smoke` byte-identical ×3 on top of that.
-- **NO ROOFTOP SIGN LOST ITS ROOF — proven.** A downward physics ray from
-  `top + 8 m` under each of the six `city_dressing` rooftop signs hits solid
-  geometry at **exactly the recorded top height, delta 0.00 m, on all six**, with
-  and without the re-skin. The `signed` → forced-CORP rule works.
-- **Cost:** boot log reports 5 287 instances in 17 MultiMeshes + 142 signs, and
-  `--perf` shows downtown_day/night both inside budget on this machine.
-- **Two things this fix broke, filed separately: D-079** (downtown lost 21 % of its
-  night brightness) and the storefront podiums, which are now blank tan bays in
-  `plaza` and `street_detail` — folded into D-040/D-046's density row rather than
-  given a new number, because they were never verified present.
-- **Not verified:** that five canon §6 names landed on buildings. The labels exist
-  in `downtown_types.gd` and the type assignment is a rule rather than a
-  coordinate, but no vantage frames them legibly and I did not confirm them by
-  eye. **Request: an `aerial_downtown` or `magnate` vantage.**
-
-### D-038  [FIXED verified 2026-08-11]  `car_wheel` did not frame a wheel, and no vantage framed the Slab
-- Both requests are done. `car_wheel` is now **1.22 m** from the hub (was 4.4 m)
-  and the rim is ~200 px across — enough to judge, and it is the frame D-068 was
-  closed from. `slab_side`, `slab_34` and `slab_rear` all exist and all frame the
-  Slab, which unblocked D-039, D-007 and D-009 in one cycle after two cycles of
-  "could not verify". **A separate lens problem remains and is filed as D-080.**
-
-### D-067  [FIXED verified 2026-08-11]  All 26 fire hydrants unfroze on the first physics frame of every boot
-- **In-engine probe, three consecutive boots, sampled at physics frames 1, 2, 3,
-  4, 5, 6, 30 and 120.** Every sample, every boot, identical:
-  ```
-  QA3PROP f=1   hydrants=26 loose=0 sunk=0 bins=19 binloose=0 jets=0
-  QA3PROP f=120 hydrants=26 loose=0 sunk=0 bins=19 binloose=0 jets=0
-  ```
-  **26 of 26 hydrants and 19 of 19 bins stay frozen, none sinks, and no water jet
-  emits.** Cycle 2 measured 26 of 26 loose at t = 0.03 s on every boot. The
-  transform-before-`add_child` fix is correct and complete.
-- **It also closed the thing I said I would not report without measuring:** the
-  bins share the path and they are clean too.
-- Note the striker guard in `_on_prop_hit` still only excludes `StaticBody3D`, so
-  the cause is removed but not the mechanism — if any future spawner ever enters
-  the tree at the origin again, this comes straight back.
-
-### D-068  [FIXED verified 2026-08-11]  Hero rims rendered as a black void
-- Measured on the new `car_wheel` vantage, Rec.709 luminance 0–255 over a 70 px
-  disc centred on the rim face: **mean 74.6** (min 6.8, max 200.5, σ 53.1), centre
-  cap **117.3**. Cycle 2 measured the same feature at **19.0**. Against the shaded
-  asphalt under the car in the same frame (71.7) the rim is now **level**; against
-  fully sunlit asphalt (138.1) it is darker, which is correct — a wheel lives in
-  its own fender's shadow. **The builder's "level with sunlit asphalt" framing is
-  wrong; the fix is not.** Crop `qa3/crop/wheelA_3x.png` shows a bright flange
-  ring, eight distinct spokes, a raised centre cap and a recessed dish behind them.
-  The root cause the builder found — the lathe's only up-facing surfaces carrying
-  the dark material — is consistent with a 3.9× recovery on the exact surfaces that
-  face the sky.
-
-### D-069  [FIXED verified 2026-08-11]  County General at night was the darkest place in the game
-- Independent photometry, ground half of frame, Rec.709 0–255, same method as
-  cycle 2. `hospital_night`: mean **4.23 → 24.31**, median **0.07 → 10.80**,
-  share below 8/255 **92.3 % → 40.6 %**, pixels > 64/255 **9 590 → 56 519** (the
-  builder reported 56 517; the two-pixel gap is anti-aliasing).
-  **It is now the brightest night vantage in the game by mean, and the only one
-  with a real median** — every other night frame medians at 0.07–3.01. The frame
-  reads: lit ward windows, a lit EMERGENCY canopy, a lit entrance, mast pools on
-  the apron and legible stall paint. `suburb_night` is **pixel-identical** to cycle
-  2 (mean 9.87, 28 237 bright px) exactly as claimed. **The freeway is not** — see
-  D-079.
-
-### D-070  [FIXED verified 2026-08-11]  42 downtown light pools were rotated 45° to the street grid
-- Verified three ways. **(a) Code:** `streetlight_glow.gd:246-250` now tests
-  `min(|toward.x|, |toward.z|) > DIAG_TOL (0.26 = sin 15°)` and, for those heads
-  only, replaces the 8.6 × 5.4 m ellipse with `rot = Basis.IDENTITY` and a
-  7.4 × 7.4 m round wash — which is a better description of what a luminaire hung
-  over an intersection actually does. **(b) Count:** the boot log prints
-  `POOLS: arterial=536 (42 intersection box washes, D-070)` — **exactly the 42 I
-  counted independently last cycle**, on the same set, with the instance count and
-  order unchanged. **(c) Photograph:** no diagonal ellipse appears in `street_night`.
-  Fixed in the file that owned the defect, with no other owner's geometry, draw
-  order or RNG touched.
-
----
-
-# WHAT I GOT WRONG — the 3-versus-6 adjudication
-
-**The builder is right. I was wrong, and the error was mine alone.**
-
-The claim under dispute: at the original 25 mm tyre-vs-lip ceiling, how many of
-the eight shells failed on the build the cycle-2 vehicle pass inherited? The
-builder measured **3**. My ledger and the bar's amendment both say **6**.
-
-**My own cycle-2 D-021 table answers it, and it says 3.** Those were my numbers,
-measured by me, in the same document:
-
-> Vantage +34.0, Interceptor +22.0, Brisket +22.0, Wrecker +34.0, ambient sedan
-> +22.0, ambient truck +22.0, junker +22.0, **Slab +55.4**
-
-Three of those exceed 25 mm: Vantage, Wrecker, Slab. **Exactly the three the
-builder names.** The other five sit at 22.0 mm and pass the original ceiling
-outright.
-
-The "six of eight" sentence was written in **cycle 1**, about the cycle-1 build —
-before the D-018 `wheel_x` fix brought the three ambient shells into agreement
-with their spawners. It was then **carried verbatim into the cycle-2 ledger and
-into the bar's amendment without re-deriving it from the cycle-2 table sitting
-eight sections above it.** That is a stale claim laundered into a live document by
-the one agent whose entire job is not to do that.
-
-**Consequences, stated plainly:**
-1. **The bar's 2026-08-10 amendment is factually wrong as it stands** and should be
-   corrected: at the 25 mm ceiling, three of eight shells failed the build the
-   vehicle pass inherited, not six. **This is a correction to QA's testimony, not
-   to the producer's ruling.**
-2. **The loosening was not load-bearing, and now provably so.** All eight shells
-   measure inside the *original* 25 mm ceiling today (D-021 FIXED). Nothing in the
-   fleet depends on the 40 mm figure.
-3. **The standing rule stands regardless, and the producer already said why:** the
-   rule is about who may move the goalposts, not about how many shells it saved. A
-   bar row widened by the person grading the work is a conflict whether or not it
-   changed an outcome. Keep it.
-4. **The integrity rule worked in both directions this cycle** — it caught the
-   producer once and it has now caught me. That is the correct number of times for
-   a rule to catch its own author.
-
----
-
-# COULD NOT TEST THIS CYCLE
-
-- **A stable build.** The tree moved under the audit (D-084). Everything above is
-  graded against a frozen 01:28 copy that is byte-identical to the live tree in
-  every file under verification, and differs in the eleven the sweep is rewriting.
-  **The sweep's own result (D-086) is therefore unverified by me.**
-- **Character rim lift in millimetres, chest span, head-height ratio.** Owed since
-  cycle 1, three cycles running. D-027 / D-028 / D-029 / D-030 / D-049 / D-076 /
-  D-081 / D-083 are all filed on photographic evidence only. **A Python or in-engine
-  mirror of `character_factory.gd`'s surface/sag/lay math remains the single
-  highest-value missing measurement in the project**, and the character file has
-  not been touched in two cycles while eight defects have accumulated against it.
-- **The hydrant jet's appearance** (D-026). Nothing in any harness triggers one now
-  that D-067 is fixed. Request: a harness hook that knocks one loose.
-- **The five canon §6 building names** (D-023). No vantage frames them legibly.
-- **The camera against walls, in tight gaps, on foot vs driving.** `zz_shot` parks
-  a free camera and never exercises `chase_camera.gd`. D-050 / D-051 / D-052 remain
-  code findings. Request: a harness hook that renders through the gameplay camera.
-- **`hospital_door_night` on a quiet machine.** My 54.0 fps and the producer's
-  84 fps are both honest; the bar row does not say which one grades. See D-073.
-
----
-
-*QA Director · 2026-08-11 · 56 open (0 S1 / 19 S2 / 32 S3 / 5 S4) · 7 verified
-fixed · 2 WONTFIX/RULED · 1 NOT REPRODUCED · 1 closed · smoke PASS ×3
-byte-identical · 90 boots with stderr captured, 11 dirty at the documented
-carve-out (13.0 %, CI 7.2–22.3 %), zero error lines outside the D-084 window ·
-perf FAIL at hospital_door_night, 54.0 fps*

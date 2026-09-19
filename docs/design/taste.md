@@ -66,26 +66,26 @@ never a feeling. Re-score at the end of every round; a row may only move with ev
 
 | # | Property | Score | Evidence (before this round) |
 |---|---|---|---|
-| 1 | Landmark navigation | 1 | Tall Tom, the Green Light, the Big Howdy exist (`landmarks.gd`); never tested from five spawns |
-| 2 | District legibility | 1 | downtown / suburb / prairie / floodway dressings differ; no playtester has named one |
+| 1 | Landmark navigation | 2 | Tall Tom, the Lone Spur, Teatro Estrella's blade, the Boone pylon and the Harvest monument are each nameable from one plate; the five-spawn test is still undone (QA, 2026-09-18) |
+| 2 | District legibility | 2 | Cedar Cliff, the fairgrounds, Harvest Hills, downtown and the floodway are distinct at street level in the sweeps; the Cliff's mid-distance read is still colour blocks (D-166) (QA, 2026-09-18) |
 | 3 | Ring-road flow | 1 | freeway ring exists; D-059 lists three dead ends |
 | 4 | Greatest-hits compression | 1 | eight parody landmarks built; zero locals asked |
-| 5 | Map editorializes | 1 | billboards and sign kit carry copy; no 60-second drive has been counted |
+| 5 | Map editorializes | 2 | the pause map carries 8 districts and 11 places, and the world's copy has an opinion; the 60-second drive is still uncounted (QA, 2026-09-18) |
 | 6 | Diegetic tutorials | 1 | missions teach by doing; the session menu's job text is non-diegetic |
-| 7 | Prep→execute loop | 0 | no score has open-world prep |
-| 8 | Approach freedom | 1 | The Second Collection accepts quiet or loud; Hook and Ladder accepts one |
-| 9 | Cheap retry | 1 | missions repeat after 30 s; death costs 4 s + the drive back from County General |
-| 10 | Fail-forward | 1 | the loud path in The Second Collection continues under lockdown; death resets |
-| 11 | Legible heat | 1 | five stars, line-of-sight search, blink-on-lost (D-044); **no reason is ever shown**, one evasion verb |
+| 7 | Prep→execute loop | 1 | Boone Trucks is prep you buy before the job and the Paper is a choice before the haul; no score has open-world prep (QA, 2026-09-18) |
+| 8 | Approach freedom | 2 | an order can be hooked, chased, boxed in or walked away from; bad paper taken or voided — two axes with numbers (stage11, stage14) (QA, 2026-09-18) |
+| 9 | Cheap retry | 2 | Busted returns you to the impound with your truck and a $150/star fine (stage4); orders re-push continuously (QA, 2026-09-18) |
+| 10 | Fail-forward | 2 | Busted keeps the fleet and clears heat; a voided bad-paper order still pays respect +3; a lost flee closes cleanly (QA, 2026-09-18) |
+| 11 | Legible heat | 2 | `add_heat(n, reason)`, 16 named call sites, the reason under WANTED, a second evasion outcome (stage1, stage4) (QA, 2026-09-18) |
 | 12 | Systems interlock | 2 | crash → debris → hook → heat → cruisers → peds flee, unscripted (`traffic.gd`, `tow_hook.gd`, `police.gd`, `pedestrians.gd`) |
 | 13 | Emergent clips | 1 | pursuit overshoot comedy is real; no 30-minute session has been logged |
-| 14 | World memory | 0 | nothing persists but money, respect, race best (`save_load.gd`) |
-| 15 | Economy metronome | 1 | one wallet, two sinks (hospital $300, body shop); no tiers, nothing to buy |
-| 16 | Satire thesis | 1 | nine-station dial and ad copy exist; no asset cites the thesis line |
-| 17 | Playable satire | 1 | the HOA drone livestreams you (+1 heat per clip) — satire as mechanic, once |
+| 14 | World memory | 2 | `save_load.gd` persists rank, deliveries, paper taken/burned, quota, favors, the notes; a towed stranger's favor covers a later bail (stage5) (QA, 2026-09-18) |
+| 15 | Economy metronome | 2 | Boone on a note, a daily draft, repossession after two misses, five ranks with a payout multiplier (stage12) (QA, 2026-09-18) |
+| 16 | Satire thesis | 2 | LONGHORN speaks in Bolo Capital's push voice and the liability line is the thesis in the mechanic's own words (QA, 2026-09-18) |
+| 17 | Playable satire | 2 | the Paper is satire with a number on it — take it or void it, respect either way — alongside the drone (QA, 2026-09-18) |
 | 18 | Radio as worldbuilding | 1 | five stations play; not one is identifiable blind |
-| 19 | Side-content taxonomy | 1 | races yes; hobbies, character quests, random events, challenges no |
-| 20 | Flat difficulty, deep mastery | 1 | race medals; no special ability, no optional goals elsewhere |
+| 19 | Side-content taxonomy | 2 | endless orders, the night board, STRANDED, Comin' Down, the dealership; hobbies and character quests still absent (QA, 2026-09-18) |
+| 20 | Flat difficulty, deep mastery | 2 | the Full Eight (stage3) plus melee's perfect block and counter, and medals on cards (QA, 2026-09-18) |
 
 **Sum 21 / 60.** Rows 7, 14 and 19 are the zeros and the near-zeros; rows 11 and 20 are the
 cheapest to move because the systems they need already exist.
@@ -94,17 +94,17 @@ cheapest to move because the systems they need already exist.
 
 | Rank | Item | Canon | Min-1 | Interlock | Cost⁻¹ | Measure | Sum | Moves row |
 |---|---|---|---|---|---|---|---|---|
-| 1 | **The Full Eight** — the bull-rope special: eight seconds of dilation, charged by holding on | 3 | 3 | 3 | 2 | 2 | 13 | 20 |
-| 2 | **Legible heat** — every star says why, under the banner | 2 | 3 | 3 | 3 | 2 | 13 | 11 |
+| 1 | **The Full Eight** — the bull-rope special: eight seconds of dilation, charged by holding on | 2 | Tall Tom, the Lone Spur, Teatro Estrella's blade, the Boone pylon and the Harvest monument are each nameable from one plate; the five-spawn test is still undone (QA, 2026-09-18) |
+| 2 | **Legible heat** — every star says why, under the banner | 2 | Cedar Cliff, the fairgrounds, Harvest Hills, downtown and the floodway are distinct at street level in the sweeps; the Cliff's mid-distance read is still colour blocks (D-166) (QA, 2026-09-18) |
 | 3 | **Busted** — the second fail state is the impound lot, fine by the star | 3 | 2 | 3 | 2 | 2 | 12 | 9, 10 |
 | 4 | **Driving feedback** — brake and reverse lamps, headlamps at night, a horn peds hear | 1 | 3 | 2 | 2 | 3 | 11 | bar §4 |
-| 5 | Random events that pay forward — a stranded driver you tow shows up later | 2 | 2 | 3 | 1 | 2 | 10 | 19, 14 |
+| 5 | Random events that pay forward — a stranded driver you tow shows up later | 2 | the pause map carries 8 districts and 11 places, and the world's copy has an opinion; the 60-second drive is still uncounted (QA, 2026-09-18) |
 | 6 | World memory v1 — the radio names the last crime; peds fear a hot player | 2 | 1 | 3 | 2 | 1 | 9 | 14 |
-| 7 | Fall and crash damage for the driver — the knob in `player_character.gd` (deliberately 0) | 1 | 2 | 2 | 3 | 3 | 11 | bar §4 (but see anti-taste: friction) |
-| 8 | Melee guard that blocks — `GUARD_DAMAGE_MULT` is read by nobody | 1 | 2 | 1 | 3 | 2 | 9 | bar §4 |
-| 9 | The Paper v1 — one title-fraud job with a bureaucratic timer (office hours) | 3 | 0 | 2 | 0 | 1 | 6 | 7, 17 |
-| 10 | Property ladder — buy to flip or hold; the block visibly changes | 3 | 0 | 3 | 0 | 1 | 7 | 15 |
-| 11 | Roadblocks at 3★, a chopper at 4★ | 1 | 1 | 2 | 1 | 2 | 7 | 11 |
+| 7 | Fall and crash damage for the driver — the knob in `player_character.gd` (deliberately 0) | 1 | Boone Trucks is prep you buy before the job and the Paper is a choice before the haul; no score has open-world prep (QA, 2026-09-18) |
+| 8 | Melee guard that blocks — `GUARD_DAMAGE_MULT` is read by nobody | 2 | an order can be hooked, chased, boxed in or walked away from; bad paper taken or voided — two axes with numbers (stage11, stage14) (QA, 2026-09-18) |
+| 9 | The Paper v1 — one title-fraud job with a bureaucratic timer (office hours) | 2 | Busted returns you to the impound with your truck and a $150/star fine (stage4); orders re-push continuously (QA, 2026-09-18) |
+| 10 | Property ladder — buy to flip or hold; the block visibly changes | 2 | Busted keeps the fleet and clears heat; a voided bad-paper order still pays respect +3; a lost flee closes cleanly (QA, 2026-09-18) |
+| 11 | Roadblocks at 3★, a chopper at 4★ | 2 | `add_heat(n, reason)`, 16 named call sites, the reason under WANTED, a second evasion outcome (stage1, stage4) (QA, 2026-09-18) |
 | 12 | Ragdoll on the skinned rig (`PhysicalBoneSimulator3D`) | 1 | 2 | 2 | 0 | 2 | 7 | bar §1 |
 
 Row 7 scores high on the rubric and still waits: it adds friction before it adds fun, and the
@@ -240,3 +240,12 @@ chase, the runner's own choices (a dead end, a U-turn into you), a debug key for
 owed since D-064, two keys so QA never waits for the dice. Principle: a loop is not felt until
 it is heard — a chime on the push does more for "want to play" than a district. Next: cops who
 join a chase, the runner's choices, the perf ruling.
+
+**Round 17 — 2026-09-18 (D-072).** The audit. Nine rounds of producer claims went to the QA
+Director read-only: 25 verified fixed, every S1 dead, the card 21 → 34/60 — and three things
+named that a player hits first: the HUD stacks five notices with no controller, the crowd is
+copies of one neckless man at attention, the shirt has a hole at the armpit. Principle: the
+rate model is only honest with an audit every few rounds; the audit found what the plates had
+been showing and the builder's own words had softened ("a straight seam" was a hole). Round 18 is
+those three, in the audit's order. Process: an audit is a frozen tree, even a read-only one (D-084
+recurred).
