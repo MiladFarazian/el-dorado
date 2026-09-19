@@ -30,9 +30,16 @@ const BODY_BUILDER := preload("res://scripts/vehicle/vehicle_body_builder.gd")
 const BEACON := preload("res://scripts/world/beacon_kit.gd")
 const RNG_SEED := 0xB00C13
 
+## THE DEBTOR WHO RUNS (D-069). One clean order in five is a FLEE: the person
+## hears you out, and then at 18 m they stop talking, walk to the door and take
+## their own car back. traffic.gd's brain drives it from there and the Hook
+## finally does the thing it was built for — a chase that ends with a chain, not
+## a gun. Bad paper NEVER runs: a debtor holding a forged lien calls the county,
+## because the county is on their side and they know it.
+##
 # ============================== PUBLIC CONTRACT ==============================
-enum State { IDLE, PUSHED, HOOKED }
-enum Reaction { PLEAD, CALL_IT_IN, OFFER, FIGHT }
+enum State { IDLE, PUSHED, HOOKED, FLEEING }
+enum Reaction { PLEAD, CALL_IT_IN, OFFER, FIGHT, FLEE }
 
 signal order_pushed(bad: bool)
 signal order_closed(outcome: String)   # "delivered" | "voided" | "expired"
@@ -125,6 +132,13 @@ var _called := false
 var _fight_t := 0.0
 var _offer_open := false
 
+# --- the run ----------------------------------------------------------------
+var _fled := false          # this order ran at some point: the delivery pays x1.5
+var _flee_walk_t := 0.0     # >0 while the debtor is walking to the door
+var _flee_age := 0.0        # seconds since the brain took the car
+var _flee_far_t := 0.0      # seconds spent beyond flee_escape_m, unbroken
+var _door: Node3D = null    # the point the follower walks to, then despawns at
+
 
 # ============================== SETUP ========================================
 func setup(main: Node) -> void:
@@ -186,14 +200,19 @@ func _pick(key: String, def: String) -> String:
 # ============================== PUBLIC API ===================================
 ## Force an order onto the board right now (probe/debug). Ignores the quiet
 ## rule and the gap; still needs an open curb slot somewhere in the city.
-func push_now(bad_paper := false) -> bool:
+## `flee` forces the reaction to FLEE — the only way to schedule a chase, since
+## the player must never be able to read one coming off the push.
+func push_now(bad_paper := false, flee := false) -> bool:
 	if _disabled or state != State.IDLE:
 		return false
-	return _push(bad_paper, true)
+	return _push(bad_paper, true, flee)
 
 
 ## LEAVE THE PAPER. Voids the order: respect by whether the paper was bad, one
 ## step of rank progress gone, and the app files it as a vehicle not located.
+## The PUSHED guard is load-bearing: once the car is FLEEING there is nobody
+## left standing there to say it to, and the order can only end on the hook,
+## boxed in, or over the horizon.
 func walk_away() -> bool:
 	if state != State.PUSHED:
 		return false
@@ -246,11 +265,31 @@ func objective_text() -> String:
 			t.global_position.z - REPO.PAD_CENTER.z).length()
 		return "HAUL TO IMPOUND · %d m" % int(round(pad))
 	var a := _actor()
+	if state == State.FLEEING and a != null:
+		return "CATCH THE %s · %d m · %d km/h" % [_short_model(),
+			int(round(a.global_position.distance_to(t.global_position))),
+			int(round(_car_speed() * 3.6))]
 	if state == State.PUSHED and a != null:
 		var away := a.global_position.distance_to(t.global_position)
 		return "ORDER %d · %s · %d %s · %d m" % [_id, _who, _year, _short_model(),
 			int(round(away))]
 	return ""
+
+
+## How fast the car is actually going. traffic.gd owns the number while it is
+## driving; the body's own velocity is the fallback for the frame after the
+## brain lets go and for any build where traffic has no such method.
+func _car_speed() -> float:
+	if not is_instance_valid(_car):
+		return 0.0
+	var tr := _peer("traffic")
+	if tr != null and tr.has_method("driven_speed"):
+		var v: Variant = tr.call("driven_speed", _car)
+		if v is float or v is int:
+			return absf(float(v))
+	var flat := _car.linear_velocity
+	flat.y = 0.0
+	return flat.length()
 
 
 ## The G prompt, for whoever draws prompts. "" when there is nothing to press.
@@ -354,7 +393,7 @@ func _tick_day() -> void:
 # ============================== THE PUSH =====================================
 ## Build an order and put it on the curb. `forced` (the probe) drops the
 ## distance band so a push always finds a slot somewhere in the city.
-func _push(bad_paper: bool, forced: bool) -> bool:
+func _push(bad_paper: bool, forced: bool, force_flee := false) -> bool:
 	var a := _actor()
 	if a == null:
 		return false
@@ -373,7 +412,13 @@ func _push(bad_paper: bool, forced: bool) -> bool:
 	_model = str(_models.get(_cls, _cls.to_upper()))
 	_year = _rng.randi_range(int(_n("year_min", 2009.0)), int(_n("year_max", 2022.0)))
 	_bad = bad_paper
-	_reaction = Reaction.CALL_IT_IN if _bad else _roll_reaction()
+	# Bad paper never runs — it calls the county, which is the point of it.
+	if _bad:
+		_reaction = Reaction.CALL_IT_IN
+	elif force_flee:
+		_reaction = Reaction.FLEE
+	else:
+		_reaction = _roll_reaction()
 	var days := _rng.randi_range(int(_n("days_min", 31.0)), int(_n("days_max", 210.0)))
 	var true_days := _rng.randi_range(int(_n("bad_days_min", 3.0)),
 		int(_n("bad_days_max", 9.0)))
@@ -398,6 +443,10 @@ func _push(bad_paper: bool, forced: bool) -> bool:
 	_line_ix = 0
 	_fight_t = 0.0
 	_offer_open = false
+	_fled = false
+	_flee_walk_t = 0.0
+	_flee_age = 0.0
+	_flee_far_t = 0.0
 	state = State.PUSHED
 	active = true
 	_say(APP, _txt("app_push", "ORDER {id} · {name}. Recover to impound.").format(fields),
@@ -424,8 +473,9 @@ func _basis_distance(a: Node3D, slot: Vector3) -> float:
 
 func _roll_reaction() -> int:
 	var w: Variant = cfg.get("reactions", {})
-	var keys: Array[String] = ["plead", "call_it_in", "offer", "fight"]
-	var vals: Array[float] = [0.42, 0.18, 0.22, 0.18]
+	# Order matters: index i IS Reaction value i. Defaults are the data file's.
+	var keys: Array[String] = ["plead", "call_it_in", "offer", "fight", "flee"]
+	var vals: Array[float] = [0.34, 0.14, 0.18, 0.14, 0.20]
 	if w is Dictionary:
 		for i in keys.size():
 			var v: Variant = (w as Dictionary).get(keys[i], vals[i])
@@ -595,6 +645,9 @@ func _tick_live(delta: float) -> void:
 	_evaluate_hook_state()
 	if state == State.IDLE:
 		return                # a release on the pad already closed the order
+	if state == State.FLEEING:
+		_tick_flee(delta)
+		return                # nobody to talk to and no clock but the chase's
 	if state == State.PUSHED and _expire_armed:
 		_expire_t -= delta
 		if _expire_t <= 0.0:
@@ -629,6 +682,9 @@ func _tick_debtor(delta: float) -> void:
 		if a.global_position.distance_to(_car.global_position) <= _n("debtor_range", 25.0):
 			_meet(a)
 		return
+	if _reaction == Reaction.FLEE:
+		_tick_flee_arm(delta)
+		return                # a person who is about to run does not plead twice
 	if _line_t > 0.0:
 		_line_t -= delta
 		if _line_t <= 0.0:
@@ -655,6 +711,13 @@ func _meet(a: Node3D) -> void:
 			a, _n("follower_seconds", 120.0))
 		if got is RigidBody3D:
 			_debtor = got
+	# A run with nobody to drive the car is not a run. If traffic.gd cannot take
+	# the wheel in this build, the order quietly becomes the plea it would have
+	# been — decided BEFORE the first line is chosen, so the player never hears
+	# a threat the system cannot keep.
+	if _reaction == Reaction.FLEE and not _traffic_can_adopt():
+		_reaction = Reaction.PLEAD
+		print("REPO ORDERS: flee degraded to PLEAD — traffic.adopt unavailable")
 	_line_ix = 0
 	_first_line()
 
@@ -664,6 +727,17 @@ func _meet(a: Node3D) -> void:
 ## know for sure. Clean paper gets the reaction's own register.
 func _first_line() -> void:
 	var line := ""
+	# THE RUNNER'S ARC: plea first, break second. Walk up slowly and you get a
+	# plea at 25 m and the break at 18 m; come in hot and both trigger the same
+	# tick, so the break simply IS the first line — one panel, one voice.
+	if _reaction == Reaction.FLEE:
+		if _within_flee_trigger():
+			_begin_flee()
+			return
+		_line_said = _pick("plead_lines", "I've got it Friday. I told the app Friday.")
+		_line_ix = 1
+		_say(_who, _line_said, _n("line_seconds", 5.0))
+		return
 	if _bad:
 		line = _pick("bad_paper_lines", "I'm four days late, not four months.")
 	elif _reaction == Reaction.OFFER:
@@ -765,6 +839,225 @@ func _in_choice_range() -> bool:
 	return a.global_position.distance_to(d.global_position) <= _n("choice_range", 4.0)
 
 
+# ============================== THE RUN ======================================
+## 18 m, not 25: the break lands after you have already heard them, and close
+## enough that the first thing you see is the door closing. Measured to the CAR
+## — it is the car they are protecting, not themselves.
+func _within_flee_trigger() -> bool:
+	var a := _actor()
+	if a == null or not is_instance_valid(_car):
+		return false
+	return a.global_position.distance_to(_car.global_position) <= _n("flee_trigger_m", 18.0)
+
+
+func _tick_flee_arm(delta: float) -> void:
+	# Hooked out from under them before the door shut — the chain beat the two
+	# seconds. No run, no run bonus, and the person goes back to following you
+	# rather than being adopted into traffic while chained to your boom.
+	if state != State.PUSHED:
+		if _flee_walk_t > 0.0:
+			_flee_walk_t = 0.0
+			_release_door()
+		return
+	if _flee_walk_t > 0.0:
+		_flee_walk_t -= delta
+		if _flee_walk_t <= 0.0:
+			_take_the_car()
+		return
+	if _fled:
+		return
+	if _within_flee_trigger():
+		_begin_flee()
+
+
+## They stop talking. One line, then two seconds of a person walking to a door
+## they are about to be in trouble for opening.
+func _begin_flee() -> void:
+	_offer_open = false
+	_line_t = 0.0
+	_line_ix = 1
+	_line_said = _pick("flee_lines", "I can't lose this one. I'm sorry.")
+	_say(_who, _line_said, _n("line_seconds", 5.0))
+	_flee_walk_t = maxf(_n("flee_walk_s", 2.0), 0.1)
+	_send_to_door()
+
+
+## Walk the follower to the door. pedestrians.gd steers a follower by its own
+## `bpos` toward whatever Node3D sits in its `follow` slot and stops FOLLOW_STOP
+## short of it, so the marker goes FOLLOW_STOP PAST the door along their line of
+## approach and the standoff ring lands exactly on the handle. The door is the
+## NEAR one: _update_follow walks a straight line with no avoidance, and routing
+## them around the hood would walk them through the car.
+func _send_to_door() -> void:
+	var d := debtor()
+	if d == null or not is_instance_valid(_car):
+		return
+	var size: Vector3 = SIZE.get(_cls, Vector3(1.9, 1.05, 4.4))
+	var right := _car.global_transform.basis.x.normalized()
+	var sx := signf((d.global_position - _car.global_position).dot(right))
+	if absf(sx) < 0.01:
+		sx = -1.0
+	var door := _car.global_position + right * sx * (size.x * 0.5 + 0.55)
+	door.y = SIDEWALK_Y + PEDS.PED_HALF
+	var lead := door - d.global_position
+	lead.y = 0.0
+	if lead.length() < 0.05:
+		lead = right * sx
+	_door = Node3D.new()
+	_door.name = "RepoOrderDoor%d" % _id
+	_door.position = door + lead.normalized() * PEDS.FOLLOW_STOP
+	add_child(_door)
+	var peds := _peer("pedestrians")
+	if peds == null:
+		return
+	var walk := _n("flee_walk_s", 2.0) + 2.0
+	if peds.has_method("send_to"):   # the sanctioned way (D-070)
+		peds.call("send_to", d, _door, walk)
+		return
+	if not peds.has_method("_find"):
+		return
+	var got: Variant = peds.call("_find", d)
+	if not (got is Dictionary) or (got as Dictionary).is_empty():
+		return
+	var ped := got as Dictionary     # pedestrians hands back the live entry
+	ped["follow"] = _door
+	ped["follow_t"] = maxf(walk, float(ped.get("follow_t", 0.0)))
+
+
+## Drop the door marker. A follower still walking to it would see its target go
+## invalid and delete ITSELF next tick (pedestrians' give-up rule) — a person
+## vanishing in front of the player — so the live debtor is handed back to the
+## player first and simply resumes following.
+func _release_door() -> void:
+	if _door == null or not is_instance_valid(_door):
+		_door = null
+		return
+	var d := debtor()
+	var a := _actor()
+	var peds := _peer("pedestrians")
+	if d != null and a != null and peds != null:
+		if peds.has_method("send_to"):
+			peds.call("send_to", d, a, 8.0)
+		elif peds.has_method("_find"):
+			var got: Variant = peds.call("_find", d)
+			if got is Dictionary and not (got as Dictionary).is_empty():
+				(got as Dictionary)["follow"] = a
+	_door.queue_free()
+	_door = null
+
+
+## The door shuts. The person is gone (pedestrians never deletes one in front of
+## the player — this one is behind glass and moving), the car wakes up, and
+## traffic.gd drives it. The car keeps "towable" and "mission_target": the hook
+## still takes it and the radar ring still finds it, which is the entire chase.
+func _take_the_car() -> void:
+	var d := debtor()
+	if d != null:
+		d.queue_free()
+	_debtor = null
+	_release_door()
+	if not is_instance_valid(_car):
+		return
+	var tr := _peer("traffic")
+	if tr == null or not tr.has_method("adopt"):
+		_flee_degrade()
+		return
+	_car.freeze = false
+	if not bool(tr.call("adopt", _car, true)):
+		_car.freeze = true          # nobody took the wheel: it is a parked car again
+		_flee_degrade()
+		return
+	_fled = true
+	_flee_age = 0.0
+	_flee_far_t = 0.0
+	_expire_armed = false           # a deadline that deletes a car mid-chase is a bug
+	state = State.FLEEING
+	active = true
+	_say(APP, _txt("app_flee", "TARGET IS MOBILE. Recover it."))
+
+
+## The brain refused the car. The order stays exactly where it was — a parked
+## car on a curb with no owner standing next to it — and reads as a plea from
+## here, which is the truthful degradation: they went inside.
+func _flee_degrade() -> void:
+	_reaction = Reaction.PLEAD
+	_fled = false
+	_flee_walk_t = 0.0
+	print("REPO ORDERS: order %d could not run — traffic.adopt refused" % _id)
+
+
+func _tick_flee(delta: float) -> void:
+	_flee_age += delta
+	_move_beacon()
+	var tr := _peer("traffic")
+	if tr != null and tr.has_method("stuck_for"):
+		var s: Variant = tr.call("stuck_for", _car)
+		if (s is float or s is int) and float(s) >= _n("flee_stuck_s", 5.0):
+			_flee_stopped()
+			return
+	# The brain dropped it on its own (a wreck, a despawn rule, a kerb it could
+	# not solve). One second of grace so the frame after adopt never counts.
+	if _flee_age > 1.0 and tr != null and tr.has_method("is_driving") \
+			and not bool(tr.call("is_driving", _car)):
+		_flee_stopped()
+		return
+	var a := _actor()
+	if a == null:
+		return
+	if a.global_position.distance_to(_car.global_position) > _n("flee_escape_m", 650.0):
+		_flee_far_t += delta
+		if _flee_far_t >= _n("flee_escape_s", 8.0):
+			_flee_lost()
+	else:
+		_flee_far_t = 0.0
+
+
+## BOXED IN. Traffic, a wall, your own wrecker across its nose. The brain lets
+## go, the car stays exactly where it stopped, and the order is a hook job
+## again — unfrozen, because a frozen car cannot be towed. The expiry re-arms
+## here: without it, a stopped runner the player drives away from would hold the
+## whole endless loop open forever.
+func _flee_stopped() -> void:
+	_traffic_release()
+	state = State.PUSHED
+	_expire_armed = true
+	_expire_t = _n("expire_seconds", 240.0)
+	_move_beacon()
+	_say(APP, _txt("app_flee_stopped", "TARGET STOPPED. Hook it."))
+
+
+## OVER THE HORIZON. 650 m for 8 unbroken seconds: far enough that it is not a
+## corner you lost them on. The car freezes where it came to rest and keeps
+## "towable" as ordinary curb stock — somebody else's problem, and the despawn
+## sweep collects it at 300 m like any other abandoned body.
+func _flee_lost() -> void:
+	_traffic_release()
+	if is_instance_valid(_car):
+		_car.freeze = true
+	_say(APP, _txt("app_flee_lost", "TARGET LOST. Reassigned to a contractor who wanted it."))
+	_close("expired", true)
+
+
+func _traffic_can_adopt() -> bool:
+	var tr := _peer("traffic")
+	return tr != null and tr.has_method("adopt")
+
+
+func _traffic_release() -> void:
+	var tr := _peer("traffic")
+	if tr != null and tr.has_method("release") and is_instance_valid(_car):
+		tr.call("release", _car)
+
+
+## The beacon rides the car while it runs: the column IS the target now, and a
+## marker left on an empty curb is a lie the radar repeats.
+func _move_beacon() -> void:
+	if _beacon != null and is_instance_valid(_beacon):
+		_beacon.position = _ground_under_car()
+		return
+	_raise_beacon(_ground_under_car())
+
+
 # ============================== THE HOOK =====================================
 func _try_bind_tow() -> void:
 	if _tow != null and is_instance_valid(_tow):
@@ -802,6 +1095,11 @@ func _evaluate_hook_state() -> void:
 ## until you deliver it. A timer that deletes a car mid-haul is a bug wearing a
 ## deadline's clothes.
 func _on_hook() -> void:
+	# A chain on a car the brain is still driving would fight the joint: the
+	# brain lets go the instant the hook takes, and the app changes its tune.
+	var caught := state == State.FLEEING
+	if caught:
+		_traffic_release()
 	state = State.HOOKED
 	active = true
 	_expire_armed = false
@@ -810,7 +1108,10 @@ func _on_hook() -> void:
 	if _beacon != null and is_instance_valid(_beacon):
 		_beacon.queue_free()
 		_beacon = null
-	_say(APP, _txt("app_hooked", "ORDER {id} ON THE HOOK.").format({"id": _id}))
+	if caught:
+		_say(APP, _txt("app_flee_secured", "TARGET SECURED. Haul it."))
+	else:
+		_say(APP, _txt("app_hooked", "ORDER {id} ON THE HOOK.").format({"id": _id}))
 
 
 func _on_release() -> void:
@@ -837,7 +1138,11 @@ func _deliver() -> void:
 	var base := float(BASE_PAY.get(_cls, 300))
 	var ref := maxf(_n("distance_ref_m", 400.0), 1.0)
 	var bonus := 1.0 + _n("distance_bonus_max", 0.5) * clampf(_haul_m / ref, 0.0, 1.0)
-	var pay := int(round(base * bonus * rank_mult()))
+	# A car you had to chase pays half again. Not a reward for the chase — a
+	# rate for the risk, in the app's own language, which is the only language
+	# it has for what just happened to that person.
+	var run := _n("flee_bonus", 1.5) if _fled else 1.0
+	var pay := int(round(base * bonus * rank_mult() * run))
 	_pay_money(pay, "ORDER %d" % _id)
 	deliveries += 1
 	quota_done += 1
@@ -863,6 +1168,8 @@ func _deliver_card(pay: int, paper: String) -> void:
 	if nxt > 0:
 		progress = "%s  %d/%d" % [rank_name(), deliveries, nxt]
 	var rows: Array = [["PAY", "$%s" % _commas(pay)], ["RANK", progress], ["PAPER", paper]]
+	if _fled:
+		rows.append(["IT RAN", "×%.1f" % _n("flee_bonus", 1.5)])
 	var medal := "SILVER" if _heat_drawn else "GOLD"
 	kit.call("card", "RECOVERED", "ORDER %d · %s · %s" % [_id, _who, _cls.to_upper()],
 		rows, medal)
@@ -910,14 +1217,19 @@ func _expire() -> void:
 ## walking away is that the car is still theirs. The debtor is never freed
 ## here — pedestrians.gd owns that life and despawns it by distance, and a
 ## person deleted in front of the player is its own kind of bug.
-func _close(outcome: String) -> void:
+func _close(outcome: String, keep_towable := false) -> void:
 	if outcome == "delivered":
 		if is_instance_valid(_car):
 			_car.queue_free()
 		_car = null
 	else:
-		_abandon_car()
+		_abandon_car(keep_towable)
 	_debtor = null
+	_release_door()
+	_fled = false
+	_flee_walk_t = 0.0
+	_flee_age = 0.0
+	_flee_far_t = 0.0
 	if _beacon != null and is_instance_valid(_beacon):
 		_beacon.queue_free()
 	_beacon = null
@@ -934,14 +1246,22 @@ func _close(outcome: String) -> void:
 	order_closed.emit(outcome)
 
 
-func _abandon_car() -> void:
+## `keep_towable`: a car that outran you is still a car. It loses the order's
+## gold ring but stays hookable curb stock, frozen where it stopped, so the
+## world does not visibly forget it the moment the app does.
+func _abandon_car(keep_towable := false) -> void:
 	if not is_instance_valid(_car):
 		_car = null
 		return
-	for g: String in ["mission_target", "repo_order", "towable"]:
+	var drop: Array[String] = ["mission_target", "repo_order"]
+	if not keep_towable:
+		drop.append("towable")
+	for g: String in drop:
 		if _car.is_in_group(g):
 			_car.remove_from_group(g)
-	if _n("expire_unfreeze", 1.0) > 0.5:
+	if keep_towable:
+		_car.freeze = true
+	elif _n("expire_unfreeze", 1.0) > 0.5:
 		_car.freeze = false
 	_abandoned.append(_car)
 	_car = null

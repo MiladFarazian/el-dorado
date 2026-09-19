@@ -211,6 +211,11 @@ Bar: `docs/qa/quality-bar.md`.
 >   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
 > - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
 >   and a gold ring on a live mission target. QA to rule at `--hudshot`.
+> - **D-150 [S1] The target never left.** Every debtor reaction kept the car parked; the Hook had
+>   nothing to catch. PRODUCER-CLAIMED LANDED (D-070): the FLEE reaction — the traffic brain drives
+>   the car (`traffic.adopt`), the wrecker hooks it on the move, ×1.5 on delivery; boxed-in and
+>   lost cases close cleanly. Evidence: probe stage 14. QA to rule by forcing a run
+>   (`push_now(false, true)` from a debug key is not bound — drive until one runs, one in five).
 > - **D-146 [S2] The new roads carried no traffic** (Juárez Boulevard, the parkway, the Cliff
 >   streets) — a district with no cars reads as a set. PRODUCER-CLAIMED LANDED (D-069): `KIND_SPUR`
 >   lanes from the atlas, five routes, a merge onto the grid at Juárez's north end. Evidence: probe

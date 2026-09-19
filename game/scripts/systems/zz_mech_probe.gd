@@ -149,6 +149,7 @@ func _physics_process(delta: float) -> void:
 		11: _stage_orders()
 		12: _stage_dealer()
 		13: _stage_alive()
+		14: _stage_chase()
 		_: _finish()
 
 
@@ -832,4 +833,105 @@ func _stage_alive() -> void:
 				_say(cars >= 1, "stage13 spur traffic on the boulevard after 40 s: %d shells" % cars)
 				var zc := int(peds.call("zone_count", "cliff_boulevard")) if peds.has_method("zone_count") else -1
 				_say(zc >= 2, "stage13 the boulevard's sidewalks have people: %d (want >= 2)" % zc)
+				_stage = 14; _sub = 0; _t = 0.0; _cycles = 0; _shot_done = false
+
+
+## Stage 14 (D-070): THE DEBTOR WHO RUNS. A forced FLEE order: at 15 m the
+## debtor takes the car and the traffic brain drives it; the objective says
+## CATCH; the wrecker rides its bumper and the hook takes it; delivered, it
+## pays the run bonus.
+func _stage_chase() -> void:
+	var o := _sys("repo_orders"); var tr := _sys("traffic"); var repo := _sys("repo_board"); var pol := _sys("police")
+	var pv := _pv()
+	if o == null or tr == null or repo == null or pv == null:
+		_say(false, "stage14 repo_orders / traffic missing"); _finish(); return
+	match _sub:
+		0:   # a clean board, the wrecker, then the forced flee push
+			if int(o.get("state")) != 0 and _t > 0.2:
+				if int(o.get("state")) == 1:
+					o.call("walk_away")
+				_t = 0.0
+			elif not (pv.has_method("has_boom") and bool(pv.call("has_boom"))):
+				# stage 12 left him in the sedan he bought: TAB back to the wrecker
+				if _cycles >= 6:
+					_say(false, "stage14 could not cycle into the wrecker (%s)" % pv.get("display_name")); _finish()
+				elif _t > 0.4:
+					main_ref.call("_cycle_vehicle"); _cycles += 1; _t = 0.0
+			elif int(o.get("state")) == 0 and _t > 0.3:
+				pol.call("add_heat", -10)
+				_money0 = int(repo.get("money"))
+				var ok := bool(o.call("push_now", false, true))
+				_say(ok, "stage14 the app pushed an order that will run (push_now flee)")
+				if not ok:
+					_finish(); return
+				_sub = 1; _t = 0.0
+			elif _t > 6.0:
+				_say(false, "stage14 could not clear the board (state=%s)" % o.get("state")); _finish()
+		1:   # drive up to 15 m: the debtor takes the car
+			var tgt: Variant = o.call("target")
+			if tgt is Node3D and is_instance_valid(tgt):
+				var tp := (tgt as Node3D).global_position
+				pv.global_transform = Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), tp + Vector3(0, 1.2, -14.0))
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				_rel = Transform3D(Basis.IDENTITY, tp)   # remember where it was parked
+				_sub = 2; _t = 0.0
+			elif _t > 3.0:
+				_say(false, "stage14 no target after the push"); _finish()
+		2:
+			var tgt: Variant = o.call("target")
+			if int(o.get("state")) == 3 and tgt is Node3D:
+				_say(true, "stage14 FLEEING (state=3): '%s'" % o.call("objective_text"))
+				_say(tr.has_method("is_driving") and bool(tr.call("is_driving", tgt)), "stage14 the traffic brain is driving the car")
+				_sub = 3; _t = 0.0
+			elif _t > 8.0:
+				_say(false, "stage14 the debtor never ran (state=%s)" % o.get("state")); _finish()
+		3:   # it moves — the brain crabs it onto the lane at 3 m/s first, then runs
+			var tgt: Variant = o.call("target")
+			if not (tgt is RigidBody3D) or not is_instance_valid(tgt):
+				_say(false, "stage14 lost the car"); _finish(); return
+			if _t > 4.5:
+				var moved := (tgt as Node3D).global_position.distance_to(_rel.origin)
+				_say(moved > 12.0, "stage14 the car ran %.0f m in 4.5 s (want > 12)" % moved)
+				# THE CATCH. The boom is at the back, so a runner is not hooked from
+				# behind: get AHEAD of it in its lane and stop — it car-follows to a
+				# halt on the boom, the brain calls it boxed in, and the hook takes.
+				var car := tgt as RigidBody3D
+				var nose := -car.global_transform.basis.z.normalized()
+				var block := Transform3D(car.global_transform.basis, car.global_position + nose * 22.0 + Vector3(0, 0.3, 0))
+				pv.global_transform = block
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				_rel = block
+				_sub = 4; _t = 0.0
+		4:   # hold the block; the runner stops behind the boom; then hook it
+			var tgt: Variant = o.call("target")
+			pv.global_transform = _rel
+			pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+			if int(o.get("state")) == 2:
+				_say(true, "stage14 boxed in and hooked: HOOKED (state=2) after %.1f s" % _t)
+				_say(not bool(tr.call("is_driving", tgt)), "stage14 the brain let go of the car")
+				if tgt is RigidBody3D:
+					_rel = pv.global_transform.affine_inverse() * (tgt as Node3D).global_transform
+					var tx := Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), REPO.PAD_CENTER + Vector3(0, 1.2, -6.0))
+					pv.global_transform = tx; (tgt as RigidBody3D).global_transform = tx * _rel
+					pv.linear_velocity = Vector3.ZERO; (tgt as RigidBody3D).linear_velocity = Vector3.ZERO
+				_sub = 5; _t = 0.0
+				return
+			if int(o.get("state")) == 1 and not _shot_done:
+				# TARGET STOPPED four metres off the boom: back up onto it once
+				_shot_done = true
+				var nose := -_rel.basis.z.normalized()
+				_rel.origin -= nose * 3.2
+			if int(o.get("state")) == 1 and _press == "" and fmod(_t, 0.6) < 0.05:
+				_press = "hook"   # it sits on the boom
+			if _t > 24.0:
+				_say(false, "stage14 the runner never stopped on the boom (state=%s, stuck %.1f s)" % [o.get("state"),
+					float(tr.call("stuck_for", tgt)) if tgt is RigidBody3D and tr.has_method("stuck_for") else -1.0]); _finish()
+		5:   # release on the pad: the run bonus
+			if int(o.get("state")) == 0:
+				var dm := int(repo.get("money")) - _money0
+				_say(dm >= 450, "stage14 DELIVERED after the run: +$%d (want >= 450: base x 1.5)" % dm)
 				_finish()
+			elif _t > 0.5 and _press == "" and int(o.get("state")) == 2:
+				_press = "hook"; _t = -2.0
+			elif _t > 9.0:
+				_say(false, "stage14 the release on the pad did not deliver (state=%s)" % o.get("state")); _finish()

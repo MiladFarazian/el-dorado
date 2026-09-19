@@ -92,6 +92,25 @@ const SPUR_GIVEUP := 9.0             # stopped this long out here: give up, U-tu
 const SPUR_UTURN_CREEP := 1.5        # ... and a U-turn always sweeps, blocked or not
 const SPUR_AXIS_TOL := 0.01          # a spur segment must be axis-aligned
 const SPUR_RNG_SEED := 990413        # spur spawns ONLY — never a seeded grid draw
+# -- GIVE-WAY AT SPUR CROSSINGS. Two atlas polylines that cross have no signal,
+# no stop sign and no priority rule, so on the shipped atlas four unsignalled
+# crossroads (Cliff side west/east against both Juárez Boulevard and the Cliff
+# back street) were settled by whoever got there first and, when that tied, by
+# the give-up timer nine seconds later. The rule: the SHORTER polyline yields.
+# It is arbitrary, it is stable, and it reads on screen as a side street waiting
+# for a boulevard. The give-up timer stays exactly where it was, as the backstop.
+const XING_YIELD := 12.0             # a yielder watches inside this of the crossing
+const XING_WATCH := 18.0             # ... for a car on the longer road this near it
+const XING_CLOSING := 0.5            # and actually pointing at it (unit dot)
+# -- ADOPTION (repo orders). A body the brain did NOT spawn, driven as a shell.
+const ADOPT_RANGE := 40.0            # no lane centreline this close: no adoption
+const ADOPT_RNG_SEED := 0xD06213     # foreign shells ONLY — never a grid draw
+const FLEE_SPEED := Vector2(15.0, 18.0)  # a runner's target speed (m/s)
+const FLEE_STRAIGHT := 0.8; const FLEE_RIGHT := 0.1  # straight 80 / right 10 / left 10
+const ADOPT_STUCK := 0.5             # under this counts as stopped for stuck_for()
+const ADOPT_OFF_LANE := 6.0          # this far off the lane centreline ...
+const ADOPT_OFF_HOLD := 3.0          # ... for this long: hand it back to the owner
+const ADOPT_MERGE := 3.0             # lateral m/s onto the lane (no teleport)
 # What a jacked shell turns into (carjack.gd reads the "jack_profile" meta).
 # The black lifted truck IS the Baron Brisket — same joke, same rollover.
 const SEDAN_PROFILE := "res://data/vehicles/sedan.json"
@@ -126,6 +145,13 @@ var _cars: Array[Dictionary] = []
 # keep its exact draw order, so no spur draw may ever touch it.
 var _spur_rng := RandomNumberGenerator.new()
 var _spurs: Array[Dictionary] = []   # polyline routes read from the atlas
+# spur index -> Array of {pos: Vector3, other: int}: the crossings where THIS
+# spur is the shorter polyline and therefore the one that gives way.
+var _yield_at: Dictionary = {}
+# A FOURTH stream, same reason as the second and third: a body the brain adopts
+# draws its speed and its turn choices from here, so a repo order driving past
+# can never shift a single number in the seeded grid stream.
+var _adopt_rng := RandomNumberGenerator.new()
 var _ns_x: Array[float] = []; var _ew_z: Array[float] = []
 var _spawn_cd := 0.0; var _cache_t := 0.0; var _spawned := 0
 var _obstacle_pts := PackedVector3Array()
@@ -137,12 +163,12 @@ var _truck_mat: StandardMaterial3D; var _wheel_mat: StandardMaterial3D
 
 func setup(main: Node) -> void:
 	main_ref = main; _rng.seed = RNG_SEED; _sig_rng.seed = SIG_RNG_SEED
-	_spur_rng.seed = SPUR_RNG_SEED
+	_spur_rng.seed = SPUR_RNG_SEED; _adopt_rng.seed = ADOPT_RNG_SEED
 	if bool(main.get("smoke_mode")):
 		set_physics_process(false); return  # smoke gate: no spawns/processing/UI
 	for i in 7: _ns_x.append(193.0 + 86.0 * float(i))
 	for j in 5: _ew_z.append(133.0 + 86.0 * float(j))
-	_build_shared(); _load_spurs()
+	_build_shared(); _load_spurs(); _build_crossings()
 
 ## One mesh/material set shared by every car — spawning never allocates meshes.
 func _build_shared() -> void:
@@ -185,7 +211,13 @@ func _validate(pv: RigidBody3D, delta: float) -> void:
 	for i in range(_cars.size() - 1, -1, -1):
 		var car := _cars[i]; var body := car["body"] as RigidBody3D
 		if not is_instance_valid(body) or not body.is_inside_tree():
-			_cars.remove_at(i); continue
+			_cars.remove_at(i); continue      # freed by its owner: drop the entry
+		# A FOREIGN BODY IS NEVER FREED HERE. Distance and debris age are the
+		# brain's licence to delete things it made; an adopted body belongs to
+		# whoever built it. All this branch can do is hand it back.
+		if bool(car.get("foreign", false)):
+			if _foreign_lapsed(car, body, delta): _foreign_restore(car); _cars.remove_at(i)
+			continue
 		if not bool(car["frozen"]): car["age"] = float(car["age"]) + delta
 		if pv == null: continue
 		var d := body.global_position.distance_to(pv.global_position)
@@ -193,9 +225,14 @@ func _validate(pv: RigidBody3D, delta: float) -> void:
 				else (float(car["age"]) > DEBRIS_MIN_AGE and d > DESPAWN_DEBRIS):
 			body.queue_free(); _cars.remove_at(i)
 
+## Ambient shells only: an adopted body is somebody else's car standing in the
+## same street, and counting it would silently thin the ambient fleet — and with
+## it the moment at which the seeded spawn stream draws its next number.
 func _frozen_count() -> int:
 	var n := 0
-	for car in _cars: n += 1 if bool(car["frozen"]) and is_instance_valid(car["body"]) else 0
+	for car in _cars:
+		if bool(car.get("foreign", false)): continue
+		n += 1 if bool(car["frozen"]) and is_instance_valid(car["body"]) else 0
 	return n
 
 ## Seeded lane points: in the 70-260 m ring, never in the protected corridor,
@@ -351,9 +388,11 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 	var turning := int(car["state"]) == TURN
 	var heading: Vector3 = (car["arc_u"] as Vector3).rotated(
 		Vector3.UP, float(car["arc_sgn"]) * PI * 0.5) if turning else car["dir"] as Vector3
+	var foreign := bool(car.get("foreign", false))
 	# Fast player closing inside 4 m: unfreeze BEFORE impact so the hit lands
-	# on loose physics, not an immovable kinematic wall.
-	if pv != null:
+	# on loose physics, not an immovable kinematic wall. NOT for an adopted
+	# body: wrecking it is the owner's call (and the player's job), not ours.
+	if pv != null and not foreign:
 		var sep := body.global_position - pv.global_position; var d := sep.length()
 		var lat := (sep - heading * sep.dot(heading)).length()  # drive-bys stay frozen
 		if d < CRASH_DIST and d > 0.01 and lat < CRASH_LATERAL and (pv.linear_velocity
@@ -361,6 +400,11 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 			_unfreeze(car); return
 	var limit := _sense_limit(car, body, heading)
 	limit = minf(limit, _follow_limit(car, body, heading))
+	# The owner's "is it boxed in?" clock. Runs for every adopted body of every
+	# kind, on its own threshold, and never touches the spur give-up timer.
+	if foreign:
+		car["f_stuck"] = float(car.get("f_stuck", 0.0)) + delta \
+			if float(car["speed"]) < ADOPT_STUCK else 0.0
 	_honk_check(car, body, heading, limit, delta)
 	if turning:
 		_set_speed(car, _turn_limit(car, limit), delta); _step_turn(car, body, delta); return
@@ -371,8 +415,13 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 	# or two of them nose to nose at an unsignalled Cedar Cliff crossroads) gives
 	# up and turns around instead of standing there for the rest of the session.
 	if int(car["kind"]) == KIND_SPUR:
+		limit = minf(limit, _yield_limit(car, body, heading))  # give way at a crossing
 		car["stuck_t"] = float(car["stuck_t"]) + delta if float(car["speed"]) < SIG_CREEP \
 			else 0.0
+		# An adopted shell never turns itself around out of boredom: a runner
+		# that doubles back is a runner driving at the player. The owner reads
+		# stuck_for() and decides the car is boxed in.
+		if foreign: car["stuck_t"] = 0.0
 		if float(car["stuck_t"]) >= SPUR_GIVEUP:
 			car["stuck_t"] = 0.0
 			_spur_exit(car, int(car["seg"]), -float(car["sdir"]))
@@ -383,6 +432,11 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 			if int(car["kind"]) == KIND_SPUR:
 				if _spur_event(car, body, limit, delta): return
 			elif int(car["kind"]) == KIND_FRONTAGE:
+				# An adopted body is never retired — it is handed back instead,
+				# next frame, from _validate (mutating _cars mid-iteration here
+				# would skip a car). The frontage is the ONE lane kind whose end
+				# frees the shell, so this guard is the whole of that hazard.
+				if foreign: car["lapse"] = true; return
 				body.queue_free(); return  # one-way road meets the map edge: retire
 			elif not _join_spur(car, body):
 				_start_turn(car, body, 3, limit, delta); return  # dead-end U-turn
@@ -390,9 +444,17 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 		limit = minf(limit, _signal_limit(car, rem, delta))  # M17: the light
 		if not bool(car["decided"]) and rem <= DECIDE_DIST:
 			car["decided"] = true
-			var roll := _rng.randf()  # seeded: straight 60 / right 20 / left 20
-			car["choice"] = 0 if roll < TURN_STRAIGHT \
-				else (1 if roll < TURN_STRAIGHT + TURN_RIGHT else 2)
+			if foreign:
+				# Own stream, own weights: a runner prefers straight (80/10/10),
+				# and the seeded grid draw order is untouched either way.
+				var st := FLEE_STRAIGHT if bool(car.get("flee", false)) else TURN_STRAIGHT
+				var rt := FLEE_RIGHT if bool(car.get("flee", false)) else TURN_RIGHT
+				var froll := _adopt_rng.randf()
+				car["choice"] = 0 if froll < st else (1 if froll < st + rt else 2)
+			else:
+				var roll := _rng.randf()  # seeded: straight 60 / right 20 / left 20
+				car["choice"] = 0 if roll < TURN_STRAIGHT \
+					else (1 if roll < TURN_STRAIGHT + TURN_RIGHT else 2)
 		var choice := int(car["choice"])
 		if bool(car["decided"]) and choice > 0:
 			if rem < APPROACH_DIST: limit = minf(limit, TURN_SPEED)
@@ -402,6 +464,7 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 			_plan_next(car)  # cleared the intersection going straight
 	_set_speed(car, limit, delta)
 	var pos := body.global_position + dirv * float(car["speed"]) * delta
+	if foreign: pos = _lane_converge(car, pos, dirv, delta)
 	pos.y = float(car["ride"]); _place(body, dirv, pos)
 
 # ============================== THE HORN (D-060) =============================
@@ -420,9 +483,17 @@ func _honk_check(car: Dictionary, body: RigidBody3D, heading: Vector3, limit: fl
 	car["blocked_t"] = float(car.get("blocked_t", 0.0)) + delta if blocked else 0.0
 	car["honk_cd"] = maxf(float(car.get("honk_cd", 0.0)) - delta, 0.0)
 	if float(car["blocked_t"]) >= HONK_AFTER and float(car["honk_cd"]) <= 0.0:
-		car["honk_cd"] = _sig_rng.randf_range(HONK_COOLDOWN.x, HONK_COOLDOWN.y)
+		car["honk_cd"] = _jit(car).randf_range(HONK_COOLDOWN.x, HONK_COOLDOWN.y)
 		car["blocked_t"] = 0.0
 		_honk(car, body)
+
+## Which runtime-jitter stream this shell draws from. An ambient shell uses
+## `_sig_rng` exactly as it always has — same stream, same order, same numbers
+## — and an ADOPTED body uses `_adopt_rng`, so a repo order leaning on its horn
+## cannot shift the dwell jitter of the traffic around it either.
+func _jit(car: Dictionary) -> RandomNumberGenerator:
+	return _adopt_rng if bool(car.get("foreign", false)) else _sig_rng
+
 
 func _honk(car: Dictionary, body: RigidBody3D) -> void:
 	var sys: Variant = main_ref.get("systems") if main_ref != null else null
@@ -437,7 +508,7 @@ func _honk(car: Dictionary, body: RigidBody3D) -> void:
 		np.stream = stream; np.unit_size = 12.0; np.max_distance = 150.0; np.volume_db = HONK_DB
 		body.add_child(np); car["horn_p"] = np; p = np
 	var hp := p as AudioStreamPlayer3D
-	hp.pitch_scale = 0.9 + 0.2 * _sig_rng.randf()   # not every horn is the same horn
+	hp.pitch_scale = 0.9 + 0.2 * _jit(car).randf()   # not every horn is the same horn
 	hp.play()
 	get_tree().create_timer(HONK_LEN).timeout.connect(func() -> void:
 		if is_instance_valid(hp): hp.stop())   # the stream loops; a honk is a beat
@@ -581,6 +652,13 @@ func _signal_limit(car: Dictionary, rem: float, delta: float) -> float:
 	if int(car["sig_mode"]) == SG_CLEARED: return INF
 	var bar := rem - float(car["half_len"]) - SIG_BAR  # bumper -> the paint
 	var ph := _phase(int(car["kind"]), idx.x, idx.y)
+	# A RUNNER READS EVERY RED AS AN AMBER. Not a separate code path — the late-
+	# amber logic below already models "too late to stop honestly, clear the box
+	# instead", and at 15-18 m/s inside SIG_AMBER_LOOK it is always too late. So
+	# a fleeing shell runs the light for a reason the geometry agrees with, and
+	# if traffic has it down to a crawl it still waits, which is what makes the
+	# chase readable. It still yields to the box via car-following.
+	if ph == PH_STOP and bool(car.get("flee", false)): ph = PH_CAUTION
 	var sp := float(car["speed"])
 	if int(car["sig_mode"]) == SG_NEW:
 		if ph == PH_GO: return INF          # stays undecided; re-read next frame
@@ -772,6 +850,9 @@ func release_car(body: Node) -> float:
 			continue
 		var sp := float(_cars[i]["speed"]) if bool(_cars[i]["frozen"]) else 0.0
 		_sig_drop_token(body)  # it leaves the roster mid-crossing: free the box
+		# An adopted body leaves the way it arrived: the owner's freeze state
+		# back, its momentum along the heading it was driving.
+		if bool(_cars[i].get("foreign", false)): _foreign_restore(_cars[i])
 		_cars.remove_at(i)
 		return sp
 	return 0.0
@@ -779,7 +860,7 @@ func release_car(body: Node) -> float:
 # ============================== CRASH HANDOFF ================================
 ## Permanent handoff to loose physics: keeps momentum, stays towable forever.
 func _unfreeze(car: Dictionary) -> void:
-	if not bool(car["frozen"]): return
+	if not bool(car["frozen"]) or bool(car.get("foreign", false)): return
 	car["frozen"] = false; car["age"] = 0.0; var body := car["body"] as RigidBody3D
 	if is_instance_valid(body):
 		body.freeze = false  # keeps momentum along its current heading:
@@ -806,7 +887,13 @@ func _pair_crashes() -> void:
 
 func _on_hooked(body: Node) -> void:
 	var car := _find(body)
-	if car.is_empty() or not bool(car["frozen"]): return
+	if car.is_empty(): return
+	# The chain is on an adopted body: hand it straight back. The owner is meant
+	# to call release() on this same signal — this is the belt to that brace, and
+	# it fires no heat, because hooking a repo order is the JOB, not a theft.
+	if bool(car.get("foreign", false)):
+		release(body as RigidBody3D); return
+	if not bool(car["frozen"]): return
 	_unfreeze(car)  # once per event: no longer frozen afterwards
 	var pol := _peer("police")
 	if pol != null and pol.has_method("add_heat"): pol.call("add_heat", 1, "GRAND THEFT AUTO")  # car theft
@@ -1143,3 +1230,344 @@ func _join_spur(car: Dictionary, body: RigidBody3D) -> bool:
 			_place(body, dirv, np); _plan_next(car)
 			return true
 	return false
+
+# ============================== ADOPTION =====================================
+## THE BRAIN CAN DRIVE A BODY IT DID NOT SPAWN. repo_orders builds the order car
+## — same frozen kinematic shell, same wheels, its own groups ("towable",
+## "mission_target", "repo_order") and its own name — and when the debtor gets
+## in and runs, it hands the body here. From that frame the lane brain drives it
+## exactly like an ambient shell: right-hand lane, arcs at the corners, the
+## signals, car-following, the obstacle ray. Three things are different, and
+## they are the whole contract:
+##   1. THE BRAIN NEVER FREES IT. Not on despawn distance, not on debris age,
+##      not on a crash. Its groups, metadata, name and mesh are never touched.
+##      The owner built it and the owner deletes it.
+##   2. Every random number it needs comes off `_adopt_rng`, a fourth stream on
+##      its own literal seed, so a repo order tearing through downtown cannot
+##      move the seeded grid spawn stream by a single draw.
+##   3. With `flee` it uses the FLEE profile: 15-18 m/s, reds read as ambers,
+##      straight preferred 80/10/10, no U-turn that is not a dead end, and the
+##      player-proximity crash rule off — stopping it is the player's job.
+## Returns false and touches NOTHING when no lane centreline of any kind (grid,
+## frontage, spur) passes within ADOPT_RANGE of the body.
+func adopt(body: RigidBody3D, flee := true) -> bool:
+	if not is_instance_valid(body) or not body.is_inside_tree(): return false
+	if main_ref == null or _ns_x.is_empty(): return false   # smoke mode: inert
+	var known := _find(body)
+	if not known.is_empty(): return bool(known.get("foreign", false))  # already ours
+	var lane := _nearest_lane(body.global_position)
+	if lane.is_empty(): return false
+	# HEADING: the lane runs two ways; take the one pointing away from the man
+	# it is running from. No player (headless, a probe) falls back to the way the
+	# body is already facing, which is what the owner parked it doing.
+	var axis := _cardinal(lane["axis"] as Vector3)
+	var actor := _player_actor()
+	var away := body.global_position - actor.global_position if actor != null \
+		else -body.global_transform.basis.z
+	away.y = 0.0
+	if away.length_squared() < 0.01: away = -body.global_transform.basis.z
+	var dirv := axis if axis.dot(away) >= 0.0 else -axis
+	var kind := int(lane["kind"])
+	var ride := body.global_position.y
+	var car := {
+		"body": body, "frozen": true, "state": CRUISE, "dir": dirv, "kind": kind,
+		"center": float(lane["center"]), "ride": ride,
+		"half_len": _body_half_len(body), "age": 0.0,
+		"tspeed": _adopt_rng.randf_range(FLEE_SPEED.x, FLEE_SPEED.y) if flee \
+			else _adopt_rng.randf_range(SPEED_RANGE.x, SPEED_RANGE.y),
+		"speed": 0.0, "choice": 0, "decided": false, "event": 0.0, "event_end": false,
+		"arc_c": Vector3.ZERO, "arc_u": Vector3.ZERO, "arc_sweep": 0.0, "arc_sgn": 1.0,
+		"arc_r": 1.0, "exit_dir": dirv, "exit_center": float(lane["center"]),
+		"exit_kind": kind,
+		"spur": int(lane["spur"]), "seg": int(lane["seg"]), "sdir": 1.0,
+		"sp_end": SP_UTURN, "sp_seg": 0, "sp_sdir": 1.0, "sp_kind": KIND_NS,
+		"sp_center": 0.0, "stuck_t": 0.0,
+		"exit_spur": int(lane["spur"]), "exit_seg": int(lane["seg"]), "exit_sdir": 1.0,
+		"sig_key": -1, "sig_mode": SG_NEW, "sig_wait": 0.0,
+		"sig_jit": _adopt_rng.randf() * SIG_JITTER,
+		# The foreign half of the record. `own_freeze` is the flag the brain is
+		# holding; `was_*` is the state handed back on release.
+		"foreign": true, "flee": flee, "f_stuck": 0.0, "off_t": 0.0,
+		"merging": true, "lapse": false,
+		"own_freeze": true, "was_freeze": body.freeze, "was_mode": body.freeze_mode}
+	if kind == KIND_SPUR:
+		car["sdir"] = 1.0 if (lane["axis"] as Vector3).dot(dirv) > 0.0 else -1.0
+		car["exit_sdir"] = float(car["sdir"])
+	# It launches from whatever it was already doing, not from its target speed:
+	# a debtor who just jumped in accelerates out of the space like a person.
+	car["speed"] = clampf(body.linear_velocity.dot(dirv), 0.0, float(car["tspeed"]))
+	body.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+	body.freeze = true
+	# THE HEADING SNAPS, THE POSITION DOES NOT. A curbside order car is 3-8 m off
+	# the lane it is about to join and the search reaches 40 m; teleporting it
+	# sideways onto the centreline is a pop, and at 40 m it is a pop through a
+	# building. It keeps where it is and crabs onto the lane at ADOPT_MERGE m/s,
+	# which is what pulling out of a parking space looks like.
+	_place(body, dirv, body.global_position)
+	_cars.append(car); _plan_next(car)
+	return true
+
+
+## PUBLIC: the brain lets go. The body keeps the velocity it was driving at,
+## along the heading it was driving, and gets its owner's freeze state back.
+## Called with a body that has already been freed (or with null) this prunes
+## every stale foreign entry instead — which is also the automatic drop.
+func release(body: RigidBody3D) -> void:
+	for i in range(_cars.size() - 1, -1, -1):
+		var car := _cars[i]
+		if not bool(car.get("foreign", false)): continue
+		var b: Variant = car.get("body")
+		if is_instance_valid(b) and b != body: continue
+		_foreign_restore(car)
+		_cars.remove_at(i)
+
+
+## PUBLIC: is the brain driving this body right now?
+func is_driving(body: RigidBody3D) -> bool:
+	if not is_instance_valid(body): return false
+	var car := _find(body)
+	return not car.is_empty() and bool(car.get("foreign", false))
+
+
+## PUBLIC: its lane speed in m/s (0 for anything the brain is not driving).
+func driven_speed(body: RigidBody3D) -> float:
+	if not is_instance_valid(body): return 0.0
+	var car := _find(body)
+	if car.is_empty() or not bool(car.get("foreign", false)): return 0.0
+	return float(car["speed"])
+
+
+## PUBLIC: seconds this adopted body has been under ADOPT_STUCK, 0 while it is
+## moving. The owner's "boxed in" test — the brain deliberately does NOT turn a
+## runner around by itself, so this number is the only way out of a blocked lane.
+func stuck_for(body: RigidBody3D) -> float:
+	if not is_instance_valid(body): return 0.0
+	var car := _find(body)
+	if car.is_empty() or not bool(car.get("foreign", false)): return 0.0
+	return float(car["f_stuck"])
+
+
+## The nearest drivable lane of ANY kind to a world point, or {} when the
+## closest one is further than ADOPT_RANGE. Distance is measured to the
+## CENTRELINE (the polyline / street axis), not to the lane the car will ride:
+## the offset is applied afterwards, once a direction of travel is chosen, and
+## which side of the road that is depends on which way the car ends up pointing.
+## Returns {kind, center, axis, spur, seg}. One-shot, at adopt time only.
+func _nearest_lane(p: Vector3) -> Dictionary:
+	var best: Dictionary = {}
+	var bd := ADOPT_RANGE
+	for x: float in _ns_x:
+		var d := _seg_near(p, Vector2(x, NS_Z.x), Vector2(x, NS_Z.y))
+		if d < bd:
+			bd = d
+			best = {"kind": KIND_NS, "center": x, "axis": Vector3(0, 0, 1),
+				"spur": -1, "seg": 0}
+	for z: float in _ew_z:
+		var d := _seg_near(p, Vector2(EW_X.x, z), Vector2(EW_X.y, z))
+		if d < bd:
+			bd = d
+			best = {"kind": KIND_EW, "center": z, "axis": Vector3(1, 0, 0),
+				"spur": -1, "seg": 0}
+	for z: float in [FR_Z, -FR_Z]:
+		var d := _seg_near(p, Vector2(-FR_X_END, z), Vector2(FR_X_END, z))
+		if d < bd:
+			bd = d
+			best = {"kind": KIND_FRONTAGE, "center": z, "axis": Vector3(1, 0, 0),
+				"spur": -1, "seg": 0}
+	for si in _spurs.size():
+		var pts: PackedVector2Array = _spurs[si]["pts"]
+		var dirs: Array = _spurs[si]["dirs"]
+		for seg in pts.size() - 1:
+			var d := _seg_near(p, pts[seg], pts[seg + 1])
+			if d < bd:
+				bd = d
+				best = {"kind": KIND_SPUR, "center": 0.0, "axis": dirs[seg],
+					"spur": si, "seg": seg}
+	return best
+
+
+## Planar distance from a world point to a 2-D segment (x,z). No allocation.
+func _seg_near(p: Vector3, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var l2 := ab.length_squared()
+	var t := 0.0 if l2 < 0.0001 else clampf((Vector2(p.x, p.z) - a).dot(ab) / l2, 0.0, 1.0)
+	var q := a + ab * t
+	return Vector2(p.x - q.x, p.z - q.y).length()
+
+
+## The point on THIS car's lane nearest its own position, keeping whatever
+## progress it has along the road. One generalisation of the three snaps already
+## in the file (_finish_turn's grid snap, _spur_event's merge snap, _spur_snap),
+## so adoption and the off-lane watchdog cannot disagree with the driving code.
+func _lane_snap_point(car: Dictionary, pos: Vector3, dirv: Vector3) -> Vector3:
+	var kind := int(car["kind"])
+	if kind == KIND_SPUR: return _spur_snap(car, pos, dirv)
+	# Frontage lanes ride the inner side of the strip — the same sign flip
+	# _try_spawn uses, and for the same reason (repo_board's junkers at z=33).
+	var lane := _right(dirv) * (LANE_OFFSET if kind != KIND_FRONTAGE else -LANE_OFFSET)
+	var p := pos
+	if kind == KIND_NS: p.x = float(car["center"]) + lane.x
+	else: p.z = float(car["center"]) + lane.z
+	return p
+
+
+## Half the length of a body the brain did not build, off its own collision box.
+## Falls back to the sedan's, which is what everything on four wheels in this
+## project is within half a metre of.
+func _body_half_len(body: RigidBody3D) -> float:
+	for c: Node in body.get_children():
+		if not is_instance_valid(c) or not (c is CollisionShape3D): continue
+		var sh: Shape3D = (c as CollisionShape3D).shape
+		if sh is BoxShape3D: return (sh as BoxShape3D).size.z * 0.5
+	return SEDAN_SIZE.z * 0.5
+
+
+## BELT AND BRACES. The owner is expected to call release() on the tow's
+## `hooked` signal; these two catch the cases where it does not.
+##   1. The freeze flag is no longer the one the brain set. The brain holds an
+##      adopted body frozen-kinematic — that is what "driven as a shell" means —
+##      so "somebody else touched freeze" is exactly what the tow hook does when
+##      it wakes a car to drag it (parked_cars' law), and equally what an owner
+##      does when it re-parks the car underneath us.
+##   2. More than 6 m off its lane for 3 s: something is physically moving this
+##      body and it is not us. An arc is off the lane by design, so a turning
+##      shell is exempt and its clock is reset.
+func _foreign_lapsed(car: Dictionary, body: RigidBody3D, delta: float) -> bool:
+	if bool(car.get("lapse", false)): return true   # _drive asked, deferred to here
+	if bool(body.get("freeze")) != bool(car.get("own_freeze", true)): return true
+	if int(car["state"]) == TURN:
+		car["off_t"] = 0.0; return false
+	var p := body.global_position
+	var lp := _lane_snap_point(car, p, car["dir"] as Vector3)
+	var off := Vector2(p.x - lp.x, p.z - lp.z).length()
+	# A body still crabbing onto its lane after adoption is off it BY DESIGN;
+	# the watchdog only arms once it has arrived (within a metre) the first time.
+	if bool(car["merging"]):
+		if off > 1.0:
+			car["off_t"] = 0.0; return false
+		car["merging"] = false
+	car["off_t"] = float(car["off_t"]) + delta if off > ADOPT_OFF_LANE else 0.0
+	return float(car["off_t"]) >= ADOPT_OFF_HOLD
+
+
+## Hand a foreign body back: the owner's freeze state, and the momentum it was
+## carrying along the heading it was driving. Never frees, never regroups,
+## never renames. Validity FIRST, then the cast — 4.7 errors on both against a
+## freed instance.
+func _foreign_restore(car: Dictionary) -> void:
+	var b: Variant = car.get("body")
+	if not is_instance_valid(b): return
+	var rb := b as RigidBody3D
+	if rb == null: return
+	_sig_drop_token(rb)          # it leaves mid-crossing: free the box
+	# The horn player is the ONE node the brain ever adds to a foreign body;
+	# it goes back with us, so the owner's car returns exactly as it came.
+	var hp: Variant = car.get("horn_p")
+	if is_instance_valid(hp) and hp is Node: (hp as Node).queue_free()
+	rb.freeze_mode = int(car.get("was_mode", RigidBody3D.FREEZE_MODE_KINEMATIC))
+	rb.freeze = bool(car.get("was_freeze", false))
+	if not rb.freeze:
+		rb.linear_velocity = -rb.global_transform.basis.z * float(car["speed"])
+
+
+# ============================== SPUR CROSSINGS ===============================
+## WHERE TWO SPURS CROSS, SOMEBODY HAS TO GO SECOND. The downtown grid has
+## lights; a spur has nothing, so on the shipped atlas four unsignalled
+## crossroads — the two Cliff side streets against both Juárez Boulevard
+## (z=800) and the Cliff back street (z=900) — were settled by arrival order,
+## and when two shells arrived together the 9 s give-up timer eventually turned
+## one of them around, which looks like a driver losing their nerve for no
+## reason. The rule, computed ONCE at setup and then pure arithmetic per frame:
+## the SHORTER polyline yields to the longer one. A side street waiting for a
+## boulevard is what that reads as on screen, and it is stable across a session
+## because the polylines never change length. The give-up timer is untouched and
+## still the backstop for everything this does not cover.
+func _build_crossings() -> void:
+	for i in _spurs.size():
+		for j in range(i + 1, _spurs.size()):
+			var ti := float(_spurs[i]["total"]); var tj := float(_spurs[j]["total"])
+			# Shorter yields; an exact tie goes to the higher index, so the
+			# answer is the same every boot.
+			var yielder := i if ti < tj else j
+			var other := j if yielder == i else i
+			for p: Vector3 in _spur_pair_crossings(i, j):
+				if not _yield_at.has(yielder): _yield_at[yielder] = []
+				(_yield_at[yielder] as Array).append({"pos": p, "other": other})
+
+
+## Every point where two spur polylines actually cross, as world Vector3s.
+func _spur_pair_crossings(i: int, j: int) -> Array:
+	var out: Array = []
+	var pi: PackedVector2Array = _spurs[i]["pts"]
+	var pj: PackedVector2Array = _spurs[j]["pts"]
+	for a in pi.size() - 1:
+		for b in pj.size() - 1:
+			var hit := _axis_cross(pi[a], pi[a + 1], pj[b], pj[b + 1])
+			if not hit.is_empty():
+				var c := hit["p"] as Vector2
+				out.append(Vector3(c.x, 0.0, c.y))
+	return out
+
+
+## Two AXIS-ALIGNED segments (the only kind _build_spur accepts) cross at one
+## point exactly when one runs along x and the other along z and each contains
+## the other's constant coordinate. Parallel pairs never cross for this purpose
+## — two roads lying on top of each other is an atlas bug, not a junction.
+func _axis_cross(a0: Vector2, a1: Vector2, b0: Vector2, b1: Vector2) -> Dictionary:
+	var a_horiz := absf(a1.y - a0.y) < SPUR_AXIS_TOL
+	var b_horiz := absf(b1.y - b0.y) < SPUR_AXIS_TOL
+	if a_horiz == b_horiz: return {}
+	var h0 := a0 if a_horiz else b0; var h1 := a1 if a_horiz else b1
+	var v0 := b0 if a_horiz else a0; var v1 := b1 if a_horiz else a1
+	var c := Vector2(v0.x, h0.y)
+	if c.x < minf(h0.x, h1.x) or c.x > maxf(h0.x, h1.x): return {}
+	if c.y < minf(v0.y, v1.y) or c.y > maxf(v0.y, v1.y): return {}
+	return {"p": c}
+
+
+## THE YIELD. INF unless this shell is on the shorter polyline, inside
+## XING_YIELD of a crossing that is AHEAD of it, and somebody on the longer one
+## is inside XING_WATCH of the same point and pointing at it. The ceiling is the
+## same _gap_speed curve the stop bar and car-following use, fed the bumper
+## distance to the crossing — so giving way looks like braking for a queue, not
+## like a switch being thrown. Spur shells only, and only the handful of
+## crossings this spur actually yields at: the common case is an empty Array.
+func _yield_limit(car: Dictionary, body: RigidBody3D, heading: Vector3) -> float:
+	var si := int(car["spur"])
+	if si < 0: return INF
+	var list: Variant = _yield_at.get(si)
+	if not (list is Array): return INF
+	var pos := body.global_position
+	for e: Variant in list as Array:
+		var x := e as Dictionary
+		var to := (x["pos"] as Vector3) - pos; to.y = 0.0
+		var ahead := to.dot(heading)
+		if ahead <= 0.0 or ahead > XING_YIELD: continue
+		if not _xing_busy(int(x["other"]), x["pos"] as Vector3, body): continue
+		return _gap_speed(car, maxf(ahead - float(car["half_len"]), 0.0))
+	return INF
+
+
+## Is anyone on spur `other` bearing down on this crossing?
+func _xing_busy(other: int, c: Vector3, me: RigidBody3D) -> bool:
+	for o in _cars:
+		if int(o.get("spur", -1)) != other or not bool(o["frozen"]): continue
+		var ob: Variant = o["body"]
+		if not is_instance_valid(ob) or ob == me: continue
+		var to := c - (ob as Node3D).global_position; to.y = 0.0
+		var d := to.length()
+		if d > XING_WATCH or d < 0.01: continue
+		if (to / d).dot(o["dir"] as Vector3) > XING_CLOSING: return true
+	return false
+
+
+## Crab an adopted body onto its lane at ADOPT_MERGE m/s of LATERAL correction
+## while it drives forward normally. Pulling out of a parking space, not a
+## teleport. Costs one snap-point call per adopted body per frame and nothing
+## at all for ambient traffic.
+func _lane_converge(car: Dictionary, pos: Vector3, dirv: Vector3, delta: float) -> Vector3:
+	var lp := _lane_snap_point(car, pos, dirv)
+	var off := lp - pos; off.y = 0.0
+	var m := off.length()
+	if m < 0.001: return pos
+	return pos + off * minf(1.0, ADOPT_MERGE * delta / m)

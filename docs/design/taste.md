@@ -229,3 +229,9 @@ is not built until something moves in it — traffic and people are the differen
 and a city, and they are data (the atlas's polylines, a zone file), not code, so the next
 district costs a JSON entry. Next: the debtor who runs (the chase the Hook was always for), give-
 way at spur crossings, Fair Drive's traffic, the perf ruling when the machine is ever quiet.
+
+**Round 15 — 2026-09-18 (D-070).** The debtor who runs. Principle: a verb is not finished until
+the world can refuse it — the Hook was a button until a car could leave. The chase is built from
+two systems that already existed (the traffic brain, the order) and one contract between them
+(`adopt` / `release`), which is the cheapest kind of new mechanic there is. Next: cops who join a
+chase, the runner's own choices (a dead end, a U-turn into you), a debug key for QA.

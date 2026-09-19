@@ -41,5 +41,6 @@ through `mission_kit`; the pay through `repo_board.add_money`; the star through
 `save_load` (rank, deliveries, the paper counters, the quota).
 
 ## Open
-No pursuit of a fleeing debtor; no order on the player's own truck yet (that is Boone Trucks'
-note); no phone screen to read the paper on — the tell is in the push.
+The debtor who runs landed in D-070 (a FLEE reaction: the traffic brain drives the car, the
+wrecker hooks it on the move, ×1.5 on delivery). Still open: no order on the player's own truck
+(that is Boone Trucks' note); the phone (D-069) reads the paper now.

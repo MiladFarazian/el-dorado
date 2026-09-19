@@ -900,6 +900,20 @@ func _refresh_threats(pv: Node3D) -> void:
 					and not (n as RigidBody3D).freeze and (n as Node).is_inside_tree():
 				_threats.append(n)
 
+## PUBLIC (D-070, repo_orders): send a follower somewhere else — a door, a
+## marker, back to the player — for `seconds`. The entry is mutated in place;
+## false if this body is not one of ours. The one sanctioned way to steer a
+## ped from outside: nobody reaches into `_find` for it.
+func send_to(body: Node, target: Node3D, seconds: float) -> bool:
+	var ped := _find(body)
+	if ped.is_empty() or not is_instance_valid(target):
+		return false
+	ped["state"] = FOLLOW
+	ped["follow"] = target
+	ped["follow_t"] = maxf(seconds, float(ped.get("follow_t", 0.0)))
+	return true
+
+
 func _find(body: Node) -> Dictionary:
 	for ped in _peds:
 		if ped["body"] == body: return ped
