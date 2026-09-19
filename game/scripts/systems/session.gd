@@ -172,11 +172,12 @@ func _build_menu() -> void:
 	left.add_child(_label("JOBS & PLACES", 14, GOLD))
 	for i in activities.size():
 		left.add_child(_button(activities[i].name, select_activity.bind(i)))
-	detail = _label("You're Book Reyes, repo man.\nStart with Hook and Ladder, chase a race time, or take the city at your own pace.\n\nChoose a place to set your destination.", 17, Color("bbc5cb"))
+	detail = _label("You're Book Reyes, repo man for Longhorn Wrecker & Recovery — a Bolo Capital Company.\nDrive, and the LONGHORN app finds you the work: a name, a truck, a curb. F hooks from the back. Some of them will talk to you. Some of the paper is bad.\nP is your phone. TAB is the rigs you own. Boone Trucks sells more, on a note.\n\nChoose a place to set your destination, or just drive.", 16, Color("bbc5cb"))
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(detail)
 	left.add_child(_button("CLEAR DESTINATION", clear_destination))
+	left.add_child(_button("NEW GAME  (wipes the save)", _new_game))
 	left.add_child(_button("QUIT TO DESKTOP", _quit))
 	var right := VBoxContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -219,6 +220,18 @@ func _button(value: String, action: Callable) -> Button:
 	button.add_theme_stylebox_override("focus", focus)
 	button.pressed.connect(action)
 	return button
+
+## D-072: a clean start. The save is deleted and blocked from rewriting itself
+## on the way out, then the whole scene rebuilds — a fresh main, fresh systems,
+## no money, no rank, the wrecker alone in the fleet.
+func _new_game() -> void:
+	var save: Node = main_ref.systems.get("save_load")
+	if save != null and save.has_method("wipe"):
+		save.call("wipe")
+	get_tree().paused = false
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	get_tree().reload_current_scene()
+
 
 func _quit() -> void:
 	var save: Node = main_ref.systems.get("save_load")

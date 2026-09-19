@@ -988,6 +988,13 @@ func _take_the_car() -> void:
 	state = State.FLEEING
 	active = true
 	_say(APP, _txt("app_flee", "TARGET IS MOBILE. Recover it."))
+	# D-072: half the runners call it in as they go — the chase is Book against
+	# the runner AND the law, and the app is not on his side either.
+	if _rng.randf() < _n("flee_calls_in_chance", 0.5):
+		var pol := _peer("police")
+		if pol != null and pol.has_method("add_heat"):
+			pol.call("add_heat", 1, "THE OWNER CALLED IT IN")
+		_say(APP, _txt("app_flee_reported", "Owner reports a theft in progress. Be advised: that is you."), 5.0)
 
 
 ## The brain refused the car. The order stays exactly where it was — a parked

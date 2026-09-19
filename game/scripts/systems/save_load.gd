@@ -97,6 +97,9 @@ func wipe() -> void:
 			dir.remove(SAVE_NAME)
 		if dir.file_exists(TMP_NAME):
 			dir.remove(TMP_NAME)
+	# D-072: NEW GAME wipes and then reloads the scene; this instance must not
+	# write the live (still-inflated) values back on its way out of the tree.
+	_smoke = true
 	var rb := _peer("repo_board")
 	if rb != null:
 		rb.set("money", 0)
