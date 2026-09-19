@@ -222,3 +222,10 @@ contract, not the model — brief the API exactly and the integration is written
 lands. The scorecard's "systemic loop" row (§8, row 1) moves for the first time since the card
 was drawn. Next: traffic on the new roads, people in the Cliff, the phone (the paper you can
 read), the debtor who runs.
+
+**Round 14 — 2026-09-18 (D-069).** The same rate model, aimed at the loop's open list: cars on
+the new roads, people where the districts are, the phone, Wade in person. Principle: a district
+is not built until something moves in it — traffic and people are the difference between a set
+and a city, and they are data (the atlas's polylines, a zone file), not code, so the next
+district costs a JSON entry. Next: the debtor who runs (the chase the Hook was always for), give-
+way at spur crossings, Fair Drive's traffic, the perf ruling when the machine is ever quiet.

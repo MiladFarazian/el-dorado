@@ -281,6 +281,57 @@ func _ride_of(prof: Dictionary) -> Array:
 ## Asphalt. Both slabs carry collision because both are DRIVING SURFACE: the
 ## prairie under them tops out at -0.02 and the freeway apron at +0.01, so a
 ## visual-only slab would let the wheels sink into it.
+## D-069: Wade himself, at the showroom door, in his own number. A static
+## figure (the same skinned body as everyone, posed once), who greets a
+## customer within WADE_RANGE once a minute. The pitchman IS the lot.
+const WADE_POS := Vector3(-138.0, 0.0, -92.0)
+const WADE_RANGE := 9.0
+const WADE_COOLDOWN := 60.0
+const SKIN := preload("res://scripts/world/skinned_character.gd")
+const FACTORY := preload("res://scripts/world/character_factory.gd")
+var _wade: Node3D = null
+var _wade_t := 0.0
+
+
+func _build_wade() -> void:
+	var cfg: Dictionary = FACTORY.book_config().duplicate()
+	cfg["skin"] = Color(0.78, 0.58, 0.46)
+	cfg["hair"] = Color(0.55, 0.45, 0.30); cfg["gray"] = 0.35
+	cfg["hat"] = FACTORY.Hat.NONE
+	cfg["outfit"] = FACTORY.Outfit.GAMEDAY; cfg["jersey"] = true; cfg["neck"] = FACTORY.Neck.CREW
+	cfg["shirt"] = Color(0.10, 0.15, 0.30); cfg["accent"] = Color(0.72, 0.74, 0.78)   # the Rustlers' navy and silver
+	cfg["pants"] = Color(0.32, 0.30, 0.28); cfg["tucked"] = false; cfg["belt"] = false; cfg["buckle"] = false
+	cfg["sleeve_long"] = false; cfg["yoke"] = false; cfg["pocket"] = false; cfg["snaps"] = false
+	cfg["build"] = 1.10; cfg["girth"] = 1.26; cfg["scale"] = 1.04
+	cfg["whiskers"] = FACTORY.Whiskers.CLEAN; cfg["asym"] = 0.3
+	_wade = Node3D.new()
+	_wade.name = "WadeBoone"
+	_wade.position = WADE_POS
+	_wade.rotation.y = PI   # faces the lot (+z)
+	add_child(_wade)
+	var rig := SKIN.build(_wade, cfg, 0.0)
+	if not rig.is_empty():   # hands on hips: the stance of a man who owns the paper
+		(rig["sh_0"] as Node3D).rotation = Vector3(0.25, 0.0, -0.62)
+		(rig["el_0"] as Node3D).rotation.x = 1.9
+		(rig["sh_1"] as Node3D).rotation = Vector3(0.25, 0.0, 0.62)
+		(rig["el_1"] as Node3D).rotation.x = 1.9
+		(rig["head"] as Node3D).rotation.x = -0.04
+	var body := StaticBody3D.new()
+	body.position = WADE_POS + Vector3(0, 0.95, 0)
+	var col := CollisionShape3D.new(); var shape := BoxShape3D.new(); shape.size = Vector3(0.7, 1.9, 0.5)
+	col.shape = shape; body.add_child(col); add_child(body)
+
+
+func _wade_tick(delta: float) -> void:
+	_wade_t = maxf(_wade_t - delta, 0.0)
+	if _wade == null or _wade_t > 0.0 or main_ref == null:
+		return
+	var a: Variant = main_ref.call("player_actor") if main_ref.has_method("player_actor") else null
+	if a is Node3D and is_instance_valid(a) and (a as Node3D).global_position.distance_to(WADE_POS) < WADE_RANGE:
+		_wade_t = WADE_COOLDOWN
+		_say(_s("", "wade_speaker", "WADE BOONE"), _pick(_list("", "wade_greet_lines")), 5.0)
+
+
 func _build_lot() -> void:
 	_solid(Vector3(LOT_SIZE.x, 1.0, LOT_SIZE.y),
 		Vector3(LOT_CENTER.x, LOT_TOP - 0.5, LOT_CENTER.z), _flat(ASPHALT, 0.96))
@@ -447,6 +498,7 @@ func _build_display_vehicles() -> void:
 		row["body"] = body
 		_stock[i] = row
 	_refresh_display()
+	_build_wade()
 
 
 func _make_display(row: Dictionary) -> RigidBody3D:
@@ -644,6 +696,7 @@ func _prompt_for(row: Dictionary) -> String:
 
 # ============================== THE LOOP =====================================
 func _physics_process(delta: float) -> void:
+	_wade_tick(delta)
 	if _disabled or main_ref == null:
 		return
 	_tick_notes(delta)

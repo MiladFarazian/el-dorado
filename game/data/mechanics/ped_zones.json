@@ -1,0 +1,89 @@
+{
+  "_doc": "PED ZONES — sidewalk crowds outside downtown. Read by systems/pedestrians.gd (ZONES_PATH) at setup, never in smoke mode. A zone is a POLYLINE of world (x,z) points that IS its peds' sidewalk: they stroll along it the way downtown peds walk a block's rounded-square loop, and everything else (flee, brawl, knockdown, gunfire panic, despawn) is the shared code. Keys: name (probe handle for pedestrians.zone_count), pts [[x,z],...], loop (wrap the last point back to the first), width (m either side of the line a ped may stand on — it is also the panic clamp, so keep it inside the real pavement), cap (max live peds from this zone), y (walking surface height in m; ped feet sit here), min_dist (m: never pop in closer than this to the player — default 50, lowered only for short zones you can otherwise never see populated), outfits (weight table over character_factory's Outfit enum), hat (optional forced hat, applied only when the rolled archetype is WORKER). The shared spawn ring/interval/tries pick zones alongside the downtown cells; when the player is far from every zone, zones simply never qualify. NOTHING may be placed in the smoke corridor x[174,212] z[424,576].",
+  "zones": [
+    {
+      "name": "cliff_boulevard",
+      "_note": "CEDAR CLIFF — both sidewalks of Juárez Boulevard as one circuit: north side west-to-east, cross at the east end, south side back, cross again. The storefront run is the busiest ground outside downtown. West end stops at x −440: Gilead Bottoms' lot fences run to z 790/810 and its sign posts stand at z 792. East end stops at x 44: the Cliff Lofts lot is fenced from x 58.",
+      "pts": [[-440.0, 791.7], [44.0, 791.7], [44.0, 808.3], [-440.0, 808.3]],
+      "loop": true,
+      "width": 1.2,
+      "cap": 10,
+      "y": 0.05,
+      "outfits": {"CASUAL": 3, "WESTERN": 2, "STREET": 2, "SERVICE": 2}
+    },
+    {
+      "name": "cliff_side_west",
+      "_note": "The side street at x −300: craftsman porches on one side, the boulevard crossing at z 800.",
+      "pts": [[-294.0, 714.0], [-294.0, 876.0]],
+      "loop": false,
+      "width": 1.0,
+      "cap": 1,
+      "y": 0.05,
+      "outfits": {"CASUAL": 3, "WESTERN": 2, "WORKER": 1, "STREET": 1}
+    },
+    {
+      "name": "cliff_side_east",
+      "_note": "The side street at x −80, past Mercado Reyes' corner.",
+      "pts": [[-86.5, 714.0], [-86.5, 876.0]],
+      "loop": false,
+      "width": 1.0,
+      "cap": 1,
+      "y": 0.05,
+      "outfits": {"CASUAL": 3, "WESTERN": 1, "SERVICE": 1, "GAMEDAY": 1}
+    },
+    {
+      "name": "cliff_park",
+      "_note": "The park at (−190, 870): a loop around the gazebo, inside the oaks and outside the benches.",
+      "pts": [[-202.0, 858.0], [-178.0, 858.0], [-178.0, 882.0], [-202.0, 882.0]],
+      "loop": true,
+      "width": 1.2,
+      "cap": 2,
+      "y": 0.08,
+      "outfits": {"CASUAL": 4, "GAMEDAY": 1, "SERVICE": 1, "SCRUBS": 1}
+    },
+    {
+      "name": "harvest_trailer",
+      "_note": "HARVEST HILLS — the apron in front of the sales trailer's door at (−836, −470).",
+      "pts": [[-844.0, -464.0], [-828.0, -464.0]],
+      "loop": false,
+      "width": 1.2,
+      "cap": 1,
+      "y": 0.03,
+      "outfits": {"WORKER": 3, "OFFICE": 1},
+      "hat": "HARD_HAT"
+    },
+    {
+      "name": "harvest_lanes",
+      "_note": "The framing crew on the mud lanes: west along z −500, south down the x −800 lane, east along z −618.",
+      "pts": [[-944.0, -502.0], [-800.0, -502.0], [-800.0, -618.0], [-690.0, -618.0]],
+      "loop": false,
+      "width": 1.5,
+      "cap": 3,
+      "y": 0.03,
+      "outfits": {"WORKER": 1},
+      "hat": "HARD_HAT"
+    },
+    {
+      "name": "boone_lot",
+      "_note": "BOONE TRUCKS — the sales staff outside the showroom door, stopping short of Wade himself at (−138, −92).",
+      "pts": [[-153.0, -93.0], [-141.0, -93.0]],
+      "loop": false,
+      "width": 1.2,
+      "cap": 2,
+      "y": 0.03,
+      "min_dist": 40.0,
+      "outfits": {"OFFICE": 1}
+    },
+    {
+      "name": "fair_gate",
+      "_note": "LONE STAR FAIRGROUNDS — a groundskeeper inside the Deco gate, off-season.",
+      "pts": [[851.0, 297.0], [851.0, 313.0], [872.0, 313.0]],
+      "loop": false,
+      "width": 1.2,
+      "cap": 2,
+      "y": 0.05,
+      "min_dist": 40.0,
+      "outfits": {"WORKER": 1}
+    }
+  ]
+}

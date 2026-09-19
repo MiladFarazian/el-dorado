@@ -24,6 +24,7 @@ var _panel: ColorRect = null
 var _head: Label = null
 var _line: Label = null
 var _queue: Array[Dictionary] = []
+var log: Array = []   # D-069: {speaker, line, t}, newest last, twelve deep — read by the phone
 var _line_left := 0.0
 var _line_total := 0.0
 var _card: ColorRect = null
@@ -45,6 +46,10 @@ func setup(main: Node) -> void:
 ## PUBLIC (missions): a line from `speaker`, held `seconds`, queued behind any earlier line.
 func say(speaker: String, line: String, seconds := 4.5) -> void:
 	_queue.append({"who": speaker, "line": line, "s": maxf(seconds, 1.0)})
+	# D-069: the phone shows the last twelve things anyone said.
+	log.append({"speaker": speaker, "line": line, "t": Time.get_ticks_msec() * 0.001})
+	while log.size() > 12:
+		log.pop_front()
 
 
 ## PUBLIC (missions): the end card. `rows` is [[label, value], ...]; `medal` GOLD/SILVER/BRONZE or "".

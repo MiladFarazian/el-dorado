@@ -25,6 +25,7 @@ var _shots: Array = [
 	["tall_tom", Vector3(820.0, 3.0, 303.0), Vector3(868.0, 9.0, 258.0), 15.0],   # through the gate opening; the first try stood 1.5 m off a pylon
 	# D-068: the loop's places.
 	["boone_lot", Vector3(-146.0, 3.0, -18.0), Vector3(-110.0, 7.0, -72.0), 16.5],
+	["boone_wade", Vector3(-126.0, 1.9, -80.0), Vector3(-140.0, 1.4, -93.0), 16.5],   # D-069: the pitchman at his door
 	["cliff_boulevard", Vector3(-62.0, 6.5, 800.0), Vector3(-260.0, 5.0, 800.0), 17.0],
 	["gilead_bottoms", Vector3(-492.0, 4.2, 838.0), Vector3(-430.0, 2.0, 762.0), 17.5],
 	["skyline_from_freeway", Vector3(-60, 15, 2), Vector3(500, 46, 210), 16.5],

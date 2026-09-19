@@ -8,6 +8,12 @@ extends Node
 ## lying still, and despawn with distance. Threats target THE ACTOR (character
 ## on foot, vehicle otherwise) and gunfire (combat's shot_fired) scatters every
 ## ped within earshot. ENTIRELY INERT in smoke mode.
+##
+## ZONES (loop 14) put people in the districts too: data-driven polylines —
+## Juárez Boulevard's two sidewalks, the Cliff's side streets and park, Harvest
+## Hills' lumber lanes, Boone's showroom door, the fairgrounds gate — where the
+## ped's "sidewalk" IS the polyline. Same ring, same interval, same states, same
+## despawn; only the path and the costume bias differ. See ped_zones.json.
 
 # ============================== TUNABLES =====================================
 const RNG_SEED := 90210; const PED_COUNT := 16   # seed; crowd size maintained
@@ -83,6 +89,35 @@ const SKINNED := preload("res://scripts/world/skinned_character.gd")
 static func _body_script() -> GDScript:
 	return FACTORY if OS.get_cmdline_user_args().has("--factory") else SKINNED   # D-050: skinned is the default; --factory is the M22 body
 
+
+# --- ZONES (loop 14): people where the new districts are. A zone is a POLYLINE
+# of sidewalk points that IS its peds' loop — they stroll it exactly the way a
+# downtown ped walks a block's rounded square, and every other behaviour (flee,
+# brawl, knockdown, gunfire panic, despawn) is the shared code below. The ring,
+# the interval and the try budget are the SHARED ones, so a zone the player is
+# nowhere near simply never qualifies. Data: ped_zones.json.
+# EVERY zone draw comes off _zone_rng — the downtown spawner's stream, and the
+# smoke line with it, must not move by a single call.
+const ZONES_PATH := "res://data/mechanics/ped_zones.json"
+const ZONE_SEED := 0x2ED20E
+const ZONE_TRIES := 10          # zone spawn attempts per frame (mirrors SPAWN_TRIES)
+const ZONE_OUTFIT_TRIES := 24   # costume rolls spent hunting a zone's archetype
+const ZONE_NEAR_PAD := 20.0     # slack on the near-list radius test (m)
+const ZONE_MIN_DIST := SPAWN_MIN_DIST   # per-zone `min_dist` default
+# Outfit / hat names as the data file spells them. Compile-time constants, so a
+# typo in the factory's enum is a parse error rather than a silent CASUAL.
+const OUTFIT_BY_NAME := {
+	"CASUAL": FACTORY.Outfit.CASUAL, "WESTERN": FACTORY.Outfit.WESTERN,
+	"WORKER": FACTORY.Outfit.WORKER, "OFFICE": FACTORY.Outfit.OFFICE,
+	"SERVICE": FACTORY.Outfit.SERVICE, "STREET": FACTORY.Outfit.STREET,
+	"SCRUBS": FACTORY.Outfit.SCRUBS, "GAMEDAY": FACTORY.Outfit.GAMEDAY}
+const HAT_BY_NAME := {
+	"NONE": FACTORY.Hat.NONE, "CAP": FACTORY.Hat.CAP, "COWBOY": FACTORY.Hat.COWBOY,
+	"FLAT_BRIM": FACTORY.Hat.FLAT_BRIM, "HARD_HAT": FACTORY.Hat.HARD_HAT,
+	"BEANIE": FACTORY.Hat.BEANIE}
+const HARD_HAT_COLORS: Array[Color] = [  # the factory's own three, so a forced lid matches a rolled one
+	Color(0.92, 0.78, 0.10), Color(0.90, 0.90, 0.88), Color(0.90, 0.42, 0.08)]
+
 # ============================== STATE ========================================
 var main_ref: Node = null
 var _rng := RandomNumberGenerator.new()
@@ -96,12 +131,18 @@ var _copfire_bound := false  # police_gunfire.shot_fired connected likewise
 var _footcop_bound := false  # foot_cops.shot_fired connected likewise (M14)
 var _pp_pos := Vector3.ZERO; var _pp_head := Vector3.ZERO  # _path_point outputs
 var _clear_cells: Array[Vector2i] = []  # tower-free blocks: lots + the Trust plaza
+var _zones: Array[Dictionary] = []   # district sidewalks from ped_zones.json
+var _zone_rng := RandomNumberGenerator.new()  # zone draws: OFF the downtown stream
+var _zone_near: Array[int] = []      # zone indices inside the ring, refreshed at 0.3 s
+var _zone_live: Array[int] = []      # live peds per zone, tallied at spawn time
+var _zn_pos := Vector2.ZERO; var _zn_off := 0.0  # _zone_nearest outputs
 
 func setup(main: Node) -> void:
 	main_ref = main; _rng.seed = RNG_SEED; _brave_rng.seed = BRAVE_SEED
+	_zone_rng.seed = ZONE_SEED
 	if bool(main.get("smoke_mode")):
 		set_physics_process(false); set_process(false); return  # smoke gate: inert
-	_build_clear_cells()
+	_build_clear_cells(); _load_zones()
 
 ## Tower quadrants reach up to 30 m from block centre — through the 28 m
 ## sidewalk ring — so peds only walk tower-free blocks: parking lots (city
@@ -117,16 +158,84 @@ func _build_clear_cells() -> void:
 	var gc: Variant = (city as Node).get("GIANT_CELL") if city is Node and is_instance_valid(city) else null
 	_clear_cells.append(gc if gc is Vector2i else Vector2i(3, 2))
 
+## ZONE DATA. Read once, at setup, and never in smoke mode (this system's
+## processing is already off by then). A malformed zone is dropped, not fatal:
+## the districts go quiet, downtown is untouched.
+func _load_zones() -> void:
+	_zones.clear(); _zone_live.clear(); _zone_near.clear()
+	var f := FileAccess.open(ZONES_PATH, FileAccess.READ)
+	if f == null: return
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	if not (parsed is Dictionary): return
+	var list: Variant = (parsed as Dictionary).get("zones")
+	if not (list is Array): return
+	for v: Variant in (list as Array):
+		if v is Dictionary:
+			var z := _zone_from(v as Dictionary)
+			if not z.is_empty(): _zones.append(z)
+	_zone_live.resize(_zones.size())
+
+## One zone from data. The polyline is precomputed into segment starts, unit
+## directions and lengths — walking it is then one subtraction per segment —
+## plus a bounding circle for the near test. {} when the shape is unusable.
+func _zone_from(d: Dictionary) -> Dictionary:
+	var raw: Variant = d.get("pts")
+	if not (raw is Array): return {}
+	var pts := PackedVector2Array()
+	for v: Variant in (raw as Array):
+		if v is Array and (v as Array).size() >= 2:
+			pts.append(Vector2(float((v as Array)[0]), float((v as Array)[1])))
+	if pts.size() < 2: return {}
+	var loop := bool(d.get("loop", false))
+	var dirs := PackedVector2Array(); var lens := PackedFloat32Array(); var total := 0.0
+	for i in (pts.size() if loop else pts.size() - 1):
+		var seg := pts[(i + 1) % pts.size()] - pts[i]
+		var seg_len := seg.length()
+		if seg_len < 0.01: return {}   # a doubled point would divide by zero
+		dirs.append(seg / seg_len); lens.append(seg_len); total += seg_len
+	var mid := Vector2.ZERO
+	for p: Vector2 in pts: mid += p
+	mid /= float(pts.size())
+	var rad := 0.0
+	for p: Vector2 in pts: rad = maxf(rad, mid.distance_to(p))
+	var z := {"name": String(d.get("name", "zone")), "pts": pts, "dirs": dirs,
+		"lens": lens, "len": total, "loop": loop,
+		"width": maxf(float(d.get("width", 1.2)), 0.3),
+		"cap": maxi(int(d.get("cap", 2)), 0), "y": float(d.get("y", 0.05)),
+		"min_dist": float(d.get("min_dist", ZONE_MIN_DIST)),
+		"hat": int(HAT_BY_NAME.get(String(d.get("hat", "")), -1)),
+		"center": mid, "radius": rad}
+	_zone_mix(z, d)
+	return z
+
+## The outfit mix: parallel code/weight arrays plus their sum, so picking one
+## is a single randf against a running total. JSON key order is insertion
+## order, so the same file always weights the same way.
+func _zone_mix(z: Dictionary, d: Dictionary) -> void:
+	var codes := PackedInt32Array(); var wts := PackedFloat32Array(); var wsum := 0.0
+	var mix: Variant = d.get("outfits")
+	if mix is Dictionary:
+		for k: Variant in (mix as Dictionary):
+			var code := int(OUTFIT_BY_NAME.get(String(k), -1))
+			var w := float((mix as Dictionary)[k])
+			if code >= 0 and w > 0.0:
+				codes.append(code); wts.append(w); wsum += w
+	z["ocodes"] = codes; z["owts"] = wts; z["owsum"] = wsum
+
 func _physics_process(delta: float) -> void:
 	if main_ref == null: return
 	var pv := _player()
 	_threat_cd -= delta
 	if _threat_cd <= 0.0:
 		_threat_cd = THREAT_REFRESH; _refresh_threats(pv); _bind_combat()
+		_refresh_zone_near(pv)
 	_validate(pv, delta)
 	_spawn_cd = maxf(_spawn_cd - delta, 0.0)
+	# Downtown first and UNCHANGED (its draw order is the smoke line); the
+	# districts get the frame only when no block qualified, which is exactly
+	# what happens the moment the player leaves the grid.
 	if pv != null and _spawn_cd <= 0.0 and _peds.size() < PED_COUNT \
-			and _try_spawn(pv.global_position):
+			and (_try_spawn(pv.global_position) or _try_zone_spawn(pv.global_position)):
 		_spawn_cd = SPAWN_INTERVAL
 	for ped in _peds:
 		_update_ped(ped, delta)
@@ -190,6 +299,119 @@ func _make_ped(c: Vector2, s: float) -> void:
 		"flee_t": 0.0, "flee_dir": Vector3.FORWARD, "zig_t": 0.0,
 		"brave": _brave_rng.randf() < BRAVE_CHANCE, "punch_t": 0.0, "brawl_t": 0.0,
 		"stun_t": 0.0, "bpos": Vector3.ZERO, "moving": false, "spawned": false})
+
+# ============================== ZONE POPULATION ==============================
+## Which zones could possibly qualify right now. Rebuilt on the threat cadence
+## rather than per frame: when the player is downtown (or on the freeway, or
+## anywhere else), the list is empty and a zone spawn attempt costs nothing.
+func _refresh_zone_near(pv: Node3D) -> void:
+	_zone_near.clear()
+	if pv == null: return
+	var p := Vector2(pv.global_position.x, pv.global_position.z)
+	for i in _zones.size():
+		var z := _zones[i]
+		var reach := float(z["radius"]) + SPAWN_RING.y + ZONE_NEAR_PAD
+		if p.distance_to(z["center"] as Vector2) <= reach:
+			_zone_near.append(i)
+
+## Seeded zone spawn, same shape as _try_spawn: a near zone with room under its
+## cap, a random arc coord on its polyline, inside the ring, never closer than
+## the zone's min_dist, NEVER in the protected corridor. Own RNG throughout.
+func _try_zone_spawn(ppos: Vector3) -> bool:
+	if _zone_near.is_empty(): return false
+	_tally_zones()
+	for _a in ZONE_TRIES:
+		var zi := _zone_near[_zone_rng.randi_range(0, _zone_near.size() - 1)]
+		var z := _zones[zi]
+		if _zone_live[zi] >= int(z["cap"]): continue
+		var s := _zone_rng.randf_range(0.0, float(z["len"]))
+		_zone_point(z, s)
+		if CORRIDOR.has_point(Vector2(_pp_pos.x, _pp_pos.z)): continue
+		var d := Vector2(_pp_pos.x - ppos.x, _pp_pos.z - ppos.z).length()
+		if d < float(z["min_dist"]) or d > SPAWN_RING.y: continue
+		_make_zone_ped(zi, s); return true
+	return false
+
+func _tally_zones() -> void:
+	_zone_live.fill(0)
+	for ped in _peds:
+		var zi := int(ped.get("zone", -1))
+		if zi >= 0 and zi < _zone_live.size(): _zone_live[zi] += 1
+
+## PUBLIC (probe): live peds belonging to the named zone. `zone_name` rather
+## than `name`: a parameter called `name` shadows Node.name.
+func zone_count(zone_name: String) -> int:
+	var n := 0
+	for ped in _peds:
+		var zi := int(ped.get("zone", -1))
+		if zi < 0 or zi >= _zones.size(): continue
+		if not is_instance_valid(ped["body"]): continue
+		if String(_zones[zi]["name"]) == zone_name: n += 1
+	return n
+
+## PUBLIC (probe): the zone's polyline length in metres, 0.0 when unknown.
+func zone_length(zone_name: String) -> float:
+	for z in _zones:
+		if String(z["name"]) == zone_name: return float(z["len"])
+	return 0.0
+
+## A zone walker. Deliberately NOT _make_ped: that function's draw order is the
+## downtown stream and nothing here may touch it. Everything below rolls off
+## _zone_rng, and the ped carries its zone index for the path code.
+func _make_zone_ped(zi: int, s: float) -> void:
+	var z := _zones[zi]
+	var body := RigidBody3D.new()
+	_spawned += 1; body.name = "Ped%d" % _spawned
+	body.mass = PED_MASS
+	body.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC; body.freeze = true
+	body.contact_monitor = true; body.max_contacts_reported = 8
+	body.add_to_group("pedestrian")  # NOT "towable" — we do not tow people
+	var col := CollisionShape3D.new(); var shape := BoxShape3D.new()
+	shape.size = COLLIDER_SIZE; col.shape = shape; body.add_child(col)
+	var rig: Dictionary = _body_script().build(body, _zone_config(z), -PED_HALF)
+	add_child(body)
+	var wdir := -1.0 if _zone_rng.randf() < 0.5 else 1.0
+	_zone_point(z, s); _place(body, _pp_head * wdir, _pp_pos)
+	body.body_entered.connect(_on_contact.bind(body))
+	_peds.append({
+		"body": body, "center": Vector2(_pp_pos.x, _pp_pos.z), "s": s,
+		"wdir": wdir, "rig": rig, "zone": zi,
+		"speed": _zone_rng.randf_range(WALK_SPEED.x, WALK_SPEED.y),
+		"state": WALK, "age": 0.0, "charged": false, "still_t": 0.0,
+		"flee_t": 0.0, "flee_dir": Vector3.FORWARD, "zig_t": 0.0,
+		"brave": _zone_rng.randf() < BRAVE_CHANCE, "punch_t": 0.0, "brawl_t": 0.0,
+		"stun_t": 0.0, "bpos": Vector3.ZERO, "moving": false, "spawned": false})
+
+## The zone's outfit mix, biased the only way the factory allows. FACTORY
+## .random_config() takes an rng and NOTHING else — there is no outfit override
+## and character_factory.gd is not ours to edit this round — so we draw the
+## archetype from the zone's weight table and then roll costumes until one comes
+## up in it. Budgeted: on exhaustion the sidewalk simply gets a visitor.
+func _zone_config(z: Dictionary) -> Dictionary:
+	var cfg: Dictionary = FACTORY.random_config(_zone_rng)
+	var want := _zone_outfit(z)
+	if want >= 0:
+		for _t in ZONE_OUTFIT_TRIES:
+			if int(cfg.get("outfit", -1)) == want: break
+			cfg = FACTORY.random_config(_zone_rng)
+	# A forced lid only lands on the archetype that wears one — a hard hat on a
+	# man in a polo is a costume error, not a construction site.
+	var hat := int(z.get("hat", -1))
+	if hat >= 0 and int(cfg.get("outfit", -1)) == FACTORY.Outfit.WORKER:
+		cfg["hat"] = hat
+		if hat == FACTORY.Hat.HARD_HAT:
+			cfg["hat_color"] = HARD_HAT_COLORS[_zone_rng.randi_range(0, HARD_HAT_COLORS.size() - 1)]
+	return cfg
+
+func _zone_outfit(z: Dictionary) -> int:
+	var codes: PackedInt32Array = z["ocodes"]
+	if codes.is_empty(): return -1
+	var wts: PackedFloat32Array = z["owts"]
+	var roll := _zone_rng.randf() * float(z["owsum"])
+	for i in codes.size():
+		roll -= wts[i]
+		if roll <= 0.0: return codes[i]
+	return codes[codes.size() - 1]
 
 # ============================== BEHAVIOUR ====================================
 func _update_ped(ped: Dictionary, delta: float) -> void:
@@ -399,8 +621,20 @@ func _flee_away(ped: Dictionary, away: Vector3) -> void:
 
 func _update_walk(ped: Dictionary, body: RigidBody3D, delta: float) -> void:
 	var wdir := float(ped["wdir"])
-	ped["s"] = wrapf(float(ped["s"]) + wdir * float(ped["speed"]) * delta, 0.0, PATH_PERIM)
-	_path_point(ped["center"] as Vector2, float(ped["s"]))
+	var zi := _zone_of(ped)
+	var step := wdir * float(ped["speed"]) * delta
+	if zi < 0:
+		ped["s"] = wrapf(float(ped["s"]) + step, 0.0, PATH_PERIM)
+	else:
+		var total := float(_zones[zi]["len"])
+		var s := float(ped["s"]) + step
+		if bool(_zones[zi]["loop"]):
+			s = wrapf(s, 0.0, total)
+		elif s < 0.0 or s > total:   # an open sidewalk ends: he turns and walks back
+			wdir = -wdir; ped["wdir"] = wdir
+			s = clampf(s, 0.0, total)
+		ped["s"] = s
+	_point_at(ped, float(ped["s"]))
 	_place(body, _pp_head * wdir, _pp_pos)  # face along travel
 
 ## PUBLIC (vehicle_audio): the player leaned on the horn. Walkers ahead of the
@@ -418,9 +652,10 @@ func honk_at(src: Node3D, radius: float) -> void:
 	for ped in _peds:
 		if int(ped["state"]) != WALK:
 			continue
-		var body: RigidBody3D = ped["body"]
-		if not is_instance_valid(body):
+		var bv: Variant = ped["body"]   # D-068: validity before the cast, always
+		if not is_instance_valid(bv):
 			continue
+		var body := bv as RigidBody3D
 		var sep := body.global_position - src.global_position
 		sep.y = 0.0
 		var d := sep.length()
@@ -455,16 +690,24 @@ func _update_flee(ped: Dictionary, body: RigidBody3D, delta: float) -> void:
 	ped["flee_t"] = float(ped["flee_t"]) - delta
 	if float(ped["flee_t"]) <= 0.0:  # panic over: rejoin the loop where nearest
 		ped["state"] = WALK
-		ped["s"] = _nearest_s(ped["center"] as Vector2, body.global_position)
+		ped["s"] = _nearest_at(ped, body.global_position)
+		ped["fdir"] = 0.0
 		return
 	ped["zig_t"] = float(ped["zig_t"]) + delta * ZIG_RATE
 	var heading := (ped["flee_dir"] as Vector3).rotated(
 		Vector3.UP, sin(float(ped["zig_t"])) * ZIG_AMP)  # panicked zigzag
-	var pos := body.global_position + heading * FLEE_SPEED * delta
-	var c := ped["center"] as Vector2
-	pos.x = clampf(pos.x, c.x - BLOCK_CLAMP, c.x + BLOCK_CLAMP)  # stay on slab
-	pos.z = clampf(pos.z, c.y - BLOCK_CLAMP, c.y + BLOCK_CLAMP)
-	pos.y = SLAB_TOP + PED_HALF
+	var zi := _zone_of(ped)
+	var pos: Vector3
+	if zi >= 0:
+		pos = _zone_flee(_zones[zi], ped, body.global_position, heading, FLEE_SPEED * delta)
+		var moved := pos - body.global_position
+		if moved.length_squared() > 0.0004: heading = moved  # face where he actually went
+	else:
+		pos = body.global_position + heading * FLEE_SPEED * delta
+		var c := ped["center"] as Vector2
+		pos.x = clampf(pos.x, c.x - BLOCK_CLAMP, c.x + BLOCK_CLAMP)  # stay on slab
+		pos.z = clampf(pos.z, c.y - BLOCK_CLAMP, c.y + BLOCK_CLAMP)
+		pos.y = SLAB_TOP + PED_HALF
 	_place(body, heading, pos)
 
 ## Handoff to loose physics: comedic, bloodless, mannequin tumble. The player
@@ -520,8 +763,8 @@ func _update_down(ped: Dictionary, body: RigidBody3D, delta: float) -> void:
 	body.freeze = true
 	body.linear_velocity = Vector3.ZERO; body.angular_velocity = Vector3.ZERO
 	ped["state"] = WALK
-	ped["s"] = _nearest_s(ped["center"] as Vector2, body.global_position)
-	_path_point(ped["center"] as Vector2, float(ped["s"]))
+	ped["s"] = _nearest_at(ped, body.global_position)
+	_point_at(ped, float(ped["s"]))
 	_place(body, _pp_head * float(ped["wdir"]), _pp_pos)
 
 # ============================== PATH GEOMETRY ================================
@@ -555,6 +798,90 @@ func _nearest_s(c: Vector2, pos: Vector3) -> float:
 		var d := Vector2(pos.x - _pp_pos.x, pos.z - _pp_pos.z).length_squared()
 		if d < bd: bd = d; best = s
 	return best
+
+## ---- A ZONE'S SIDEWALK IS ITS POLYLINE ----
+## Same job as _path_point/_nearest_s, same out-params, for a district zone:
+## the ped's loop is the line through its points instead of a block's rounded
+## square. Segment counts are single digits, so both are a handful of dots.
+func _zone_of(ped: Dictionary) -> int:
+	var zi := int(ped.get("zone", -1))
+	return zi if zi >= 0 and zi < _zones.size() else -1
+
+## Point + heading at arc coord `s` along a zone's polyline.
+func _zone_point(z: Dictionary, s: float) -> void:
+	var pts: PackedVector2Array = z["pts"]
+	var dirs: PackedVector2Array = z["dirs"]
+	var lens: PackedFloat32Array = z["lens"]
+	var total := float(z["len"])
+	var t := wrapf(s, 0.0, total) if bool(z["loop"]) else clampf(s, 0.0, total)
+	var i := 0
+	while i < lens.size() - 1 and t > lens[i]:
+		t -= lens[i]; i += 1
+	var p := pts[i] + dirs[i] * clampf(t, 0.0, lens[i])
+	_pp_pos = Vector3(p.x, float(z["y"]) + PED_HALF, p.y)
+	_pp_head = Vector3(dirs[i].x, 0.0, dirs[i].y)
+
+## Nearest arc coord to a world point. Also leaves the projected point in
+## _zn_pos and its perpendicular distance in _zn_off — the panic clamp wants
+## both, and a second pass would be a second loop.
+func _zone_nearest(z: Dictionary, pos: Vector3) -> float:
+	var pts: PackedVector2Array = z["pts"]
+	var dirs: PackedVector2Array = z["dirs"]
+	var lens: PackedFloat32Array = z["lens"]
+	var q := Vector2(pos.x, pos.z)
+	var best := 0.0; var bd := INF; var base := 0.0
+	_zn_pos = q
+	for i in lens.size():
+		var t := clampf((q - pts[i]).dot(dirs[i]), 0.0, lens[i])
+		var foot := pts[i] + dirs[i] * t
+		var d := foot.distance_squared_to(q)
+		if d < bd:
+			bd = d; best = base + t; _zn_pos = foot
+		base += lens[i]
+	_zn_off = sqrt(bd)
+	return best
+
+## Keep a fleeing zone ped on his own pavement: outside the band, he is pulled
+## back to its edge. The downtown equivalent is the BLOCK_CLAMP square.
+func _zone_clamp(z: Dictionary, pos: Vector3) -> Vector3:
+	_zone_nearest(z, pos)
+	var band := float(z["width"])
+	var out := pos
+	if _zn_off > band:
+		var off := Vector2(pos.x, pos.z) - _zn_pos
+		var edge := _zn_pos + off * (band / maxf(_zn_off, 0.001))
+		out.x = edge.x; out.z = edge.y
+	out.y = float(z["y"]) + PED_HALF
+	return out
+
+## A district ped panics ALONG his pavement. A sidewalk is two metres wide, so
+## the half of the bolt that would cross it becomes speed up the block instead:
+## a crowd scattering up the street, not four people running into a storefront
+## (and never the moonwalk a hard clamp gives a man shoved at a wall). The side
+## he takes is the side the panic pointed, decided ONCE and kept for the run, so
+## the zigzag cannot flip him mid-stride.
+func _zone_flee(z: Dictionary, ped: Dictionary, from: Vector3, heading: Vector3,
+		dist: float) -> Vector3:
+	_zone_point(z, _zone_nearest(z, from))
+	var tan := _pp_head
+	var way := float(ped.get("fdir", 0.0))
+	if absf(way) < 0.5:
+		way = signf(tan.dot(heading))
+		if absf(way) < 0.5: way = float(ped["wdir"])   # shoved dead square: he keeps his face
+		ped["fdir"] = way
+	var step := tan * way + (heading - tan * tan.dot(heading)) * 0.30
+	return _zone_clamp(z, from + step.normalized() * dist)
+
+## Dispatchers: the downtown block loop, or the ped's zone polyline.
+func _point_at(ped: Dictionary, s: float) -> void:
+	var zi := _zone_of(ped)
+	if zi < 0: _path_point(ped["center"] as Vector2, s)
+	else: _zone_point(_zones[zi], s)
+
+func _nearest_at(ped: Dictionary, pos: Vector3) -> float:
+	var zi := _zone_of(ped)
+	if zi < 0: return _nearest_s(ped["center"] as Vector2, pos)
+	return _zone_nearest(_zones[zi], pos)
 
 # ============================== PLUMBING =====================================
 ## Threat-set membership scan, throttled to 0.3 s: the ACTOR (character on foot
@@ -620,8 +947,9 @@ func _bind_combat() -> void:
 ## muzzle for a long 4 s — the FLEE state reused with an override direction.
 func _on_shot_fired(pos: Vector3) -> void:
 	for ped in _peds:
-		var body := ped["body"] as RigidBody3D
-		if not is_instance_valid(body) or not body.is_inside_tree(): continue
+		var bv: Variant = ped["body"]   # D-068: validity before the cast, always
+		if not is_instance_valid(bv) or not (bv as Node).is_inside_tree(): continue
+		var body := bv as RigidBody3D
 		if int(ped["state"]) == DOWN: continue  # already floored: stay down
 		var away := body.global_position - pos; away.y = 0.0
 		if Vector2(away.x, away.z).length() > GUN_PANIC_RADIUS: continue

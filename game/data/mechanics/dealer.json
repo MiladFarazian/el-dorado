@@ -1,27 +1,31 @@
 {
   "_doc": "BOONE TRUCKS (naming bible §7) — Wade 'The Bullet' Boone's lot on the I-3 north frontage. Every tunable the dealer has: prices, the note's terms, the sign copy, the prompt strings, Wade's lines and BOONE FINANCIAL's draft notices. The satire is the NOTE, never the customer: 96 months at $0 down, a multiplier in the fine print, and LONGHORN WRECKER & RECOVERY on the other end of it. Wade is tragicomic, never a victim. Geometry lives in dealer.gd; words and money live here.",
-
   "note_months": 96,
   "note_apr_total": 1.31,
   "_note_apr_total": "The note costs 31% more over its life than the cash price. monthly = ceil(price * note_apr_total / note_months); interest = monthly*note_months - price. Brisket $28,700 -> $392/mo -> $37,632 paid -> $8,932 in interest.",
-
   "day_seconds": 600.0,
   "_day_seconds": "One in-game day of play. BOONE FINANCIAL drafts once per day, counted off play time so it is true headless and never depends on sky_weather being present.",
   "miss_limit": 2,
   "_miss_limit": "Returned drafts before LONGHORN comes. Two. Wade would tell you that is generous, and by his standards it is.",
-
   "buy_range_m": 3.5,
   "hold_seconds": 1.2,
   "repo_distance_m": 30.0,
   "display_gap_m": 5.0,
   "_display_gap_m": "Clear metres of asphalt between bumpers in the front line; centres are spaced by the two half-lengths plus this.",
-
   "stock": [
-    { "path": "res://data/vehicles/brisket.json", "price": 28700 },
-    { "path": "res://data/vehicles/sedan.json",   "price": 14900 },
-    { "path": "res://data/vehicles/slab.json",    "price": 39900 }
+    {
+      "path": "res://data/vehicles/brisket.json",
+      "price": 28700
+    },
+    {
+      "path": "res://data/vehicles/sedan.json",
+      "price": 14900
+    },
+    {
+      "path": "res://data/vehicles/slab.json",
+      "price": 39900
+    }
   ],
-
   "sign": {
     "name": "BOONE TRUCKS",
     "tagline": "APPRECIATE YOU!",
@@ -29,17 +33,14 @@
     "showroom": "BOONE TRUCKS",
     "showroom_sub": "WADE \"THE BULLET\" BOONE · SINCE '09"
   },
-
   "prompt": {
     "buy": "G  SIGN THE NOTE — {name}  ${monthly}/mo × {months}      HOLD G  PAY CASH  ${price}",
     "signing": "SIGNING… HOLD FOR CASH  ${price}",
     "on_note": "{name} — ON THE NOTE  {paid}/{months} PAID  ${monthly}/mo  ·  {missed} RETURNED",
     "owned": "{name} — TITLE CLEAR. APPRECIATE YOU!"
   },
-
   "cash_short": "Wade says: 'Cash is for people who don't trust themselves.'",
   "cash_short_line": "Cash is for people who don't trust themselves.",
-
   "wade_speaker": "WADE BOONE",
   "wade_lines": [
     "Ninety-six months. That's eight football seasons. You'll be a different man.",
@@ -56,7 +57,6 @@
     "No note, no draft, no me callin' you in March. Kinda miss you already.",
     "Paid in full. Now what am I supposed to put on the board?"
   ],
-
   "app": {
     "speaker": "BOONE FINANCIAL",
     "paid": "BOONE FINANCIAL: ${monthly} drafted. {left} to go. Appreciate you!",
@@ -68,15 +68,21 @@
     "signed": "BOONE FINANCIAL: welcome aboard. First draft in one day. ${monthly}, ninety-six times.",
     "title_clear": "TITLE CLEAR. Appreciate you."
   },
-
   "repo": {
     "speaker": "LONGHORN · RECOVERY",
     "line": "YOUR VEHICLE HAS BEEN RECOVERED. WE OWN THAT TOO.",
     "warn": "LONGHORN · RECOVERY: a unit is en route to your last known address."
   },
-
   "card": {
     "title": "APPRECIATE YOU!",
     "subtitle": "BOONE TRUCKS · {name}"
-  }
+  },
+  "wade_greet_lines": [
+    "Number twelve. You remember. Everybody remembers. Come look at the Brisket.",
+    "Ninety-six months is eight football seasons. You'll be a different man. Appreciate you.",
+    "I don't sell trucks. I sell Fridays. Sign something.",
+    "That wrecker's a job. This lot's a life. Walk with me.",
+    "Zero down. Your signature IS your credit. That's not a slogan, that's the law in this county.",
+    "My knees went in '09 and I still made quota. You'll make yours."
+  ]
 }

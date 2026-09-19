@@ -1,0 +1,82 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M4 (Apple9)
+
+RENDER: tier=budget sdfgi=on c3 cell0.75 r16 l16 ssr=on s12 volfog=on 48x48 aa=off+taa sky=custom(m16)+scatter shadow=450m/pcss0.53deg grade=lut32 exposure=tod
+STREET WEAR: 390 lids, 280 drains, 790 patches, 3 draw calls
+SKIN MICRO: skin 256^2 in 158 ms
+SKIN MICRO: cloth 256^2 in 118 ms
+TALL TOM: 17 m tall at (868.0, 1.35, 258.0)
+CEDAR CLIFF: 45 houses, 14 storefronts, 31 labels
+DOWNTOWN TYPES: 108 towers = corp 22 / deco 13 / slab 25 / brick 21 / deck 14 / signblock 10 / site 3 — 5344 instances in 17 MultiMeshes + 142 signs
+HOSPITAL NIGHT: 14 lights (mast 6, canopy 4, wash 3, door 1), 8 pools, 0 shadow maps, 3 draw calls, built in 0.2 ms
+POOLS: arterial=536 (42 intersection box washes, D-070) soft=312 inst=8 (3 draw calls, 0 lights, 0 per-frame work)
+SUBURB NIGHT: 492 lights (porch 245, flood 67, tv 24, head 156), 0 shadow maps, built in 1.5 ms
+SURFACES: materials=947 shaders=7 normalmapped=72 roughmapped=69 standard=883 shadermat=64 geom=8279 std_nm=14 std_rm=5
+SHOT saved: street_north
+SHOT saved: fair_gate
+SHOT saved: fair_wheel_night
+SHOT saved: harvest_edge
+SHOT saved: tall_tom
+SHOT saved: boone_lot
+SHOT saved: boone_wade
+SHOT saved: cliff_boulevard
+SHOT saved: gilead_bottoms
+SHOT saved: skyline_from_freeway
+SHOT saved: frontage_signs
+SHOT saved: trust_tower
+SHOT saved: billboard
+SHOT saved: aerial
+SHOT saved: street_night
+SHOT saved: skyline_night
+SHOT saved: showcase_cars
+SHOT saved: hero_wrecker
+SHOT saved: hero_slab
+SHOT saved: hero_police
+SHOT saved: hero_pickup
+SHOT saved: showcase_people
+SHOT saved: hospital
+SHOT saved: hospital_night
+SHOT saved: street_detail
+SHOT saved: suburb_street
+SHOT saved: suburb_night
+SHOT saved: freeway_deck
+SHOT saved: freeway_night
+SHOT saved: floodway
+SHOT saved: plaza
+SHOT saved: portrait
+SHOT saved: car_34
+SHOT saved: car_side
+SHOT saved: car_rear34
+SHOT saved: car_wheel
+SHOT saved: slab_side
+SHOT saved: slab_34
+SHOT saved: slab_rear
+SHOT sun: toward-sun dir=(-0.055532, -0.902274, -0.427572) elev=-64.5 deg
+SHOT saved: face
+SHOT saved: torso
+SHOT saved: side
+SHOT saved: back
+SHOT saved: sky_wide
+SHOT saved: sky_night
+SHOT saved: landmark_church
+SHOT saved: landmark_stadium
+SHOT saved: sg_marquee
+SHOT saved: sg_gigastead
+SHOT saved: sg_gigagate
+SHOT saved: sg_rooftops
+SHOT saved: sg_rooftops_night
+SHOT saved: sg_trust
+SHOT saved: sg_trust_night
+SHOT saved: sg_hosp_road
+SHOT saved: sg_gantry
+SHOT saved: sg_blade
+SHOT saved: sg_watertower
+SHOT saved: sg_ghost
+SHOT saved: sg_candyland
+SHOT saved: sg_clingtel
+SHOT saved: sg_clingtel_night
+SHOT saved: sg_hosp_stack
+SHOT saved: sg_hosp_drive
+SHOT saved: sg_payhut
+SHOT saved: sg_howdy
+SHOT saved: sg_storefront

@@ -148,6 +148,7 @@ func _physics_process(delta: float) -> void:
 		10: _stage_comin()
 		11: _stage_orders()
 		12: _stage_dealer()
+		13: _stage_alive()
 		_: _finish()
 
 
@@ -674,6 +675,14 @@ func _stage_orders() -> void:
 			var tgt: Variant = o.call("target")
 			if tgt is Node3D and is_instance_valid(tgt):
 				_say(int(o.get("state")) == 1, "stage11 PUSHED (state=%s): '%s'" % [o.get("state"), o.call("objective_text")])
+				_shot("order_push")   # the push line, the beacon, the objective
+				var ph := _sys("phone")   # D-069: the paper you can read
+				if ph != null and ph.has_method("toggle") and ph.has_method("text_of"):
+					ph.call("toggle")
+					var t0 := str(ph.call("text_of", 0))
+					_say(ph.get("open") == true and t0.contains("ORDER"), "stage11 the phone opens on the order (%d chars)" % t0.length())
+					ph.call("toggle"); ph.call("toggle"); ph.call("toggle")   # BOONE, WALLET, closed
+					_say(ph.get("open") == false, "stage11 the phone closes after three tabs")
 				_say((tgt as Node).is_in_group("towable") and (tgt as Node).is_in_group("mission_target"),
 					"stage11 the target is towable and rings on the radar")
 				var tp := (tgt as Node3D).global_position
@@ -686,6 +695,7 @@ func _stage_orders() -> void:
 			if _t > 1.5 and _press == "":
 				var db: Variant = o.call("debtor")
 				_say(db is Node3D and is_instance_valid(db), "stage11 the debtor came out to meet him")
+				_shot("order_debtor")
 				_press = "hook"; _sub = 3; _t = 0.0
 		3:
 			if int(o.get("state")) == 2:
@@ -795,4 +805,31 @@ func _stage_dealer() -> void:
 				repo.call("add_money", 20000, "PROBE: FUNDED")
 				var ok2 := bool(d.call("buy_cash", SEDAN))
 				_say(ok2 and int(repo.get("money")) == 20000 - 14900, "stage12 bought the sedan for cash ($%s left, want 5100)" % repo.get("money"))
+				_stage = 13; _sub = 0; _t = 0.0
+
+
+## Stage 13 (D-069): ALIVE. Park on Juárez Boulevard in the Cliff and wait:
+## the spur lanes carry traffic (five routes qualified from the atlas) and the
+## boulevard's sidewalks fill from the zone file. A live order may push
+## meanwhile — that is the loop working, not a fault.
+func _stage_alive() -> void:
+	var tr := _sys("traffic"); var peds := _sys("pedestrians"); var pv := _pv()
+	if tr == null or peds == null or pv == null:
+		_say(false, "stage13 traffic / pedestrians missing"); _finish(); return
+	match _sub:
+		0:
+			pv.global_transform = Transform3D(Basis.looking_at(Vector3(-1, 0, 0), Vector3.UP), Vector3(-200.0, 1.2, 796.0))
+			pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+			var c: Variant = tr.call("spur_census") if tr.has_method("spur_census") else null
+			var routes := int((c as Dictionary).get("routes", 0)) if c is Dictionary else -1
+			_say(routes == 5, "stage13 five spur routes qualified from the atlas (%d)" % routes)
+			_sub = 1; _t = 0.0
+		1:
+			pv.linear_velocity = Vector3.ZERO
+			if _t > 40.0:
+				var c: Variant = tr.call("spur_census")
+				var cars := int((c as Dictionary).get("cars", 0)) if c is Dictionary else 0
+				_say(cars >= 1, "stage13 spur traffic on the boulevard after 40 s: %d shells" % cars)
+				var zc := int(peds.call("zone_count", "cliff_boulevard")) if peds.has_method("zone_count") else -1
+				_say(zc >= 2, "stage13 the boulevard's sidewalks have people: %d (want >= 2)" % zc)
 				_finish()

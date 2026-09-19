@@ -211,6 +211,20 @@ Bar: `docs/qa/quality-bar.md`.
 >   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
 > - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
 >   and a gold ring on a live mission target. QA to rule at `--hudshot`.
+> - **D-146 [S2] The new roads carried no traffic** (Juárez Boulevard, the parkway, the Cliff
+>   streets) — a district with no cars reads as a set. PRODUCER-CLAIMED LANDED (D-069): `KIND_SPUR`
+>   lanes from the atlas, five routes, a merge onto the grid at Juárez's north end. Evidence: probe
+>   stage 13 (spur census ≥ 1 shell after 40 s parked on the boulevard). QA to rule by driving
+>   Juárez end to end at noon: cars both ways, none nose-to-nose for more than nine seconds.
+> - **D-147 [S2] Nobody lived in the districts** (pedestrians spawned downtown only).
+>   PRODUCER-CLAIMED LANDED (D-069): eight spawn zones from `ped_zones.json`. Evidence: probe
+>   stage 13 (`zone_count("cliff_boulevard") >= 2`). QA to rule on the boulevard on foot.
+> - **D-148 [S2] The Paper could only be read in a four-second push.** PRODUCER-CLAIMED LANDED
+>   (D-069): the phone (P), the LONGHORN tab with the tell in red. Evidence: probe rows "the phone
+>   opens on the order". QA to rule at a bad-paper order with the phone open — is the tell legible
+>   at 720p, does the note list overflow the column.
+> - **D-149 [S3] Boone Trucks had a voice and no one behind it.** PRODUCER-CLAIMED LANDED (D-069):
+>   Wade at the showroom door, a greeting within nine metres. Evidence: `boone_wade` plate.
 > - **D-143 [S1] There was no game loop.** Past the three scripted missions and nine derelict
 >   junkers, nothing pushed the player to do anything, nobody was in it, and money bought nothing.
 >   PRODUCER-CLAIMED LANDED (D-068): `repo_orders.gd` — orders without end from the app, a debtor

@@ -1,0 +1,91 @@
+{
+  "_doc": "BOOK'S PHONE — the read-only screen the loop is legible on. P opens it and cycles LONGHORN -> BOONE -> WALLET -> closed. It reports; it never acts. Every string and every measurement the panel draws lives here so the copy can be rewritten without touching scripts/systems/phone.gd. Read once at boot by that file.",
+
+  "key": "P",
+  "layer": 20,
+  "panel_w": 360.0,
+  "panel_h": 640.0,
+  "margin": 24.0,
+  "bezel": 10.0,
+  "pad": 16.0,
+  "gap": 7.0,
+  "refresh_hz": 4.0,
+  "_refresh_hz": "The screen is a report, not an instrument: 4 Hz is faster than a reader's eye and 15x cheaper than per-frame. Nothing here is allocated while the phone is shut.",
+
+  "font_head": 13,
+  "font_sub": 11,
+  "font_body": 13,
+  "font_big": 22,
+  "font_alert": 13,
+  "font_tail": 12,
+  "font_foot": 11,
+
+  "ink": "#101b22",
+  "ink_alpha": 0.85,
+  "screen": "#0a1218",
+  "screen_alpha": 0.92,
+  "gold": "#edbd63",
+  "text": "#d7dcd9",
+  "dim": "#8f9a9c",
+  "orange": "#fa7314",
+  "red": "#e05a4e",
+  "candy": "#d98fb8",
+  "_candy": "Candyland's pink. Held here so the wardrobe/Slab copy has one source if the phone ever speaks for that side of the fiction.",
+
+  "app_speaker": "LONGHORN · RECOVERY",
+  "_app_speaker": "= repo_orders.gd APP and mission_kit's dispatcher voice (D-063). The phone shows the LAST line this speaker said; the dispatcher is the app, never a named person.",
+
+  "tab_dots": ["● ○ ○", "○ ● ○", "○ ○ ●"],
+
+  "head_longhorn": "LONGHORN WRECKER & RECOVERY",
+  "sub_longhorn": "a Bolo Capital Company",
+  "foot_longhorn": "We Own That Too™",
+
+  "head_boone": "BOONE FINANCIAL",
+  "sub_boone": "Wade \"The Bullet\" Boone · 96 months · $0 down",
+  "foot_boone": "Appreciate you!",
+
+  "head_wallet": "WALLET",
+  "sub_wallet": "Book Alvarado",
+  "foot_wallet": "Balance is informational. Ask the app.",
+
+  "order_head": "ORDER %d",
+  "order_due": "%s DAYS PAST DUE  ·  $%s",
+  "paper_head": "THE PAPER",
+  "no_push": "No push on file. The app is not saying.",
+  "read_the_paper": "READ THE PAPER.",
+  "idle": "No open orders. Stay quiet and the app will find you.",
+
+  "rank_line": "RANK %d · %s",
+  "rank_next": "NEXT: %s at %d deliveries",
+  "rank_top": "TOP RANK. There is nothing above PARTNER but Bolo.",
+  "deliveries_line": "DELIVERIES %d",
+  "quota_line": "Quota %d/%d today",
+  "counters_line": "PAPER TAKEN %d  ·  PAPER BURNED %d",
+
+  "note_line": "$%s/day · %d/%d paid · %d returned",
+  "note_balance": "balance $%s",
+  "warn_recovery": "%s — TWO RETURNED DRAFTS = RECOVERY",
+  "boone_none": "No paper with Boone. Appreciate you!",
+  "rigs_head": "RIGS IN YOUR NAME",
+  "rigs_none": "Nothing titled to you.",
+  "title_clear": "TITLE CLEAR",
+
+  "money_line": "$%s",
+  "respect_line": "RESPECT %d",
+  "favors_line": "FAVORS %d",
+  "feed_head": "RECENT",
+  "feed_line": "%s: %s",
+  "feed_none": "Nobody has said anything to you.",
+  "feed_lines": 6,
+
+  "note_months_default": 96,
+  "due_pattern": "([0-9]+) DAYS PAST DUE[^0-9$]*\\$([0-9,]+)",
+  "_due_pattern": "repo_orders.json's app_push is the only place the days and the amount of a live order exist as text -- repo_orders.gd holds them in locals, never in fields (repo_orders.gd:377-381). The phone recovers them from the push it is already showing. If app_push's wording changes, change this pattern; no code edit.",
+
+  "paper_scan": 12,
+  "_paper_scan": "How far back the phone will look for the ORDER push that carries the days and the amount. Twelve app lines is roughly one order's worth of chatter; beyond that the phone would be quoting paper from a job two orders ago.",
+
+  "tell_min_prefix": 8,
+  "_tell_min_prefix": "paper_tells in repo_orders.json carry {placeholders}; the phone matches on the literal text BEFORE the first brace, and refuses a prefix shorter than this so a common phrase can never false-flag clean paper. 'DAYS PAST DUE: ' (with the colon) is 15 and does not appear in a clean push."
+}

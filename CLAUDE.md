@@ -100,7 +100,7 @@ artifacts instead of paying for a third pass. Therefore:
   in every long-mission brief verbatim.
 - Prefer several short focused missions over one monolithic pass, and order the brief so
   the highest-value question is answered first.
-- **A 66-vantage `--shot` sweep takes ~1–3 minutes — WITH A REAL RENDERER.** The earlier
+- **A 67-vantage `--shot` sweep takes ~1–3 minutes — WITH A REAL RENDERER.** The earlier
   "15–18 minutes" figure in this file was wrong; it was inferred from a run that had in
   fact deadlocked. **`--headless` + `--shot` hangs forever:** the dummy renderer never
   fires `RenderingServer.frame_post_draw`, so `_settle_and_save` awaits a frame that never
@@ -175,12 +175,12 @@ Standing rules the loop exists to enforce:
   `--env-legacy` (M22 look), `--env-no-{sdfgi,ssr,volfog,taa,farshadow,grade,scatter,exposure}`,
   `--env-aa=off|msaa2|msaa4|msaa8|taa|msaa2taa|msaa8taa`, `--factory` (the M22 rigid-part body; skinned is the default since D-050),
   `--skinned-bare` (body with no garment shells — bisects body vs wardrobe),
-  `--gfx-legacy` (M22 materials), `--shot` (66 plates, windowed), `--hudshot` (the live HUD,
+  `--gfx-legacy` (M22 materials), `--shot` (67 plates, windowed), `--hudshot` (the live HUD,
   windowed), `--perf` (see `docs/tech/rendering/perf-harness.md`), `--nobeacon`,
   `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
   Boot census lines: `RENDER:`, `SURFACES:`, `SKIN LIB:`, `SKIN MICRO:`; `SHOT sun:` at `face`.
-- **Mechanics probe (D-056…D-068):** `godot --headless -- --mech-probe` — 79 checks in ~200 s:
+- **Mechanics probe (D-056…D-069):** `godot --headless -- --mech-probe` — 84 checks in ~250 s:
   a parked truck stays parked (drift < 2 cm over 8 s), legible heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore),
   busted by a cruiser that pulls alongside (card, impound, fine, heat still 1), a favor that
   covers bail, the stranded-driver spawn and its TTL, a towed box sliding onto the impound pad,
@@ -188,7 +188,8 @@ Standing rules the loop exists to enforce:
   (dispatch, the app, hook, drone + owner, deliver, card, $950), and Comin' Down (the Slab, the
   board, a pass, the star, the takeover, the slide-out, the card), a LONGHORN order end to end (push,
   target, debtor, hook, deliver, card; then bad paper walked), and Boone Trucks (a note, the draft,
-  two misses, the recovery, a cash buy). Prints
+  two misses, the recovery, a cash buy), and the city alive (five spur routes, traffic and
+  people on Juárez Boulevard after 40 s; the phone opens on an order). Prints
   `MECH PROBE: PASS (n/n)`; `--mech-only=N` runs one stage. Windowed with `--mech-shots=/abs/dir` it also saves `full_eight.png`,
   `brake_night.png`, `busted.png`, `brawl.png`, `mission_card.png`. Run it after any change to police/on_foot/
   full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board/
@@ -217,8 +218,9 @@ Standing rules the loop exists to enforce:
   non-grid roads by class, nameable places — and `ui/city_map.gd` draws from it; `docs/design/
   world-atlas.md` is its prose twin with the still-prairie table. A layer that adds a nameable
   place registers it there; a new road name goes in the naming bible §4. `godot -- --mapshot=PATH`
-  (windowed) saves the map as the player sees it. The `--shot` sweep is 66 plates (`fair_gate`,
-  `fair_wheel_night`, `harvest_edge`, `tall_tom`, `boone_lot`, `cliff_boulevard`, `gilead_bottoms`).
+  (windowed) saves the map as the player sees it. The `--shot` sweep is 67 plates (`fair_gate`,
+  `fair_wheel_night`, `harvest_edge`, `tall_tom`, `boone_lot`, `boone_wade`, `cliff_boulevard`,
+  `gilead_bottoms`).
 - **Cloth (D-067):** the shirt, sleeves and trousers are constant-offset SHELLS of the body
   (`skinned_character._pieces`, "THE CLOTHES THEMSELVES"): 10 mm off, 12 mm thick, 4 mm cells,
   one piece per garment, zone −1 = inherit the skin's palette zone. Laws paid for in plates: a
@@ -233,6 +235,11 @@ Standing rules the loop exists to enforce:
   reads or writes the player's save** (`save_load` treats every `--shot/--perf/--mech-probe/
   --mapshot/--session-test` run as smoke). Godot 4.7 errors on `is` and `as` against a freed
   instance: check `is_instance_valid()` on the Variant FIRST, then cast (D-121, and twice here).
+- **Traffic and people are data (D-069):** a new road gets traffic by being a `street` polyline
+  in the atlas (≥ 120 m; `traffic_spurs.json` has the floor, caps and lane offsets); a new place
+  gets people by a zone in `data/mechanics/ped_zones.json` (a sidewalk polyline, a cap, an outfit
+  mix). `traffic.spur_census()` and `pedestrians.zone_count(name)` are the probe's hooks; the
+  phone (P) reads `mission_kit.log`, `repo_orders`, `dealer.notes` and the wallet, read-only.
 - **Milad's task inbox:** a shared Apple Note, "El Dorado Tasks". `game/tools/tasks_note.sh`
   reads it from Notes.app and diffs against `game/.gate/tasks_seen.txt`; run it at the start of a
   session and between rounds, and work new items before the backlog.

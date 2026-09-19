@@ -1,0 +1,15 @@
+{
+  "_doc": "Ambient traffic on the roads that are NOT the downtown grid. traffic.gd reads data/world/atlas.json (D-066) at setup, takes every road of class 'street', and drives it as a KIND_SPUR polyline: cars ride lane_offset metres right of the centreline, so one polyline carries both directions; corners are taken with the grid's own arc radii; each end U-turns unless it meets a grid lane it can merge straight onto. Every key here is optional — traffic.gd's consts are the fallbacks. 'caps' and 'lanes' override spur_cap and lane_offset for one road, keyed by its atlas name.",
+  "spur_cap": 3,
+  "spur_min_len": 120.0,
+  "lane_offset": 3.5,
+  "caps": {
+    "Juárez Boulevard": 4
+  },
+  "_lanes_doc": "lane_offset is half the road: 3.5 suits Juárez Boulevard's 12 m of asphalt (cedar_cliff.BLVD_W), 2.0 suits the 8 m side and back streets, where a 3.5 m lane would hang a wheel off the edge.",
+  "lanes": {
+    "Cliff side street (west)": 2.0,
+    "Cliff side street (east)": 2.0,
+    "Cliff back street": 2.0
+  }
+}

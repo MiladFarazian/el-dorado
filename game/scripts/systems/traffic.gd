@@ -10,6 +10,12 @@ extends Node
 ## M17: they also STOP FOR THE LIGHTS. The phase is re-derived from the same
 ## literal rule city_dressing bakes the lit lens from (see _phase) — no accessor,
 ## no plumbing, nothing to desync. The player is never governed by any of this.
+##
+## AND THEY DRIVE THE REST OF THE COUNTY. Four lane kinds now: the downtown grid
+## (KIND_NS/KIND_EW), I-3's frontage roads (KIND_FRONTAGE) and KIND_SPUR — any
+## "street" polyline in the atlas, which is how Juárez Boulevard, Pioneer Vision
+## Parkway and the Cedar Cliff streets got traffic without a line of geometry
+## being hard-coded here. See the SPURS section at the bottom.
 
 # ============================== TUNABLES =====================================
 const RNG_SEED := 777; const TRAFFIC_COUNT := 10  # seed; frozen cars maintained
@@ -67,6 +73,25 @@ const TRUCK_COLOR := Color(0.07, 0.07, 0.08)  # the occasional black truck
 const NS_Z := Vector2(47.0, 545.0); const EW_X := Vector2(107.0, 783.0)  # 545: U-turn apex clears the impound pad (z 553+)
 const FR_Z := 30.0; const FR_X_END := 760.0
 const CORRIDOR := Rect2(174.0, 424.0, 38.0, 152.0)  # protected: NEVER spawn in
+# -- SPURS: ambient traffic on the atlas's non-grid "street" polylines. Juárez
+# Boulevard, Pioneer Vision Parkway and the Cedar Cliff streets are real roads
+# with nobody on them; a spur is one of those polylines driven exactly the way
+# the grid is — 3.5 m right of the centreline (so one polyline carries BOTH
+# directions), the existing arcs at the corners, and a U-turn at each end unless
+# the end meets a grid lane it can merge straight onto. A corner is never a
+# signal. Tunables live in data/mechanics/traffic_spurs.json; these are the
+# fallbacks used when that file is missing or a key is absent.
+const SPURS_PATH := "res://data/mechanics/traffic_spurs.json"
+const ATLAS_PATH := "res://data/world/atlas.json"   # optional: no file, no spurs
+const SPUR_CAP := 3                  # frozen cars per spur (TRAFFIC_COUNT still rules)
+const SPUR_MIN_LEN := 120.0          # an 8 m drive or a 66 m stub gets no traffic
+const SPUR_CORNER_CLEAR := 12.0      # never spawn this near a polyline vertex
+const SPUR_JOIN := 30.0              # a spur end this near a grid lane end merges
+const SPUR_JOIN_LAT := 1.5           # ... and this close to that lane, laterally
+const SPUR_GIVEUP := 9.0             # stopped this long out here: give up, U-turn
+const SPUR_UTURN_CREEP := 1.5        # ... and a U-turn always sweeps, blocked or not
+const SPUR_AXIS_TOL := 0.01          # a spur segment must be axis-aligned
+const SPUR_RNG_SEED := 990413        # spur spawns ONLY — never a seeded grid draw
 # What a jacked shell turns into (carjack.gd reads the "jack_profile" meta).
 # The black lifted truck IS the Baron Brisket — same joke, same rollover.
 const SEDAN_PROFILE := "res://data/vehicles/sedan.json"
@@ -76,7 +101,9 @@ const BODY_BUILDER := preload("res://scripts/vehicle/vehicle_body_builder.gd")
 # PH_STOP below (0/1/2) — it returns straight into _signal_limit.
 const SIGNAL_CYCLE := preload("res://scripts/systems/signal_cycle.gd")
 
-enum { CRUISE, TURN }; enum { KIND_NS, KIND_EW, KIND_FRONTAGE }
+enum { CRUISE, TURN }; enum { KIND_NS, KIND_EW, KIND_FRONTAGE, KIND_SPUR }
+# What a spur car does at the far end of its current segment.
+enum { SP_JOIN, SP_RIGHT, SP_LEFT, SP_UTURN, SP_STRAIGHT }  # 1/2/3 == _start_turn's codes
 enum { PH_GO, PH_CAUTION, PH_STOP }      # what the lens facing this shell says
 enum { SG_NEW, SG_HOLD, SG_CLEARED }     # what this shell decided about it
 
@@ -94,6 +121,11 @@ var _sig_clock := 0.0
 var _sig_token: Dictionary = {}          # intersection key -> {body, ttl}
 var signal_period := 0.0                 # >0: half-cycle seconds (see _phase)
 var _cars: Array[Dictionary] = []
+# Spur state. `_spur_rng` is a THIRD stream on its own literal seed for the same
+# reason `_sig_rng` is a second one: the seeded grid spawn stream (_rng) must
+# keep its exact draw order, so no spur draw may ever touch it.
+var _spur_rng := RandomNumberGenerator.new()
+var _spurs: Array[Dictionary] = []   # polyline routes read from the atlas
 var _ns_x: Array[float] = []; var _ew_z: Array[float] = []
 var _spawn_cd := 0.0; var _cache_t := 0.0; var _spawned := 0
 var _obstacle_pts := PackedVector3Array()
@@ -105,11 +137,12 @@ var _truck_mat: StandardMaterial3D; var _wheel_mat: StandardMaterial3D
 
 func setup(main: Node) -> void:
 	main_ref = main; _rng.seed = RNG_SEED; _sig_rng.seed = SIG_RNG_SEED
+	_spur_rng.seed = SPUR_RNG_SEED
 	if bool(main.get("smoke_mode")):
 		set_physics_process(false); return  # smoke gate: no spawns/processing/UI
 	for i in 7: _ns_x.append(193.0 + 86.0 * float(i))
 	for j in 5: _ew_z.append(133.0 + 86.0 * float(j))
-	_build_shared()
+	_build_shared(); _load_spurs()
 
 ## One mesh/material set shared by every car — spawning never allocates meshes.
 func _build_shared() -> void:
@@ -136,8 +169,12 @@ func _physics_process(delta: float) -> void:
 	var pv := _player()
 	_refresh_follow(pv)
 	_validate(pv, delta); _spawn_cd = maxf(_spawn_cd - delta, 0.0)
+	# The grid is tried FIRST and unconditionally — its 12 tries draw the same
+	# seeded numbers in the same order they always have. Spurs only get the slot
+	# the grid could not fill (out in Cedar Cliff every grid lane is out of ring),
+	# so downtown density and the seeded stream are both exactly as before.
 	if pv != null and _spawn_cd <= 0.0 and _frozen_count() < TRAFFIC_COUNT \
-			and _try_spawn(pv.global_position):
+			and (_try_spawn(pv.global_position) or _try_spawn_spur(pv.global_position)):
 		_spawn_cd = SPAWN_INTERVAL
 	for car in _cars:
 		if bool(car["frozen"]): _drive(car, delta, pv)
@@ -189,7 +226,7 @@ func _try_spawn(ppos: Vector3) -> bool:
 		if d < SPAWN_RING.x or d > SPAWN_RING.y: continue
 		if CORRIDOR.has_point(Vector2(pos.x, pos.z)): continue
 		if not _clear_at(pos): continue
-		_make_car(pos, dirv, kind, center); return true
+		_make_car(pos, dirv, kind, center, _rng); return true
 	return false
 
 func _clear_at(pos: Vector3) -> bool:
@@ -207,8 +244,14 @@ func _refresh_obstacles() -> void:
 		for n: Node in get_tree().get_nodes_in_group(g):
 			if n is Node3D and is_instance_valid(n): _obstacle_pts.append((n as Node3D).global_position)
 
-func _make_car(pos: Vector3, dirv: Vector3, kind: int, center: float) -> void:
-	var truck := _rng.randf() < TRUCK_CHANCE
+## `rng` is the stream this car's shape/paint/speed are drawn from, and it is
+## ALWAYS the same stream that chose the spawn point: the grid passes the seeded
+## `_rng` (whose draw order is frozen), spurs pass `_spur_rng`. `extra` is merged
+## into the car record before _plan_next sees it — that is how a spur car arrives
+## already knowing which polyline, segment and direction it is on.
+func _make_car(pos: Vector3, dirv: Vector3, kind: int, center: float,
+		rng: RandomNumberGenerator, extra: Dictionary = {}) -> void:
+	var truck := rng.randf() < TRUCK_CHANCE
 	var size := TRUCK_SIZE if truck else SEDAN_SIZE
 	var ride := TRUCK_RIDE if truck else SEDAN_RIDE  # lifted trucks sit higher
 	var body := RigidBody3D.new()
@@ -227,7 +270,7 @@ func _make_car(pos: Vector3, dirv: Vector3, kind: int, center: float) -> void:
 	# collision box and this function's rng draw order are unchanged).
 	var vis := Node3D.new(); body.add_child(vis)
 	var paint: Color = TRUCK_COLOR if truck \
-		else PALETTE[_rng.randi_range(0, PALETTE.size() - 1)]  # SAME draw as before
+		else PALETTE[rng.randi_range(0, PALETTE.size() - 1)]  # SAME draw as before
 	BODY_BUILDER.build(vis, "pickup" if truck else "sedan", size, paint)
 	var radius := TRUCK_WHEEL if truck else SEDAN_WHEEL; var zoff := size.z * 0.5 - radius - 0.7
 	for c: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
@@ -243,15 +286,21 @@ func _make_car(pos: Vector3, dirv: Vector3, kind: int, center: float) -> void:
 	var car := {
 		"body": body, "frozen": true, "state": CRUISE, "dir": dirv, "kind": kind,
 		"center": center, "ride": ride, "half_len": size.z * 0.5, "age": 0.0,
-		"tspeed": _rng.randf_range(SPEED_RANGE.x, SPEED_RANGE.y), "speed": 0.0,
+		"tspeed": rng.randf_range(SPEED_RANGE.x, SPEED_RANGE.y), "speed": 0.0,
 		"choice": 0, "decided": false, "event": 0.0, "event_end": false,
 		"arc_c": Vector3.ZERO, "arc_u": Vector3.ZERO, "arc_sweep": 0.0, "arc_sgn": 1.0,
 		"arc_r": 1.0, "exit_dir": dirv, "exit_center": center, "exit_kind": kind,
+		# Spur state: -1 = not on a spur. `seg` indexes the polyline segment and
+		# `sdir` (+1/-1) which way along it, so `dir` is dirs[seg] * sdir.
+		"spur": -1, "seg": 0, "sdir": 1.0, "sp_end": SP_UTURN, "sp_seg": 0,
+		"sp_sdir": 1.0, "sp_kind": KIND_NS, "sp_center": 0.0, "stuck_t": 0.0,
+		"exit_spur": -1, "exit_seg": 0, "exit_sdir": 1.0,
 		# Signal state. sig_jit comes off the SEPARATE runtime stream so the
 		# seeded spawn draws above stay in their frozen order.
 		"sig_key": -1, "sig_mode": SG_NEW, "sig_wait": 0.0,
 		"sig_jit": _sig_rng.randf() * SIG_JITTER}
 	car["speed"] = float(car["tspeed"])
+	car.merge(extra, true)
 	_cars.append(car); _plan_next(car)
 
 # ============================== LANE DRIVING =================================
@@ -261,6 +310,7 @@ func _plan_next(car: Dictionary) -> void:
 	var body := car["body"] as RigidBody3D
 	_sig_forget(car)  # the old intersection is behind us: drop its hold + token
 	if not is_instance_valid(body): return
+	if int(car["kind"]) == KIND_SPUR: _plan_spur(car); return
 	var dirv := car["dir"] as Vector3
 	var s := dirv.x + dirv.z  # +1 toward +axis, -1 toward -axis
 	var t := _travel_coord(car, body)
@@ -276,8 +326,24 @@ func _plan_next(car: Dictionary) -> void:
 		if d > DECIDE_DIST and d < best:
 			best = d; car["event"] = c; car["event_end"] = false
 
+## Where this shell is along its own road, and which way "forward" moves that
+## number. Grid lanes ride a world axis, so the coordinate IS x or z and the sign
+## is the heading's component. A spur segment can point either way along either
+## axis, so its coordinate is the projection onto the heading — which always
+## grows forward, hence a sign of +1. One pair, so `rem` is the same subtraction
+## for every kind.
 func _travel_coord(car: Dictionary, body: RigidBody3D) -> float:
-	return body.global_position.z if int(car["kind"]) == KIND_NS else body.global_position.x
+	var pos := body.global_position
+	if int(car["kind"]) == KIND_SPUR:
+		var d := car["dir"] as Vector3
+		return pos.x * d.x + pos.z * d.z
+	return pos.z if int(car["kind"]) == KIND_NS else pos.x
+
+
+func _travel_sign(car: Dictionary) -> float:
+	if int(car["kind"]) == KIND_SPUR: return 1.0
+	var d := car["dir"] as Vector3
+	return d.x + d.z
 
 func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 	var body := car["body"] as RigidBody3D
@@ -297,17 +363,29 @@ func _drive(car: Dictionary, delta: float, pv: RigidBody3D) -> void:
 	limit = minf(limit, _follow_limit(car, body, heading))
 	_honk_check(car, body, heading, limit, delta)
 	if turning:
-		_set_speed(car, minf(limit, TURN_SPEED), delta); _step_turn(car, body, delta); return
+		_set_speed(car, _turn_limit(car, limit), delta); _step_turn(car, body, delta); return
 	var dirv := car["dir"] as Vector3
-	var rem := (float(car["event"]) - _travel_coord(car, body)) * (dirv.x + dirv.z)  # dist to event
+	var rem := (float(car["event"]) - _travel_coord(car, body)) * _travel_sign(car)  # dist to event
+	# Out on a spur there is no signal, no queue and nobody coming to sort it out:
+	# a shell that has been stopped this long (the player parked across the lane,
+	# or two of them nose to nose at an unsignalled Cedar Cliff crossroads) gives
+	# up and turns around instead of standing there for the rest of the session.
+	if int(car["kind"]) == KIND_SPUR:
+		car["stuck_t"] = float(car["stuck_t"]) + delta if float(car["speed"]) < SIG_CREEP \
+			else 0.0
+		if float(car["stuck_t"]) >= SPUR_GIVEUP:
+			car["stuck_t"] = 0.0
+			_spur_exit(car, int(car["seg"]), -float(car["sdir"]))
+			_start_turn(car, body, 3, limit, delta); return
 	if bool(car["event_end"]):
 		if rem < APPROACH_DIST: limit = minf(limit, TURN_SPEED)
-		if rem <= 0.0:
-			if int(car["kind"]) == KIND_FRONTAGE:
-				body.queue_free()  # one-way road meets the map edge: retire
-			else:
-				_start_turn(car, body, 3, limit, delta)  # dead-end U-turn
-			return
+		if rem <= _end_trigger(car):
+			if int(car["kind"]) == KIND_SPUR:
+				if _spur_event(car, body, limit, delta): return
+			elif int(car["kind"]) == KIND_FRONTAGE:
+				body.queue_free(); return  # one-way road meets the map edge: retire
+			elif not _join_spur(car, body):
+				_start_turn(car, body, 3, limit, delta); return  # dead-end U-turn
 	else:
 		limit = minf(limit, _signal_limit(car, rem, delta))  # M17: the light
 		if not bool(car["decided"]) and rem <= DECIDE_DIST:
@@ -616,6 +694,19 @@ func _sig_tick_tokens(delta: float) -> void:
 			_sig_token.erase(k)
 
 
+## The arc's own ceiling. A U-turn is the one manoeuvre whose first quarter is
+## still pointing at whatever it is turning away from: the sense ray reads the
+## blocker head-on, the limit is 0, and _step_turn's d_ang is speed*delta/r — so
+## a shell that U-turns because it is blocked would freeze at zero degrees and
+## never sweep. Spur U-turns therefore keep a walking-pace floor until the arc
+## has swung far enough to see round it. Grid cars are untouched.
+func _turn_limit(car: Dictionary, limit: float) -> float:
+	var cap := minf(limit, TURN_SPEED)
+	if int(car["kind"]) == KIND_SPUR and float(car["arc_sweep"]) > PI * 0.6:
+		return maxf(cap, SPUR_UTURN_CREEP)
+	return cap
+
+
 func _set_speed(car: Dictionary, limit: float, delta: float) -> void:
 	var sp := float(car["speed"])
 	car["speed"] = move_toward(sp, limit, (ACCEL if limit > sp else DECEL) * delta)
@@ -633,7 +724,11 @@ func _start_turn(car: Dictionary, body: RigidBody3D, turn: int, limit: float, de
 		car["arc_sgn"] = 1.0; car["arc_c"] = pos + _left(h) * r
 		car["arc_u"] = _right(h); car["exit_dir"] = _left(h) if turn == 2 else -h
 	car["arc_r"] = r; car["arc_sweep"] = PI if turn == 3 else PI * 0.5
-	if turn == 3:
+	if int(car["kind"]) == KIND_SPUR:
+		# The exit polyline/segment/direction were staged by _spur_exit before the
+		# call; a spur turn never crosses onto the grid, so the kind is carried.
+		car["exit_kind"] = KIND_SPUR; car["exit_center"] = float(car["center"])
+	elif turn == 3:
 		car["exit_kind"] = int(car["kind"]); car["exit_center"] = float(car["center"])
 	else:
 		car["exit_kind"] = KIND_EW if int(car["kind"]) == KIND_NS else KIND_NS
@@ -656,7 +751,11 @@ func _finish_turn(car: Dictionary, body: RigidBody3D) -> void:
 	car["center"] = float(car["exit_center"]); car["state"] = CRUISE
 	var lane := _right(dirv) * LANE_OFFSET  # snap exactly onto the exit lane
 	var pos := body.global_position
-	if int(car["kind"]) == KIND_NS: pos.x = float(car["center"]) + lane.x
+	if int(car["kind"]) == KIND_SPUR:
+		car["spur"] = int(car["exit_spur"]); car["seg"] = int(car["exit_seg"])
+		car["sdir"] = float(car["exit_sdir"]); car["stuck_t"] = 0.0
+		pos = _spur_snap(car, pos, dirv)
+	elif int(car["kind"]) == KIND_NS: pos.x = float(car["center"]) + lane.x
 	else: pos.z = float(car["center"]) + lane.z
 	pos.y = float(car["ride"]); _place(body, dirv, pos); _plan_next(car)
 
@@ -747,3 +846,300 @@ func _left(d: Vector3) -> Vector3: return Vector3(d.z, 0.0, -d.x)
 
 func _cardinal(v: Vector3) -> Vector3:
 	return Vector3(roundf(v.x), 0.0, roundf(v.z)).normalized()
+
+# ============================== SPURS ========================================
+## THE ATLAS IS THE REGISTER OF THE ROADS. Every road that is not the downtown
+## grid lives in data/world/atlas.json (D-066) as a class plus a polyline in
+## world x,z, and the city map draws straight from it. Traffic reads the SAME
+## register — the "street" polylines only — so a street added to the atlas gets
+## cars without anyone editing this file. The atlas is optional: no file, no
+## spurs, and downtown drives exactly as it did.
+##
+## A polyline qualifies when it is axis-aligned (the arc helpers turn between
+## cardinals, and 90 degrees is the only corner they can sweep) and longer than
+## spur_min_len — which is what keeps Boone Trucks' 8 m drive, the two ~76 m
+## hospital drives and Fair Drive's 66 m stub empty.
+func _load_spurs() -> void:
+	var tune := _read_json(SPURS_PATH)
+	var min_len := float(tune.get("spur_min_len", SPUR_MIN_LEN))
+	var def_cap := int(tune.get("spur_cap", SPUR_CAP))
+	var def_lane := float(tune.get("lane_offset", LANE_OFFSET))
+	var raw_caps: Variant = tune.get("caps", {})
+	var caps := raw_caps as Dictionary if raw_caps is Dictionary else {}
+	var raw_lanes: Variant = tune.get("lanes", {})
+	var lanes := raw_lanes as Dictionary if raw_lanes is Dictionary else {}
+	var roads: Variant = _read_json(ATLAS_PATH).get("roads", [])
+	if not (roads is Array): return
+	for entry: Variant in roads as Array:
+		if not (entry is Dictionary): continue
+		var road := entry as Dictionary
+		if String(road.get("class", "")) != "street": continue
+		var spur := _build_spur(road)
+		if spur.is_empty() or float(spur["total"]) < min_len: continue
+		var nm := String(road.get("name", ""))
+		spur["cap"] = int(caps.get(nm, def_cap))
+		# The lane offset is HALF THE ROAD, and the atlas does not carry a width:
+		# 3.5 m is Juárez Boulevard's 12 m of asphalt, but Cedar Cliff's side and
+		# back streets are 8 m wide and a 3.5 m lane would hang a wheel off the
+		# edge of them. Per-road override, by atlas name, in traffic_spurs.json.
+		spur["lane"] = float(lanes.get(nm, def_lane))
+		_spurs.append(spur)
+
+
+## Optional JSON: a missing or malformed file is a quiet {}. The spur layer is
+## additive, and downtown must not care whether either file shipped.
+func _read_json(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path): return {}
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null: return {}
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	return parsed as Dictionary if parsed is Dictionary else {}
+
+
+## One polyline -> {pts, dirs, lens, total, cap}. Returns {} for anything this
+## brain cannot drive: fewer than two points, a degenerate segment, or a segment
+## that is not axis-aligned (the arcs sweep exactly 90 degrees between cardinals,
+## so a diagonal corner would exit on a heading the lane maths does not expect).
+func _build_spur(road: Dictionary) -> Dictionary:
+	var raw: Variant = road.get("pts", [])
+	if not (raw is Array) or (raw as Array).size() < 2: return {}
+	var pts := PackedVector2Array()
+	for p: Variant in raw as Array:
+		if not (p is Array) or (p as Array).size() < 2: return {}
+		var pair := p as Array
+		pts.append(Vector2(float(pair[0]), float(pair[1])))
+	var dirs: Array[Vector3] = []
+	var lens := PackedFloat32Array()
+	var total := 0.0
+	for i in pts.size() - 1:
+		var leg := pts[i + 1] - pts[i]
+		var leg_len := leg.length()
+		if leg_len < 1.0: return {}
+		var d := Vector3(leg.x / leg_len, 0.0, leg.y / leg_len)
+		if absf(d.x) > SPUR_AXIS_TOL and absf(d.z) > SPUR_AXIS_TOL: return {}
+		var card := _cardinal(d)
+		# A polyline that doubles back on itself has no drivable corner: the
+		# turn classifier would read the reversal as "straight on".
+		if not dirs.is_empty() and (dirs[dirs.size() - 1] as Vector3).dot(card) < -0.5:
+			return {}
+		dirs.append(card); lens.append(leg_len); total += leg_len
+	return {"pts": pts, "dirs": dirs, "lens": lens, "total": total, "cap": SPUR_CAP}
+
+
+## A spur car spawns under the same rules a grid car does — inside the ring, out
+## of the corridor, SPAWN_CLEARANCE from anything solid — plus two of its own:
+## the per-spur cap, and never within SPUR_CORNER_CLEAR of a vertex, so nothing
+## materialises inside an arc it would immediately be turning through. EVERY draw
+## here comes off _spur_rng; the seeded grid stream is never touched.
+func _try_spawn_spur(ppos: Vector3) -> bool:
+	if _spurs.is_empty(): return false
+	for _a in SPAWN_TRIES:
+		var si := _spur_rng.randi_range(0, _spurs.size() - 1)
+		var spur := _spurs[si]
+		if _spur_count(si) >= int(spur["cap"]): continue
+		var lens: PackedFloat32Array = spur["lens"]
+		var seg := _pick_segment(lens, _spur_rng.randf() * float(spur["total"]))
+		var span := lens[seg] - 2.0 * SPUR_CORNER_CLEAR
+		if span <= 0.0: continue
+		var sdir := 1.0 if _spur_rng.randf() < 0.5 else -1.0
+		var along := SPUR_CORNER_CLEAR + _spur_rng.randf() * span
+		var dirs: Array = spur["dirs"]
+		var dirv := (dirs[seg] as Vector3) * sdir
+		var head: Vector2 = (spur["pts"] as PackedVector2Array)[seg]
+		var pos := Vector3(head.x, 0.0, head.y) + (dirs[seg] as Vector3) * along \
+			+ _right(dirv) * float(spur["lane"])
+		var d := Vector2(pos.x - ppos.x, pos.z - ppos.z).length()
+		if d < SPAWN_RING.x or d > SPAWN_RING.y: continue
+		if CORRIDOR.has_point(Vector2(pos.x, pos.z)): continue
+		if not _clear_at(pos): continue
+		_make_car(pos, dirv, KIND_SPUR, 0.0, _spur_rng,
+			{"spur": si, "seg": seg, "sdir": sdir})
+		return true
+	return false
+
+
+## Length-weighted segment pick: the 759 m leg of Juárez Boulevard should carry
+## three times the cars of its 234 m leg, not the same number.
+func _pick_segment(lens: PackedFloat32Array, roll: float) -> int:
+	var acc := roll
+	for i in lens.size() - 1:
+		acc -= lens[i]
+		if acc <= 0.0: return i
+	return lens.size() - 1
+
+
+## PUBLIC (probe/QA): how many spur routes the atlas handed us, and how many
+## shells are driving them right now. A census is the only honest way for a
+## headless check to assert "Juárez Boulevard has traffic on it".
+func spur_census() -> Dictionary:
+	var n := 0
+	for car in _cars:
+		if int(car.get("spur", -1)) >= 0 and is_instance_valid(car["body"]): n += 1
+	return {"routes": _spurs.size(), "cars": n}
+
+
+func _spur_count(si: int) -> int:
+	var n := 0
+	for car in _cars:
+		if int(car.get("spur", -1)) == si and bool(car["frozen"]) \
+				and is_instance_valid(car["body"]): n += 1
+	return n
+
+
+## The spur half of _plan_next. The event is ALWAYS the far vertex of the
+## current segment — a spur has no signalled crossing, so `event_end` stays true
+## — and WHAT happens there is settled here, once, instead of being rolled at
+## the intersection the way a grid turn is: a corner is not a choice.
+func _plan_spur(car: Dictionary) -> void:
+	var si := int(car["spur"])
+	if si < 0 or si >= _spurs.size(): return
+	var spur := _spurs[si]
+	var pts: PackedVector2Array = spur["pts"]
+	var dirs: Array = spur["dirs"]
+	var seg := clampi(int(car["seg"]), 0, dirs.size() - 1)
+	var sdir := float(car["sdir"])
+	var dirv := (dirs[seg] as Vector3) * sdir
+	car["seg"] = seg; car["dir"] = dirv   # exact: no drift off an arc exit
+	car["decided"] = false; car["choice"] = 0; car["event_end"] = true
+	var tgt: Vector2 = pts[seg + 1] if sdir > 0.0 else pts[seg]
+	car["event"] = tgt.x * dirv.x + tgt.y * dirv.z   # same projection as _travel_coord
+	var nseg := seg + 1 if sdir > 0.0 else seg - 1
+	if nseg >= 0 and nseg < dirs.size():
+		var side := _right(dirv).dot((dirs[nseg] as Vector3) * sdir)
+		var turn := SP_STRAIGHT if absf(side) < 0.5 else (SP_RIGHT if side > 0.0 else SP_LEFT)
+		_spur_stage(car, turn, nseg, sdir); return
+	if _join_grid(car, tgt, dirv): return   # the end meets a grid lane: merge
+	_spur_stage(car, SP_UTURN, seg, -sdir)  # otherwise turn around on the spot
+
+
+func _spur_stage(car: Dictionary, end_code: int, nseg: int, nsdir: float) -> void:
+	car["sp_end"] = end_code; car["sp_seg"] = nseg; car["sp_sdir"] = nsdir
+
+
+## How far short of the event the manoeuvre begins. Grid streets and the
+## frontage act AT the end (0). A spur corner is the same geometry as a grid
+## crossing — the arc has to start LANE_OFFSET + R_RIGHT short of the vertex to
+## land on the exit lane, R_LEFT - LANE_OFFSET short for a left — so it reuses
+## the same two triggers, and a U-turn or a merge still happens at the end.
+func _end_trigger(car: Dictionary) -> float:
+	if int(car["kind"]) != KIND_SPUR: return 0.0
+	var lane := _spur_lane(car)
+	match int(car["sp_end"]):
+		SP_RIGHT: return lane + R_RIGHT
+		SP_LEFT: return R_LEFT - lane
+	return 0.0
+
+
+## The manoeuvre at the far vertex. Returns true when this frame belongs to an
+## arc (the caller must not move the shell as well); false for the two collinear
+## continuations — another segment dead ahead, or a merge onto a grid lane —
+## where the heading does not change and the shell just keeps rolling.
+func _spur_event(car: Dictionary, body: RigidBody3D, limit: float, delta: float) -> bool:
+	var end_code := int(car["sp_end"])
+	if end_code == SP_RIGHT or end_code == SP_LEFT or end_code == SP_UTURN:
+		_spur_exit(car, int(car["sp_seg"]), float(car["sp_sdir"]))
+		_start_turn(car, body, end_code, limit, delta)
+		return true
+	if end_code == SP_JOIN:
+		car["kind"] = int(car["sp_kind"]); car["center"] = float(car["sp_center"])
+		car["spur"] = -1; car["stuck_t"] = 0.0
+		var dirv := car["dir"] as Vector3
+		var lane := _right(dirv) * LANE_OFFSET
+		var pos := body.global_position
+		if int(car["kind"]) == KIND_NS: pos.x = float(car["center"]) + lane.x
+		else: pos.z = float(car["center"]) + lane.z
+		pos.y = float(car["ride"]); _place(body, dirv, pos)
+		_plan_next(car); return false
+	car["seg"] = int(car["sp_seg"]); car["sdir"] = float(car["sp_sdir"])
+	_plan_next(car); return false        # collinear next segment: drive straight on
+
+
+## Stage what _finish_turn will land this shell on: the same polyline, the
+## segment the arc exits onto, and which way along it.
+func _spur_exit(car: Dictionary, nseg: int, nsdir: float) -> void:
+	car["exit_spur"] = int(car["spur"]); car["exit_seg"] = nseg
+	car["exit_sdir"] = nsdir
+
+
+## How far right of its centreline this shell rides. Defaults to the grid's own
+## LANE_OFFSET; a narrower road overrides it in traffic_spurs.json.
+func _spur_lane(car: Dictionary) -> float:
+	var si := int(car["spur"])
+	if si < 0 or si >= _spurs.size(): return LANE_OFFSET
+	return float(_spurs[si]["lane"])
+
+
+## Put the shell exactly on its lane — the line _spur_lane right of the segment
+## it is now on — keeping whatever progress it already has along that line. Same
+## snap _finish_turn does for a grid lane, generalised to a segment that can run
+## any of four ways.
+func _spur_snap(car: Dictionary, pos: Vector3, dirv: Vector3) -> Vector3:
+	var si := int(car["spur"])
+	if si < 0 or si >= _spurs.size(): return pos
+	var pts: PackedVector2Array = _spurs[si]["pts"]
+	var seg := clampi(int(car["seg"]), 0, pts.size() - 2)
+	var head: Vector2 = pts[seg]
+	var base := Vector3(head.x, 0.0, head.y) + _right(dirv) * _spur_lane(car)
+	var rel := pos - base; rel.y = 0.0
+	return base + dirv * rel.dot(dirv)
+
+
+# ---- THE TWO MERGES ---------------------------------------------------------
+## Juárez Boulevard's north end at (279, 566) is 21 m from where the x=279 grid
+## street stops at z=545, on the same centreline — and the downtown street bed
+## runs out to z=566 — so the two lanes are literally collinear. A shell that
+## reaches either end keeps its heading and simply changes which brain drives
+## it: no arc, no gap, no U-turn in the middle of a boulevard. Both directions
+## are covered (_join_grid takes a spur car onto the grid, _join_spur takes a
+## grid car off it) and both refuse anything that is not a straight continuation
+## — SPUR_JOIN metres ahead at most, SPUR_JOIN_LAT off the lane at most. On the
+## shipped atlas exactly one pair of ends passes: Juárez's north end. Every
+## other end U-turns, which is the documented fallback.
+
+## Spur terminal -> grid lane. Stages SP_JOIN plus the lane to land on; false
+## when no grid street continues ahead, and _plan_spur stages a U-turn instead.
+func _join_grid(car: Dictionary, tgt: Vector2, dirv: Vector3) -> bool:
+	if absf(_spur_lane(car) - LANE_OFFSET) > 0.01: return false  # lanes not collinear
+	var ns := absf(dirv.z) > 0.5              # travelling north/south -> an N-S street
+	var lanes: Array[float] = _ns_x if ns else _ew_z
+	var mine := tgt.x if ns else tgt.y        # the spur's centreline at this end
+	var along := tgt.y if ns else tgt.x       # ... and where along the grid street
+	var s := dirv.z if ns else dirv.x         # +1 toward the +axis
+	var bounds := NS_Z if ns else EW_X
+	if ((bounds.x if s < 0.0 else bounds.y) - along) * s <= 0.0: return false  # behind us
+	if ((bounds.y if s < 0.0 else bounds.x) - along) * s > SPUR_JOIN: return false  # too far
+	for c in lanes:
+		if absf(c - mine) > SPUR_JOIN_LAT: continue
+		car["sp_end"] = SP_JOIN; car["sp_center"] = c
+		car["sp_kind"] = KIND_NS if ns else KIND_EW
+		return true
+	return false
+
+
+## Grid lane end -> spur. The same test from the other side: a spur terminal
+## ahead of us, on our heading, whose lane is the one we are already in. Switches
+## the shell over in place and returns true; false means the caller does the
+## old dead-end U-turn, exactly as before.
+func _join_spur(car: Dictionary, body: RigidBody3D) -> bool:
+	var dirv := car["dir"] as Vector3
+	var pos := body.global_position
+	var side := _right(dirv)
+	for si in _spurs.size():
+		var spur := _spurs[si]
+		var pts: PackedVector2Array = spur["pts"]
+		var dirs: Array = spur["dirs"]
+		for tail in 2:
+			var seg := 0 if tail == 0 else dirs.size() - 1
+			var sdir := 1.0 if tail == 0 else -1.0
+			if (dirs[seg] as Vector3).dot(dirv) * sdir < 0.999: continue
+			var p: Vector2 = pts[0] if tail == 0 else pts[pts.size() - 1]
+			var to := Vector3(p.x, 0.0, p.y) - pos; to.y = 0.0
+			var ahead := to.dot(dirv)
+			if ahead < 0.0 or ahead > SPUR_JOIN: continue
+			if absf((to - dirv * ahead).dot(side) + float(spur["lane"])) > SPUR_JOIN_LAT: continue
+			car["kind"] = KIND_SPUR; car["spur"] = si; car["seg"] = seg
+			car["sdir"] = sdir; car["stuck_t"] = 0.0
+			var np := _spur_snap(car, pos, dirv); np.y = float(car["ride"])
+			_place(body, dirv, np); _plan_next(car)
+			return true
+	return false
