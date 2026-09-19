@@ -269,7 +269,7 @@ func _process(_delta: float) -> void:
 	if _beam != null and is_instance_valid(_beam):
 		_beam.visible = state == State.IDLE
 	if _objective == null: return
-	_objective.visible = state != State.IDLE
+	_objective.visible = false   # D-155: the HUD draws this label's text; the mission never does
 	_objective.text = _objective_text()
 
 

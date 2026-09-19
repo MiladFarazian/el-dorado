@@ -350,16 +350,31 @@ func _update_bottom(delta: float, actor: Node3D, on_foot: bool) -> void:
 				var pt: Variant = orders.call("prompt_text")
 				if pt is String and str(pt) != "":
 					obj += "   ·   " + str(pt)
-	_obj_lbl.text = obj
-	# Scripted jobs already own their objective and exposure UI. Do not issue
-	# an unrelated ambient repo order underneath them.
-	# D-071: yield only to a mission that is RUNNING (states 1..3); a finished
-	# one in its re-arm window does not get to blank a live order's line.
+	# D-155: ONE objective line, drawn here and nowhere else. A mission keeps its
+	# own hidden label as the place it writes its objective and its flashes; the
+	# HUD shows that text (and its fade) while the mission runs or flashes, and
+	# the order/repo line otherwise. Two missions can no longer overprint.
+	var mission_text := ""
+	var mission_alpha := 1.0
+	var mission_owns := false
 	for key in ["mission_hook_and_ladder", "mission_second_collection", "mission_comin_down"]:
 		var mission := _peer(key)
-		if mission != null and int(mission.get("state")) in [1, 2, 3]:
-			_obj_lbl.text = ""
+		if mission == null or int(mission.get("state")) == 0:
+			continue
+		var ml: Variant = mission.get("_objective")
+		var text := str((ml as Label).text) if (ml is Label and is_instance_valid(ml)) else ""
+		var running := int(mission.get("state")) in [1, 2, 3]
+		if running or text != "":
+			mission_text = text
+			mission_alpha = (ml as Label).modulate.a if (ml is Label and is_instance_valid(ml)) else 1.0
+			mission_owns = true
 			break
+	if mission_owns:
+		_obj_lbl.text = mission_text
+		_obj_lbl.modulate.a = mission_alpha
+	else:
+		_obj_lbl.text = obj
+		_obj_lbl.modulate.a = 1.0
 	# Verb hint: mode-aware (D-033), shown for HINT_FADE_S after a mode change.
 	var mode := 1 if on_foot else 0
 	if mode != _last_on_foot:

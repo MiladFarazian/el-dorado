@@ -502,10 +502,10 @@ func _update_ui(delta: float) -> void:
 		_flash_left = maxf(0.0, _flash_left - delta)
 		_objective.add_theme_font_size_override("font_size", FLASH_FONT)
 		_objective.text = _flash_text; _objective.modulate.a = clampf(_flash_left, 0.0, 1.0)
-		_objective.visible = true
+		_objective.visible = false   # D-155: the HUD draws this label's text; the mission never does
 	else:
 		_objective.add_theme_font_size_override("font_size", OBJECTIVE_FONT)
-		_objective.modulate.a = 1.0; _objective.visible = state != State.IDLE
+		_objective.modulate.a = 1.0; _objective.visible = false   # D-155
 		_objective.text = _objective_text()
 	var filming := _drone != null and is_instance_valid(_drone) and not _drone_leaving
 	if _bar_bg != null:

@@ -3,7 +3,7 @@ Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
 RENDER: tier=budget sdfgi=on c3 cell0.75 r16 l16 ssr=on s12 volfog=on 48x48 aa=off+taa sky=custom(m16)+scatter shadow=450m/pcss0.53deg grade=lut32 exposure=tod
 STREET WEAR: 390 lids, 280 drains, 790 patches, 3 draw calls
 SKIN MICRO: skin 256^2 in 119 ms
-SKIN MICRO: cloth 256^2 in 99 ms
+SKIN MICRO: cloth 256^2 in 101 ms
 TALL TOM: 17 m tall at (868.0, 1.35, 258.0)
 CEDAR CLIFF: 45 houses, 14 storefronts, 31 labels
 DOWNTOWN TYPES: 108 towers = corp 22 / deco 13 / slab 25 / brick 21 / deck 14 / signblock 10 / site 3 — 5344 instances in 17 MultiMeshes + 142 signs
@@ -96,7 +96,7 @@ MECHPROBE PASS stage12 two missed drafts: LONGHORN recovered the Brisket (1 rigs
 MECHPROBE PASS stage12 the wrecker is still his
 MECHPROBE PASS stage12 bought the sedan for cash ($5100 left, want 5100)
 MECHPROBE PASS stage13 five spur routes qualified from the atlas (5)
-MECHPROBE PASS stage13 spur traffic on the boulevard after 40 s: 14 shells
+MECHPROBE PASS stage13 spur traffic on the boulevard after 40 s: 13 shells
 MECHPROBE PASS stage13 the boulevard's sidewalks have people: 10 (want >= 2)
 MECHPROBE PASS stage14 the app pushed an order that will run (push_now flee)
 MECHPROBE PASS stage14 FLEEING (state=3): 'CATCH THE VANTAGE · 14 m · 0 km/h'

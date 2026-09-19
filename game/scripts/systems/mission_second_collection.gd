@@ -1076,13 +1076,13 @@ func _update_ui(delta: float) -> void:
 	if _flash_left > 0.0:   # title/event flash reuses the objective label, big
 		_flash_left = maxf(0.0, _flash_left - delta)
 		_objective.add_theme_font_size_override("font_size", FLASH_FONT)
-		_objective.text = _flash_text
+		_objective.text = _flash_text   # D-155: the HUD draws this text; the label stays hidden
 		_objective.modulate.a = clampf(_flash_left, 0.0, 1.0)
-		_objective.visible = true
+		_objective.visible = false   # D-155
 	else:
 		_objective.add_theme_font_size_override("font_size", OBJECTIVE_FONT)
 		_objective.modulate.a = 1.0
-		_objective.visible = state != State.IDLE
+		_objective.visible = false   # D-155
 		_objective.text = _objective_text()
 	if _prompt != null:
 		var show_prompt := state == State.LOCKED and _kiosk_in_reach()
