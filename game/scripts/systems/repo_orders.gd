@@ -156,6 +156,16 @@ func setup(main: Node) -> void:
 	_load_models()
 	_next_id = int(_n("order_id_base", 4471.0))
 	_gap_t = _n("first_gap", 12.0)
+	# D-071: QA keys — F8 pushes a bad-paper order, F9 an order that will run.
+	# One in five orders runs and one in five carries bad paper; a tester should
+	# not have to drive for ten minutes to see either.
+	for pair: Array in [["qa_paper", KEY_F8], ["qa_run", KEY_F9]]:
+		var action := str(pair[0])
+		if not InputMap.has_action(action):
+			InputMap.add_action(action)
+			var ev := InputEventKey.new()
+			ev.physical_keycode = pair[1]
+			InputMap.action_add_event(action, ev)
 
 
 ## Naming bible §7a: a vehicle's canon name lives in the `name` field of its
@@ -321,6 +331,10 @@ func _short_model() -> String:
 
 # ============================== THE CLOCK ====================================
 func _physics_process(delta: float) -> void:
+	if Input.is_action_just_pressed("qa_paper") and state == State.IDLE:
+		push_now(true, false)
+	elif Input.is_action_just_pressed("qa_run") and state == State.IDLE:
+		push_now(false, true)
 	if _disabled or main_ref == null:
 		return
 	_try_bind_tow()

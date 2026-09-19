@@ -735,6 +735,14 @@ func _knockdown(ped: Dictionary, body: RigidBody3D, striker: Node) -> void:
 ## striker's closing speed (bullets have none). _knockdown's own guards (already
 ## down, spawn grace) still apply, and its charge branch stays silent for a
 ## stationary shooter — combat's own once-per-ped meta is the only charge.
+## PUBLIC (D-071, missions): was this ped put down by the PLAYER's rig? The
+## knockdown charges the player only when the striker was their vehicle, so a
+## cruiser ploughing through a crowd is not on Book's account.
+func downed_by_player(body: Node) -> bool:
+	var ped := _find(body)
+	return not ped.is_empty() and int(ped.get("state", 0)) == DOWN and bool(ped.get("charged", false))
+
+
 func force_knockdown(body: RigidBody3D, striker: Node) -> void:
 	var ped := _find(body)
 	if ped.is_empty() or int(ped["state"]) == DOWN: return

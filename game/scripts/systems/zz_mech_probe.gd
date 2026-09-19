@@ -629,8 +629,12 @@ func _stage_comin() -> void:
 					_say(false, "stage10 crossed the east gate and no pass counted (state=%s)" % m.get("state")); _finish()
 		3:
 			pv.linear_velocity = Vector3.ZERO
-			if int(m.get("state")) == 3:
+			if int(m.get("state")) == 3 and _t > 1.5:
 				_say(true, "stage10 parked on the lot: SLIDE OUT (state=3)")
+				if m.has_method("crowd_count"):   # D-071: the takeover is a crowd
+					var cc := int(m.call("crowd_count"))
+					_say(cc >= 6, "stage10 the club came out: %d on the lot (want >= 6)" % cc)
+					_shot("takeover")
 				pol.call("add_heat", -10)   # the probe loses them for you
 				_sub = 4; _t = 0.0
 			elif _t > 4.0:
@@ -677,6 +681,12 @@ func _stage_orders() -> void:
 			if tgt is Node3D and is_instance_valid(tgt):
 				_say(int(o.get("state")) == 1, "stage11 PUSHED (state=%s): '%s'" % [o.get("state"), o.call("objective_text")])
 				_shot("order_push")   # the push line, the beacon, the objective
+				var la := _sys("loop_audio")   # D-071: the loop has a voice
+				if la != null and la.has_method("cue_names") and la.has_method("play"):
+					var names: Variant = la.call("cue_names")
+					var n := (names as Array).size() if names is Array else 0
+					_say(n >= 11, "stage11 loop_audio carries %d cues (want >= 11)" % n)
+					_say(bool(la.call("play", "delivered")), "stage11 loop_audio plays the delivered cue on demand")
 				var ph := _sys("phone")   # D-069: the paper you can read
 				if ph != null and ph.has_method("toggle") and ph.has_method("text_of"):
 					ph.call("toggle")

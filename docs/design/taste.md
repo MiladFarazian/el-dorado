@@ -235,3 +235,8 @@ the world can refuse it — the Hook was a button until a car could leave. The c
 two systems that already existed (the traffic brain, the order) and one contract between them
 (`adopt` / `release`), which is the cheapest kind of new mechanic there is. Next: cops who join a
 chase, the runner's own choices (a dead end, a U-turn into you), a debug key for QA.
+
+**Round 16 — 2026-09-18 (D-071).** Feel: sound on the loop's every beat, the crowd the takeover
+owed since D-064, two keys so QA never waits for the dice. Principle: a loop is not felt until
+it is heard — a chime on the push does more for "want to play" than a district. Next: cops who
+join a chase, the runner's choices, the perf ruling.

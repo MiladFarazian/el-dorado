@@ -1,0 +1,71 @@
+{
+  "_doc": "LOOP AUDIO — the voice of the core loop (the LONGHORN push, the close, the debtor bolting, Boone's bell and chain, the note drafting, rank). Every cue is synthesised into an AudioStreamWAV at setup by scripts/systems/loop_audio.gd; there are no asset files. Levels are player dB; peaks are the normalised buffer peak, so a cue's real ceiling is level_db + linear_to_db(peak). Keep the loudest cue under the siren (-12 dB positional) — a notification cuts through by being SHORT, never by being loud.",
+  "mix_rate": 22050,
+  "rng_seed": 46609,
+  "_rng_seed": "Fixed seed for every noise burst (chirp, chain, transient). Synthesis must be byte-identical run to run.",
+  "peak": 0.55,
+  "_peak": "Default normalised peak (-5.2 dBFS). Per-cue overrides live in peaks{}.",
+  "note_poll_seconds": 1.0,
+  "_note_poll_seconds": "Cadence of the dealer.notes paid/missed poll. repo_orders.state and .rank are read every physics tick (two int compares); the notes walk is 1 Hz.",
+
+  "levels_db": {
+    "push": -12.0,
+    "push_bad": -12.0,
+    "delivered": -8.0,
+    "voided": -10.0,
+    "expired": -14.0,
+    "run": -13.0,
+    "bell": -11.0,
+    "chain": -12.0,
+    "coin": -13.0,
+    "buzz": -15.0,
+    "rankup": -10.0
+  },
+  "_levels_db": "Chimes sit at -12, the cash rise at -8 (the loop's one payoff), the expiry at -14 because a miss should feel small. Nothing here is a loop, so nothing here can mask anything for longer than its own tail. LEVELS ARE SET BY RMS, NOT PEAK: a flat buzz and a decaying bell normalised to the same peak differ by 14 dB of loudness. Measured RMS ceilings (level + 20*log10(rms)) land -24 to -39 dBFS with `delivered` at the top of the family, which is the point — the payoff is the loudest thing the loop says.",
+
+  "peaks": {
+    "delivered": 0.60,
+    "coin": 0.45,
+    "expired": 0.45,
+    "buzz": 0.30
+  },
+  "_peaks": "buzz is held to 0.30 because it is the only cue with a FLAT envelope: at the family peak of 0.55 its RMS measured 0.486 against delivered's 0.116, i.e. 7 dB louder than the payoff. Held to 0.30 AND levelled to -15 dB, its RMS lands -26.5 dBFS against delivered's -26.7 — the same loudness, reached from a much lower peak. A buzz stings by being ugly, not by being loud.",
+
+  "seconds": {
+    "push": 0.35,
+    "delivered": 0.70,
+    "voided": 0.45,
+    "expired": 0.45,
+    "run": 0.60,
+    "bell": 1.60,
+    "chain": 1.15,
+    "coin": 0.28,
+    "buzz": 0.30,
+    "rankup": 0.90
+  },
+  "_seconds": "Buffer length. push_bad shares push's length; chain is 0.8 s of rattle plus the push notes.",
+
+  "notes": {
+    "push_root_midi": 81,
+    "push_interval": 7,
+    "push_bad_flat": 1,
+    "_push": "A5 up a perfect fifth to E6. Bad paper flattens the second note one semitone into a tritone — corporate calm with something wrong under it. The player will not name it; the phone will confirm it.",
+    "push_gap_seconds": 0.14,
+    "delivered_midi": [76, 83, 88],
+    "_delivered_midi": "E5 - B5 - E6: a rise that opens out rather than resolves, under a bright register chink.",
+    "rankup_midi": [67, 71, 74, 79],
+    "_rankup_midi": "G major arpeggio to the octave. Four notes, no more — a promotion at LONGHORN is a push notification, not a parade.",
+    "coin_midi": [96, 103],
+    "voided_hz": [120.0, 52.0],
+    "bell_hz": 660.0,
+    "buzz_hz": 110.0,
+    "run_hz": [58.0, 186.0],
+    "_run_hz": "Engine crank sweep, low to high across the 0.6 s, with the tyre chirp landing on top of it."
+  },
+
+  "chain": {
+    "bursts_hz": 12.0,
+    "burst_seconds": 0.8,
+    "_doc": "Ten 12 Hz noise slaps, high-passed, then the push notes — the app tells you it took the truck back with the same two tones it used to offer it."
+  }
+}

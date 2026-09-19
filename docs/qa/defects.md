@@ -211,6 +211,12 @@ Bar: `docs/qa/quality-bar.md`.
 >   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
 > - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
 >   and a gold ring on a live mission target. QA to rule at `--hudshot`.
+> - **D-151 [S2] The loop was silent** — no push chime, no cash, no note dropping. PRODUCER-CLAIMED
+>   LANDED (D-071): `loop_audio.gd`, eleven procedural cues on the loop's signals. Evidence: probe
+>   rows in stage 11. QA to rule by ear at a push, a delivery, a draft; the bad-paper flat note.
+> - **D-152 [S2] The takeover was a parking spot** (open since D-064). PRODUCER-CLAIMED LANDED
+>   (D-071): the club comes out, four rides, the lines, the bulbs. Evidence: probe stage 10
+>   (`crowd_count >= 6` at SLIDE OUT). QA to rule by driving the strip at night in the Slab.
 > - **D-150 [S1] The target never left.** Every debtor reaction kept the car parked; the Hook had
 >   nothing to catch. PRODUCER-CLAIMED LANDED (D-070): the FLEE reaction — the traffic brain drives
 >   the car (`traffic.adopt`), the wrecker hooks it on the move, ×1.5 on delivery; boxed-in and

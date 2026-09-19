@@ -180,7 +180,7 @@ Standing rules the loop exists to enforce:
   `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
   Boot census lines: `RENDER:`, `SURFACES:`, `SKIN LIB:`, `SKIN MICRO:`; `SHOT sun:` at `face`.
-- **Mechanics probe (D-056…D-070):** `godot --headless -- --mech-probe` — 91 checks in ~300 s:
+- **Mechanics probe (D-056…D-071):** `godot --headless -- --mech-probe` — 94 checks in ~300 s:
   a parked truck stays parked (drift < 2 cm over 8 s), legible heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore),
   busted by a cruiser that pulls alongside (card, impound, fine, heat still 1), a favor that
   covers bail, the stranded-driver spawn and its TTL, a towed box sliding onto the impound pad,
@@ -190,7 +190,7 @@ Standing rules the loop exists to enforce:
   target, debtor, hook, deliver, card; then bad paper walked), and Boone Trucks (a note, the draft,
   two misses, the recovery, a cash buy), and the city alive (five spur routes, traffic and
   people on Juárez Boulevard after 40 s; the phone opens on an order), and the chase (a forced
-  run, the brain driving, blocked ahead, stopped on the boom, hooked, the run bonus). Prints
+  run, the brain driving, blocked ahead, stopped on the boom, hooked, the run bonus), the takeover crowd and the loop's cues. Prints
   `MECH PROBE: PASS (n/n)`; `--mech-only=N` runs one stage. Windowed with `--mech-shots=/abs/dir` it also saves `full_eight.png`,
   `brake_night.png`, `busted.png`, `brawl.png`, `mission_card.png`. Run it after any change to police/on_foot/
   full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board/
@@ -246,6 +246,8 @@ Standing rules the loop exists to enforce:
   reaction (`push_now(false, true)` forces one). The boom is at the back: a runner is caught by
   getting AHEAD of it and stopping (it car-follows to a halt, 5 s stuck = boxed in), then backing
   onto it. `pedestrians.send_to(body, target, seconds)` is the one way to steer a ped from outside.
+- **QA keys (D-071):** in any windowed run, **F8** pushes a bad-paper order and **F9** an order
+  that will run (both only while no order is live); **P** is the phone; TAB cycles owned rigs.
 - **Milad's task inbox:** a shared Apple Note, "El Dorado Tasks". `game/tools/tasks_note.sh`
   reads it from Notes.app and diffs against `game/.gate/tasks_seen.txt`; run it at the start of a
   session and between rounds, and work new items before the backlog.
