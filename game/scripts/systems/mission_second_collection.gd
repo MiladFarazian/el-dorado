@@ -1133,5 +1133,5 @@ func _objective_text() -> String:
 					_target.global_position.z - PAD_CENTER.z).length()
 			return "HAUL IT TO THE IMPOUND   %dm" % int(d4)
 		State.COMPLETE:
-			return "NIGHT BOARD RE-ARM %ds" % int(ceilf(_cooldown_t))
+			return ""   # D-071: one objective line on screen
 	return ""

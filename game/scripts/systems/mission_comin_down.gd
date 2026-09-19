@@ -281,7 +281,7 @@ func _objective_text() -> String:
 			return "COMIN' DOWN · PASS %d/%d · %s · %d MPH" % [passes + 1, passes_needed, "EAST" if _dir > 0 else "WEST", int(sp)]
 		State.TAKEOVER: return "TAKEOVER — PARK ON THE LOT, TRUNK UP"
 		State.SLIDE_OUT: return "SLIDE OUT — LOSE THE TASK FORCE"
-		State.COMPLETE: return "CANDYLAND RE-ARM %ds" % int(ceilf(_cooldown_t))
+		State.COMPLETE: return ""   # D-071: one objective line on screen
 	return ""
 
 

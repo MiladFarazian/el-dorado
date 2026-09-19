@@ -529,5 +529,5 @@ func _objective_text() -> String:
 				d2 = Vector2(_target.global_position.x - PAD_CENTER.x, _target.global_position.z - PAD_CENTER.z).length()
 			return "DELIVER TO IMPOUND   %dm" % int(d2)
 		State.COMPLETE:
-			return "LONGHORN DISPATCH RE-ARM %ds" % int(ceilf(_cooldown_t))
+			return ""   # D-071: one objective line on screen — the re-arm is the board's business, not the HUD's
 	return ""

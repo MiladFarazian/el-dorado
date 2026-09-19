@@ -353,9 +353,11 @@ func _update_bottom(delta: float, actor: Node3D, on_foot: bool) -> void:
 	_obj_lbl.text = obj
 	# Scripted jobs already own their objective and exposure UI. Do not issue
 	# an unrelated ambient repo order underneath them.
+	# D-071: yield only to a mission that is RUNNING (states 1..3); a finished
+	# one in its re-arm window does not get to blank a live order's line.
 	for key in ["mission_hook_and_ladder", "mission_second_collection", "mission_comin_down"]:
 		var mission := _peer(key)
-		if mission != null and int(mission.get("state")) != 0:
+		if mission != null and int(mission.get("state")) in [1, 2, 3]:
 			_obj_lbl.text = ""
 			break
 	# Verb hint: mode-aware (D-033), shown for HINT_FADE_S after a mode change.

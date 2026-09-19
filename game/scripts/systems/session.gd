@@ -276,7 +276,7 @@ func _process(delta: float) -> void:
 		_refresh_route()
 	if destination.is_empty():
 		_arrival_left = maxf(0.0, _arrival_left - delta)
-		nav_label.text = "DESTINATION REACHED" if _arrival_left > 0.0 else "Find work at Longhorn Dispatch  ·  M"
+		nav_label.text = "DESTINATION REACHED" if _arrival_left > 0.0 else "Stay quiet and the app finds the work  ·  M  city map"
 		return
 	var position_2d := Vector2(actor.global_position.x, actor.global_position.z)
 	var distance := position_2d.distance_to(destination.pos)
