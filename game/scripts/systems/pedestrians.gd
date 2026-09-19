@@ -134,9 +134,11 @@ func _physics_process(delta: float) -> void:
 # ============================== POPULATION ===================================
 func _validate(pv: Node3D, delta: float) -> void:
 	for i in range(_peds.size() - 1, -1, -1):
-		var ped := _peds[i]; var body := ped["body"] as RigidBody3D
-		if not is_instance_valid(body) or not body.is_inside_tree():
+		var ped := _peds[i]
+		var bv: Variant = ped["body"]   # D-068: validity before the cast — 4.7 errors on casting a freed object
+		if not is_instance_valid(bv) or not (bv as Node).is_inside_tree():
 			_peds.remove_at(i); continue
+		var body := bv as RigidBody3D
 		ped["age"] = float(ped["age"]) + delta
 		if pv != null and body.global_position.distance_to(pv.global_position) > DESPAWN_DIST:
 			body.queue_free(); _peds.remove_at(i)  # covers never-settling debris too
@@ -191,8 +193,9 @@ func _make_ped(c: Vector2, s: float) -> void:
 
 # ============================== BEHAVIOUR ====================================
 func _update_ped(ped: Dictionary, delta: float) -> void:
-	var body := ped["body"] as RigidBody3D
-	if not is_instance_valid(body) or not body.is_inside_tree(): return
+	var bv: Variant = ped["body"]
+	if not is_instance_valid(bv) or not (bv as Node).is_inside_tree(): return
+	var body := bv as RigidBody3D
 	match int(ped["state"]):
 		DOWN: _update_down(ped, body, delta)
 		FLEE:
@@ -351,7 +354,10 @@ func _update_follow(ped: Dictionary, body: RigidBody3D, delta: float) -> void:
 	ped["follow_t"] = float(ped.get("follow_t", 0.0)) - delta
 	ped["moving"] = false
 	var bpos: Vector3 = ped["bpos"]
-	if not (t is Node3D) or not is_instance_valid(t) or float(ped["follow_t"]) <= 0.0 \
+	# D-068: validity FIRST — `is` on a freed instance is an error in 4.7, and a
+	# follower's target is freed every time the player's rig is swapped (TAB, a
+	# purchase, a recovery).
+	if not is_instance_valid(t) or not (t is Node3D) or float(ped["follow_t"]) <= 0.0 \
 			or (t as Node3D).global_position.distance_to(bpos) > FOLLOW_GIVE_UP:
 		body.queue_free()   # _validate drops the freed entry
 		return

@@ -100,7 +100,7 @@ artifacts instead of paying for a third pass. Therefore:
   in every long-mission brief verbatim.
 - Prefer several short focused missions over one monolithic pass, and order the brief so
   the highest-value question is answered first.
-- **A 63-vantage `--shot` sweep takes ~1–3 minutes — WITH A REAL RENDERER.** The earlier
+- **A 66-vantage `--shot` sweep takes ~1–3 minutes — WITH A REAL RENDERER.** The earlier
   "15–18 minutes" figure in this file was wrong; it was inferred from a run that had in
   fact deadlocked. **`--headless` + `--shot` hangs forever:** the dummy renderer never
   fires `RenderingServer.frame_post_draw`, so `_settle_and_save` awaits a frame that never
@@ -150,8 +150,17 @@ Opus missions each running windowed Godot with SDFGI/SSR/volumetric fog, plus pe
 screenshot sweeps, simultaneously. Headless for smoke/boot gates; windowed only for a
 screenshot or a perf number, never two windowed runs in parallel. Never edit a game file
 while a runner is booting the tree — a half-written file poisons its next boot (D-084).
-Runners never edit `game/` or `docs/`. Long-mission builder agents are the exception, not the
-rule, and need Milad's say-so.
+Runners never edit `game/` or `docs/`.
+
+**RATE MODEL SINCE 2026-09-18 (Milad: "I need more progress and a faster rate").** Builder
+agents are back, under D-029's one rule — **one owner per file** — and one more: **agents never
+run Godot except `tools/parse_all.gd` headless under a watchdog.** The producer briefs each
+builder with the exact public API it must expose (names, signatures, signals, save keys), owns
+every shared file (main.gd, save_load.gd, hud_gta.gd, session.gd, the probe, the atlas, the
+docs) and writes the integration and the probe stages against the contract WHILE the builders
+write, then runs the single gate. Three builders in parallel is the working size (a loop system,
+a place, a district); each writes a findings file as it goes and stops when its parse and lint
+are clean. Long-mission builders no longer need Milad's say-so; a second Godot process still does.
 
 Standing rules the loop exists to enforce:
 - **"Better than before" is not a pass.** The bar is absolute.
@@ -166,18 +175,20 @@ Standing rules the loop exists to enforce:
   `--env-legacy` (M22 look), `--env-no-{sdfgi,ssr,volfog,taa,farshadow,grade,scatter,exposure}`,
   `--env-aa=off|msaa2|msaa4|msaa8|taa|msaa2taa|msaa8taa`, `--factory` (the M22 rigid-part body; skinned is the default since D-050),
   `--skinned-bare` (body with no garment shells — bisects body vs wardrobe),
-  `--gfx-legacy` (M22 materials), `--shot` (63 plates, windowed), `--hudshot` (the live HUD,
+  `--gfx-legacy` (M22 materials), `--shot` (66 plates, windowed), `--hudshot` (the live HUD,
   windowed), `--perf` (see `docs/tech/rendering/perf-harness.md`), `--nobeacon`,
   `--surf-census-quit`, `--mech-probe` (D-056), `--shot-debug=normals|unshaded|lighting|overdraw` (the sweep through a
   G-buffer view — normals answers "mesh or light?" in one plate; D-051 was found with it).
   Boot census lines: `RENDER:`, `SURFACES:`, `SKIN LIB:`, `SKIN MICRO:`; `SHOT sun:` at `face`.
-- **Mechanics probe (D-056…D-064):** `godot --headless -- --mech-probe` — 61 checks in ~130 s:
+- **Mechanics probe (D-056…D-068):** `godot --headless -- --mech-probe` — 79 checks in ~200 s:
   a parked truck stays parked (drift < 2 cm over 8 s), legible heat, brake lamps and horn, the Full Eight (fire, four effects, self-end, restore),
   busted by a cruiser that pulls alongside (card, impound, fine, heat still 1), a favor that
   covers bail, the stranded-driver spawn and its TTL, a towed box sliding onto the impound pad,
   the melee loop (jab, brawler, guard, perfect block, counter), and Hook and Ladder end to end
   (dispatch, the app, hook, drone + owner, deliver, card, $950), and Comin' Down (the Slab, the
-  board, a pass, the star, the takeover, the slide-out, the card). Prints
+  board, a pass, the star, the takeover, the slide-out, the card), a LONGHORN order end to end (push,
+  target, debtor, hook, deliver, card; then bad paper walked), and Boone Trucks (a note, the draft,
+  two misses, the recovery, a cash buy). Prints
   `MECH PROBE: PASS (n/n)`; `--mech-only=N` runs one stage. Windowed with `--mech-shots=/abs/dir` it also saves `full_eight.png`,
   `brake_night.png`, `busted.png`, `brawl.png`, `mission_card.png`. Run it after any change to police/on_foot/
   full_eight/arrest/random_events/vehicle_lamps/vehicle_audio/pedestrians/melee/repo_board/
@@ -206,8 +217,8 @@ Standing rules the loop exists to enforce:
   non-grid roads by class, nameable places — and `ui/city_map.gd` draws from it; `docs/design/
   world-atlas.md` is its prose twin with the still-prairie table. A layer that adds a nameable
   place registers it there; a new road name goes in the naming bible §4. `godot -- --mapshot=PATH`
-  (windowed) saves the map as the player sees it. The `--shot` sweep is 63 plates (`fair_gate`,
-  `fair_wheel_night`, `harvest_edge`, `tall_tom` joined it).
+  (windowed) saves the map as the player sees it. The `--shot` sweep is 66 plates (`fair_gate`,
+  `fair_wheel_night`, `harvest_edge`, `tall_tom`, `boone_lot`, `cliff_boulevard`, `gilead_bottoms`).
 - **Cloth (D-067):** the shirt, sleeves and trousers are constant-offset SHELLS of the body
   (`skinned_character._pieces`, "THE CLOTHES THEMSELVES"): 10 mm off, 12 mm thick, 4 mm cells,
   one piece per garment, zone −1 = inherit the skin's palette zone. Laws paid for in plates: a
@@ -215,6 +226,13 @@ Standing rules the loop exists to enforce:
   so a garment is one piece; a full-field shell at wrist height rings the wrist (use the trunk
   field or an |x| clip). Anything that sits on the shirt carries `CLOTH_TOP`. A cache bump now
   dresses the crowd over ~4 minutes on the first boot (63 s a bucket, async) — warm before plates.
+- **The loop (D-068):** `repo_orders.gd` pushes LONGHORN orders whenever the world is quiet — so a
+  probe or a test that needs a quiet world must expect one live (stage 11 clears it with
+  `walk_away()` before forcing its own with `push_now()`). TAB cycles `main.owned_paths` in play;
+  tools get the whole fleet (`dev_fleet`, set by the tool args or `--dev-fleet`). **No tool run
+  reads or writes the player's save** (`save_load` treats every `--shot/--perf/--mech-probe/
+  --mapshot/--session-test` run as smoke). Godot 4.7 errors on `is` and `as` against a freed
+  instance: check `is_instance_valid()` on the Variant FIRST, then cast (D-121, and twice here).
 - **Milad's task inbox:** a shared Apple Note, "El Dorado Tasks". `game/tools/tasks_note.sh`
   reads it from Notes.app and diffs against `game/.gate/tasks_seen.txt`; run it at the start of a
   session and between rounds, and work new items before the backlog.

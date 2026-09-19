@@ -28,6 +28,11 @@ var fallback_cam := false
 var spawn_transform := Transform3D(Basis.IDENTITY, Vector3(0, 2, 0))
 var profile_paths: Array[String] = []
 var profile_index := 0
+# D-068: the rigs Book OWNS. TAB cycles these in play; the wrecker is always
+# his. Boone Trucks grants (a note or cash) and LONGHORN revokes (a missed
+# note). Tools and probes (`dev_fleet`) still cycle every profile on disk.
+var owned_paths: Array[String] = []
+var dev_fleet := false
 
 # Gameplay systems auto-loaded from scripts/systems/*.gd, keyed by basename
 # (e.g. systems["tow_hook"]). Each gets setup(self) and may implement
@@ -225,6 +230,33 @@ func _scan_vehicle_profiles() -> void:
 			profile_paths.remove_at(i)
 			profile_paths.insert(0, w)
 			break
+	owned_paths.clear()
+	if not profile_paths.is_empty():
+		owned_paths.append(profile_paths[0])   # the wrecker: the Hook is equipment he owns
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with("--shot") or a.begins_with("--perf") or a.begins_with("--mech-probe") \
+				or a.begins_with("--hudshot") or a.begins_with("--wanted-probe") or a == "--dev-fleet":
+			dev_fleet = true
+
+
+## D-068: Boone Trucks calls this on a sale. True if the rig is now owned.
+func grant_vehicle(path: String) -> bool:
+	if path == "" or not profile_paths.has(path):
+		return false
+	if not owned_paths.has(path):
+		owned_paths.append(path)
+	return true
+
+
+## D-068: LONGHORN calls this on a missed note. The wrecker can never go.
+func revoke_vehicle(path: String) -> bool:
+	if owned_paths.size() < 2 or path.contains("wrecker"):
+		return false
+	var i := owned_paths.find(path)
+	if i < 0:
+		return false
+	owned_paths.remove_at(i)
+	return true
 
 
 func _spawn_vehicle(path: String) -> void:
@@ -262,14 +294,17 @@ func _reset_vehicle() -> void:
 
 
 func _cycle_vehicle() -> void:
-	if profile_paths.size() < 2:
+	var fleet: Array[String] = profile_paths if dev_fleet else owned_paths
+	if fleet.size() < 2:
 		return
-	profile_index = (profile_index + 1) % profile_paths.size()
+	var cur: String = str(vehicle.get("profile_path")) if vehicle != null else ""
+	var at := fleet.find(cur)
+	profile_index = (at + 1) % fleet.size()
 	var t := vehicle.global_transform
 	t.origin += Vector3(0, 0.5, 0)
 	var lv: Vector3 = vehicle.linear_velocity
 	var av: Vector3 = vehicle.angular_velocity
-	_spawn_vehicle(profile_paths[profile_index])
+	_spawn_vehicle(fleet[profile_index])
 	vehicle.global_transform = t
 	vehicle.linear_velocity = lv
 	vehicle.angular_velocity = av

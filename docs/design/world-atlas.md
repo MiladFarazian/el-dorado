@@ -23,6 +23,8 @@ bug** (rule 1's cousin: one world, one register).
 | `harvest` | HARVEST HILLS™ | −980, −880 → 340 × 460 | **new (D-066)**: a Pioneer Vision Development — Pioneer Vision Parkway off the north frontage road, the monument sign, the billboard, mud roads, framing-lumber houses, wrapped houses, bare slabs, five model homes, the sales trailer | 8 · the frontier (the slab-farm satire) |
 
 **The freeway** is I-3 (z 0, x ±800, deck at 9 m) with frontage roads at z ±30 and ramps at |x|
+| `boone` | BOONE TRUCKS | −180, −110 → 140 × 66 | **new (D-068)**: Wade Boone's lot on the north frontage — showroom, pylon, pennants, the stock on display (Brisket, Vantage, Slab); a note or cash; Boone Financial drafts daily; two misses and LONGHORN recovers it | 8 · the suburban-credit satire |
+| `cedar_cliff` | CEDAR CLIFF | −500, 640 → 600 × 300 | **new (D-068)**: Juárez Boulevard south from the grid and west along z 800; the Deacon Arts storefronts, Teatro Estrella, murals, papel picado; 45 craftsman houses, a park, a small church; Gilead Bottoms' horse lots against the levee; the Cliff Lofts hoarding at the east end | 4 · Cedar Cliff |
 517–582. Traffic drives the downtown grid and the frontage roads only. Three dirt two-tracks cross
 the prairie (`wild_dressing`).
 
@@ -31,10 +33,9 @@ the prairie (`wild_dressing`).
 | Where | Rect | The candidate, by the map concept |
 |---|---|---|
 | East, south of the fairgrounds | 830, 430 → 160 × 500 | Deep Elm (brick + murals under the Overhead) — needs an elevated road first |
-| South-west | −530, 576 → 650 × 400 | Cedar Cliff / Deacon Arts: craftsman blocks, Juárez Boulevard, Teatro Estrella; Gilead Bottoms' horse lots at the floodway's edge |
 | South, beyond the church and the hospital | 120, 800 → 400 × 200 | the Threefork Bottoms treeline (forest edge, no buildings) |
 | West of the channel | −1000, 100 → 290 × 900 | Westbank: warehouses, the motel strip, Darlin' Field's fence line |
-| North of Stonebridle | −600, −1000 → 1300 × 120 | the prairie fade; the Dam Store, Exit 47 belongs on a frontage road, not here |
+| North of Stonebridle | −600, −1000 → 1300 × 120 | the prairie fade; the Dam Store, Exit 47 belongs on a frontage road, not here (Boone Trucks took the north frontage's east half at x −180..−40; the Dam Store wants the west) |
 | North-east | 700, −880 → 300 × 850 | Hyland Glen (mansions, private cops) or Grand Emporia (the mall + the Valley Vista rubble) |
 
 ## 3. Rules
@@ -43,6 +44,6 @@ the prairie (`wild_dressing`).
    ground, as a district. The map reads the file; nothing on the map is typed twice.
 2. Roads that are not the downtown grid are listed in `roads` with a class: `freeway`, `frontage`,
    `ramp`, `street`, `strip`, `dirt`. The grid stays in `city_dressing.NS_X / EW_Z`.
-3. New road names go in the naming bible §4 (Fair Drive, Pioneer Vision Parkway registered 2026-09-13).
+3. New road names go in the naming bible §4 (Fair Drive, Pioneer Vision Parkway registered 2026-09-13; Juárez Boulevard as built, 2026-09-18).
 4. Layers follow house law: visual-only, a literal seed, MultiMeshes with `custom_aabb`, nothing in
    the smoke corridor, colliders only on masses a car must not pass through.

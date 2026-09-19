@@ -23,6 +23,10 @@ var _shots: Array = [
 	["fair_wheel_night", Vector3(904.0, 2.0, 322.0), Vector3(960.0, 24.0, 250.0), 21.5],
 	["harvest_edge", Vector3(-800.0, 2.6, -395.0), Vector3(-805.0, 7.0, -480.0), 17.5],
 	["tall_tom", Vector3(820.0, 3.0, 303.0), Vector3(868.0, 9.0, 258.0), 15.0],   # through the gate opening; the first try stood 1.5 m off a pylon
+	# D-068: the loop's places.
+	["boone_lot", Vector3(-146.0, 3.0, -18.0), Vector3(-110.0, 7.0, -72.0), 16.5],
+	["cliff_boulevard", Vector3(-62.0, 6.5, 800.0), Vector3(-260.0, 5.0, 800.0), 17.0],
+	["gilead_bottoms", Vector3(-492.0, 4.2, 838.0), Vector3(-430.0, 2.0, 762.0), 17.5],
 	["skyline_from_freeway", Vector3(-60, 15, 2), Vector3(500, 46, 210), 16.5],
 	["frontage_signs", Vector3(408, 3.4, 22), Vector3(414, 4.6, 44), 13.0],
 	["trust_tower", Vector3(540, 60, 396), Vector3(451, 142, 305), 13.0],

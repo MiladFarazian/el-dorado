@@ -1,0 +1,157 @@
+{
+  "_doc": "REPO ORDERS — THE HOOK, ENDLESS. The LONGHORN app pushes a recovery order at a quiet moment: a debtor's name, a car on a curb, an amount outstanding, and PAPER that is clean 80% of the time. Drive out, meet the person whose car it is, and decide. Hook it and you get paid; walk away and the app marks your rating. 20% of orders are BAD PAPER — a fake lien, a note written yesterday, a dead account — and those carry a TELL in the push that the debtor confirms to your face. The debtors are never the joke. The paperwork is. Read once at boot by scripts/systems/repo_orders.gd.",
+
+  "first_gap": 12.0,
+  "order_gap": 40.0,
+  "gap_jitter": 20.0,
+  "retry_gap": 6.0,
+  "min_m": 120.0,
+  "max_m": 450.0,
+
+  "debtor_range": 25.0,
+  "debtor_out_m": 3.0,
+  "choice_range": 4.0,
+  "follower_seconds": 120.0,
+  "line_seconds": 5.0,
+  "plead_gap_s": 5.0,
+  "fight_delay_s": 2.5,
+  "call_delay_s": 12.0,
+  "call_range_m": 20.0,
+  "call_hook_near_m": 10.0,
+
+  "expire_seconds": 240.0,
+  "expire_unfreeze": 1,
+  "despawn_m": 300.0,
+
+  "quota": 3,
+  "bad_paper_chance": 0.20,
+  "offer_amount": 200,
+  "respect_walk_bad": 3,
+  "respect_walk_clean": 1,
+  "respect_offer": 2,
+  "respect_taken": -3,
+
+  "distance_basis": "haul",
+  "distance_ref_m": 400.0,
+  "distance_bonus_max": 0.5,
+
+  "pickup_chance": 0.45,
+  "amount_min": 2400,
+  "amount_max": 24000,
+  "days_min": 31,
+  "days_max": 210,
+  "bad_days_min": 3,
+  "bad_days_max": 9,
+  "year_min": 2009,
+  "year_max": 2022,
+  "order_id_base": 4471,
+  "order_id_step_min": 3,
+  "order_id_step_max": 41,
+
+  "reactions": {
+    "plead": 0.42,
+    "call_it_in": 0.18,
+    "offer": 0.22,
+    "fight": 0.18
+  },
+
+  "profiles": {
+    "sedan": "res://data/vehicles/sedan.json",
+    "pickup": "res://data/vehicles/brisket.json"
+  },
+
+  "paint": [
+    [0.72, 0.70, 0.66],
+    [0.20, 0.24, 0.30],
+    [0.55, 0.12, 0.10],
+    [0.33, 0.40, 0.30],
+    [0.87, 0.87, 0.85],
+    [0.64, 0.66, 0.69],
+    [0.66, 0.58, 0.44],
+    [0.28, 0.34, 0.42]
+  ],
+
+  "first_names": [
+    "DARLENE", "OTIS", "MARISOL", "DEWAYNE", "THUY", "ALMA", "MARCUS", "JUNIE",
+    "PRIYA", "CLEO", "HECTOR", "BONNIE", "KWAME", "LUPITA", "RUSTY", "NADIA",
+    "ABEL", "CHARMAINE", "ELI", "ROSALINDA", "YOLANDA", "DUC", "ERNESTO", "IMANI"
+  ],
+
+  "last_names": [
+    "PRUITT", "SALINAS", "WHITAKER", "NGUYEN", "FERRELL", "OCHOA", "BOATWRIGHT",
+    "OKAFOR", "VILLARREAL", "KESSLER", "TRAN", "DUNLAP", "AMAYA", "BEVINS",
+    "CASTILLO", "HAGGERTY", "RASMUSSEN", "ZAVALA", "CROWDER", "PATEL",
+    "DELGADO", "STOVALL", "MCNAIR", "ARELLANO"
+  ],
+
+  "paper_tells": [
+    "LIEN HOLDER: LONGHORN DYNAMICS",
+    "DAYS PAST DUE: {true_days} (system shows {days})",
+    "NOTE ORIGINATED: yesterday",
+    "VIN: PENDING",
+    "ACCOUNT: Cattleman's Trust, closed 2019",
+    "OWNER DECEASED — RECOVER FROM ESTATE"
+  ],
+
+  "plead_lines": [
+    "I've got it Friday. Friday. I already told the app Friday.",
+    "That's my daughter's car seat in the back. Let me get the car seat out.",
+    "I'm not gonna fight you. I just need somebody to write down that I was standing here.",
+    "Two payments. I missed two payments in nine years and here you are.",
+    "I work the line off the Loop. No car, no shift. No shift, no payment. You see it?",
+    "They moved the due date. Same account, new date, no letter. I checked twice.",
+    "My mother's oxygen is in that trunk. Ninety seconds. That's all I'm asking.",
+    "You're just the guy they send. I know. I used to be the guy they send.",
+    "I called the number on the notice. It played me a song and then it hung up.",
+    "Take it. I'm tired. Just don't scratch the tailgate — it was my dad's.",
+    "Can you tell them an actual person was out here? That's it. That's the whole favor.",
+    "I can have it current by the fifteenth. I've got that in writing somewhere in the house."
+  ],
+
+  "offer_lines": [
+    "Two hundred cash and you never saw this truck.",
+    "Two hundred in your pocket and the app says you drove right past.",
+    "There's two hundred in the glovebox. Nobody on this street is watching.",
+    "Two hundred says your paperwork gets real confusing tonight.",
+    "Two hundred, and I'll have it at the lot myself by Monday. My word on it.",
+    "Two hundred. That's grocery money and I'm still standing here offering it."
+  ],
+
+  "fight_lines": [
+    "No. Not this one. Not today.",
+    "Step off the truck. I'm asking you nice, and I'm asking once.",
+    "You put that hook on it and you and me are gonna have a real conversation.",
+    "I built that engine in my daddy's driveway. Back up.",
+    "Everybody takes something off me. Not you. Not tonight.",
+    "Put it down and walk. Please. I'm saying please."
+  ],
+
+  "bad_paper_lines": [
+    "I'm four days late, not four months. Who told you four months?",
+    "That lien's from a company that's been dead since 2019. I've got the letter inside.",
+    "My account's at Cattleman's Trust. They closed my branch. They closed everybody's branch.",
+    "The note on that truck got written yesterday. Yesterday. I never signed a thing.",
+    "You got a VIN on that order? No? Then whose car are you taking?",
+    "My husband passed in March. That car's in probate and your app knows it.",
+    "Longhorn Dynamics isn't a company. I looked it up. It's a P.O. box off the tollway.",
+    "I paid that off in June. The receipt's in the house. Let me go get the receipt."
+  ],
+
+  "app_push": "ORDER {id} · {name} · {year} {model} · {days} DAYS PAST DUE · ${amount}. Recover to impound. Quota {q}/{quota}.",
+  "app_tell": "ORDER {id} FLAG · {tell}. Recovery authorized anyway.",
+  "app_void": "ORDER {id} VOIDED — VEHICLE NOT LOCATED. This affects your rating.",
+  "app_offer_void": "ORDER {id} VOIDED — VEHICLE NOT LOCATED. This affects your rating.",
+  "app_expire": "ORDER {id} EXPIRED. Reassigned to a contractor who wanted it.",
+  "app_missed_quota": "Yesterday's numbers are visible to the region.",
+  "app_hooked": "ORDER {id} ON THE HOOK. Impound is expecting it. Do not stop for food.",
+
+  "promo_lines": [
+    "PROMOTION PROCESSED. Your new rate is live in the app. Your old rate is not.",
+    "You are a {rank} now. That is a title, not a raise, but the multiplier is real.",
+    "Bolo Capital notes your throughput and has adjusted its expectations upward.",
+    "RANK {rank} UNLOCKED. A regional manager was notified and did not respond.",
+    "{rank}. The dental is still coming. Keep an eye on the app."
+  ],
+
+  "_tuning": "first_gap 12 s of QUIET (not 12 s of clock) so a new player meets the loop inside a minute of leaving the menu; under 8 s and the first push lands before the wrecker is straight. order_gap 40 + 0..20 keeps roughly 1 order per 60 s of quiet driving — the Hook should feel endless, not nagging. min_m 120 guarantees a drive (under 90 and the order spawns in your mirror); max_m 450 is the far edge of the seven-street grid. bad_paper_chance 0.20 is the whole moral system's dial: at 0.35 the player stops reading pushes and starts refusing everything, at 0.10 nobody ever notices a tell. debtor_range 25 m makes the person appear while you are still deciding, never after the hook. expire_seconds 240 real seconds ~= 6 in-game minutes at sky_weather's 24 h / 600 s. Pay: sedan 300 / pickup 450 base x (1 + 0.5 x haul/400) x rank (1.00..1.60) = $300 worst case to $1,080 at PARTNER on a long pickup haul; repo_board's own junker pays 250-450 flat, so an order should always beat the board. offer_amount 200 is deliberately LESS than any delivery: taking the cash is a moral choice, never an optimal one."
+}

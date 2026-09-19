@@ -211,6 +211,19 @@ Bar: `docs/qa/quality-bar.md`.
 >   by playing Hook and Ladder; open: no speech bubble over the owner, no checkpoints.
 > - **D-055 update (D-063):** PRODUCER-CLAIMED FIXED — the radar draws D (dispatch), N (night board)
 >   and a gold ring on a live mission target. QA to rule at `--hudshot`.
+> - **D-143 [S1] There was no game loop.** Past the three scripted missions and nine derelict
+>   junkers, nothing pushed the player to do anything, nobody was in it, and money bought nothing.
+>   PRODUCER-CLAIMED LANDED (D-068): `repo_orders.gd` — orders without end from the app, a debtor
+>   at every one, the Paper as a choice, five ranks, a quota; persisted. Evidence: probe stage 11
+>   (10/10), `docs/qa/evidence/loop-sept18/`. QA to rule by driving the wrecker for ten quiet
+>   minutes: at least eight orders, a bad one among them, a debtor who calls it in.
+> - **D-144 [S2] Money had no sink and TAB handed out the whole fleet.** PRODUCER-CLAIMED LANDED
+>   (D-068): Boone Trucks — a note or cash, TAB cycles only what Book owns, the note drafts daily,
+>   two misses and LONGHORN takes it back. Evidence: probe stage 12 (8/8), `boone_lot` plate. QA
+>   to rule at the lot on foot (the prompt, the hold, the card) and after two in-game days broke.
+> - **D-145 [S3] The south-west was prairie.** PRODUCER-CLAIMED LANDED (D-068): Cedar Cliff and
+>   the Deacon Arts District on Juárez Boulevard. Evidence: `cliff_boulevard`, `gilead_bottoms`
+>   plates. QA to rule by driving the boulevard end to end; open: no traffic, no people there yet.
 > - **D-142 [S1] The shirt and the trousers were paint on the skin** — a sleeve was the arm's own
 >   radius, a trouser leg the shin's; every review since D-050 called it "coat hanger on two
 >   pipes". PRODUCER-CLAIMED LANDED (D-067): constant-offset shells 10 mm off, 12 mm thick, one

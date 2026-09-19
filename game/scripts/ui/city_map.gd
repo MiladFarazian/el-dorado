@@ -20,7 +20,7 @@ const PLACE_STYLE := {   # kind -> colour of the dot
 	"tower": Color("7ee08a"), "hospital": Color("f0605a"), "impound": GOLD,
 	"church": Color("e8d9a8"), "stadium": Color("9fb4e8"), "industry": Color("a0d060"),
 	"watertower": Color("cfd6d8"), "race": Color("d98fb8"), "wheel": Color("f2b070"),
-	"statue": Color("f2b070"), "sales": Color("e8e070"),
+	"statue": Color("f2b070"), "sales": Color("e8e070"), "dealer": Color("e8e070"), "ranch": Color("c9a66b"), "park": Color("7fb069"), "theatre": Color("f2b070"),
 }
 var session: Node
 var _scale := 1.0

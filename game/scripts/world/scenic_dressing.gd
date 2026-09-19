@@ -459,6 +459,8 @@ func _open(x: float, z: float, r: float) -> bool:
 		return false                                        # suburb fringe + yards
 	if x + r > -716.0 and x - r < -524.0 and z + r > 94.0:
 		return false                                        # the channel + rims
+	if x + r > -510.0 and x - r < 110.0 and z + r > 630.0 and z - r < 950.0:
+		return false                                        # Cedar Cliff (D-068): the blocks and the boulevard
 	for bz: float in BRIDGE_Z:
 		if x + r > -746.0 and x - r < -494.0 and absf(z - bz) < 10.0 + r:
 			return false                                    # bridge approach decks

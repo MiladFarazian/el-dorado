@@ -98,7 +98,10 @@ func _process(delta: float) -> void:
 		var m: StandardMaterial3D = _target.get_meta("mat", null)
 		if m: m.emission_energy_multiplier = 1.2 + 0.8 * sin(_t * 5.0)
 		if _beam:
-			_beam.visible = true
+			# D-068: while a LONGHORN order is live the junker beam stands down —
+			# one objective on screen; the junkers stay as gray work.
+			var orders := _peer("repo_orders")
+			_beam.visible = not (orders != null and orders.get("active") == true)
 			# The beacon's origin IS the ground point it marks (D-015) — and the
 			# GROUND, not y=0. Seven of the nine junker slots stand on a parking
 			# lot slab whose top is y=0.2, so a beacon pinned to y=0 buried its
@@ -304,7 +307,7 @@ func add_money(amount: int, reason: String = "") -> void:
 	money += amount
 	money_changed.emit(money)
 	if reason != "":
-		_flash("%s +$%d" % [reason, amount])
+		_flash("%s %s$%s" % [reason, "+" if amount >= 0 else "-", _thousands(absi(amount))])
 
 
 ## Community standing — earned on the strip and in the neighborhoods, lost by
@@ -452,3 +455,12 @@ func _arrow(veh: Node3D, dir: Vector3) -> String:
 	if not fwd.is_finite() or not dir.is_finite(): return "•"
 	if fwd.length_squared() < 0.001 or dir.length_squared() < 0.001: return "•"
 	return ARROWS[wrapi(int(roundf(fwd.normalized().signed_angle_to(dir.normalized(), Vector3.UP) / (PI * 0.25))), 0, 8)]
+
+
+static func _thousands(n: int) -> String:
+	var t := str(n)
+	var out := ""
+	while t.length() > 3:
+		out = "," + t.substr(t.length() - 3) + out
+		t = t.substr(0, t.length() - 3)
+	return t + out

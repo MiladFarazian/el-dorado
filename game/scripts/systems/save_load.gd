@@ -38,7 +38,15 @@ var _autosave_left := AUTOSAVE_SECONDS
 
 func setup(main: Node) -> void:
 	main_ref = main
-	if main.get("smoke_mode") == true or OS.get_cmdline_user_args().has("--session-test"):
+	# D-068: no tool run touches the player's save — the probe had been banking
+	# its deliveries and its Boone purchase into Milad's own file.
+	var dev := false
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with("--session-test") or a.begins_with("--mech-probe") or a.begins_with("--wanted-probe") \
+				or a.begins_with("--shot") or a.begins_with("--hudshot") or a.begins_with("--perf") \
+				or a.begins_with("--mapshot"):
+			dev = true
+	if main.get("smoke_mode") == true or dev:
 		_smoke = true
 		set_physics_process(false)
 		set_process(false)
@@ -146,6 +154,23 @@ func _apply_pending() -> void:
 	var re := _peer("random_events")
 	if re != null:
 		re.set("favors", int(_num(_pending.get("favors"), 0.0)))
+	# D-068
+	var orders := _peer("repo_orders")
+	if orders != null:
+		for k: String in ["rank", "deliveries", "paper_taken", "paper_burned", "quota_done", "quota_day"]:
+			if _pending.has("orders_" + k):
+				orders.set(k, int(_num(_pending.get("orders_" + k), 0.0)))
+		if orders.has_method("sync_rank"):
+			orders.call("sync_rank")
+	var owned: Variant = _pending.get("owned")
+	if owned is Array and main_ref != null and main_ref.has_method("grant_vehicle"):
+		for pth: Variant in (owned as Array):
+			if pth is String:
+				main_ref.call("grant_vehicle", str(pth))
+	var dealer := _peer("dealer")
+	var notes: Variant = _pending.get("notes")
+	if dealer != null and notes is Array:
+		dealer.set("notes", (notes as Array).duplicate(true))
 	var best: Variant = _pending.get("race_best")
 	if best is float or best is int:         # JSON null = no best: keep INF
 		var b := float(best)
@@ -179,6 +204,19 @@ func _snapshot() -> Dictionary:
 		var b: Variant = race.get("_best")
 		if (b is float or b is int) and is_finite(float(b)) and float(b) > 0.0:
 			d["race_best"] = float(b)
+	# D-068: the loop — LONGHORN rank and the paper, the rigs owned, the notes.
+	var orders := _peer("repo_orders")
+	if orders != null:
+		for k: String in ["rank", "deliveries", "paper_taken", "paper_burned", "quota_done", "quota_day"]:
+			d["orders_" + k] = int(_num(orders.get(k), 0.0))
+	var owned: Variant = main_ref.get("owned_paths") if main_ref != null else null
+	if owned is Array:
+		d["owned"] = (owned as Array).duplicate()
+	var dealer := _peer("dealer")
+	if dealer != null:
+		var notes: Variant = dealer.get("notes")
+		if notes is Array:
+			d["notes"] = (notes as Array).duplicate(true)
 	return d
 
 

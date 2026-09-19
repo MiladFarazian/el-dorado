@@ -113,6 +113,7 @@ Source keys used in tables: **map** · **story** · **A** · **C** · **satire**
 | Frontage roads, Texas turnarounds | kept as descriptive genericisms | map | — |
 | — (this slice, D-066) | **Fair Drive** — Howdy Street carried east past the grid to the fairgrounds gate | producer | — |
 | — (this slice, D-066) | **Pioneer Vision Parkway** — the developer's own road north off the I-3 frontage into Harvest Hills™ | producer | — |
+| — (this slice, D-068) | **Juárez Boulevard** — built: south from the grid at x 279, then west along z 800 through the Deacon Arts storefronts to Gilead Bottoms | producer | — |
 
 ### Interchanges (landmarks-as-brands)
 | Real-world referent | Canon name | Source | Retired variants |
@@ -274,6 +275,7 @@ The full satire-canon §3b brand bible is adopted wholesale. Registry (with stor
 | THC vape barns | **Smoke 'Em If You Got 'Em** ("NOW LEGAL / NEVER MIND / ASK BUBBA") | satire/A | — |
 | Injury-lawyer billboard king | **The Texas Sledgehammer** (1-800-WRECKED, "Se Habla Justice") | satire | — |
 | Wade Boone's dealership | **Boone Trucks** ("Appreciate You!") | C (grafted with Wade) | — |
+| Dealer's captive lender (96-month notes) | **Boone Financial** (drafts once a day; "That's one.") | producer (D-068) | — |
 | Fake-HQ-relocation con (in-fiction shell) | **Longhorn Dynamics** | story graft (B) | — |
 | Hillwood/Huffines developers | **Pioneer Vision Development** (Harvest Hills™: "homes from the $400s, trees from 2041") | satire | — |
 

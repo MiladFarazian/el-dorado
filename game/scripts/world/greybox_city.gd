@@ -752,6 +752,7 @@ const EXTRA_LAYERS: Array[String] = [
 	"res://scripts/world/street_wear.gd",     # D-059: lids, drains, tar patches on the downtown lanes
 	"res://scripts/world/fairgrounds.gd",     # D-066: the Lone Star Fairgrounds, east of the grid
 	"res://scripts/world/harvest_hills.gd",   # D-066: Harvest Hills, the slab-farm frontier, north-west
+	"res://scripts/world/cedar_cliff.gd",     # D-068: Cedar Cliff and the Deacon Arts District, south-west
 	"res://scripts/world/landmarks.gd",
 	# M21 (defect D-023): downtown's architectural vocabulary. MUST stay LAST —
 	# it re-skins the tower stack from the recorded segments, and it frees the
@@ -769,9 +770,9 @@ func _build_extra_layers() -> void:
 		if not ResourceLoader.exists(path):
 			continue
 		var script: Variant = load(path)
-		if not (script is GDScript):
+		if not (script is GDScript) or not (script as GDScript).can_instantiate():
 			push_error("district layer FAILED TO PARSE, skipped: %s" % path)
-			continue  # D-074: skip, but never silently
+			continue  # D-074: skip, but never silently (D-068: a half-written layer loads but cannot instantiate)
 		var node: Variant = (script as GDScript).new()
 		if not (node is Node3D):
 			push_error("district layer is not a Node3D, skipped: %s" % path)

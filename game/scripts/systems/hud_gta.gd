@@ -340,6 +340,16 @@ func _update_bottom(delta: float, actor: Node3D, on_foot: bool) -> void:
 		var jl: Variant = repo.get("_job_label")
 		if jl is Label and is_instance_valid(jl):
 			obj = (jl as Label).text
+	# D-068: a live LONGHORN order owns the line (the junker board stands down).
+	var orders := _peer("repo_orders")
+	if orders != null and orders.get("active") == true and orders.has_method("objective_text"):
+		var ot: Variant = orders.call("objective_text")
+		if ot is String and str(ot) != "":
+			obj = str(ot)
+			if orders.has_method("prompt_text"):
+				var pt: Variant = orders.call("prompt_text")
+				if pt is String and str(pt) != "":
+					obj += "   ·   " + str(pt)
 	_obj_lbl.text = obj
 	# Scripted jobs already own their objective and exposure UI. Do not issue
 	# an unrelated ambient repo order underneath them.
@@ -448,6 +458,7 @@ func _on_radar_draw() -> void:
 	_marker(Vector2(HOOK.DISPATCH_POS.x, HOOK.DISPATCH_POS.z), focus, s, c, C_DISPATCH, "D")
 	_marker(Vector2(SECOND.BOARD_POS.x, SECOND.BOARD_POS.z), focus, s, c, C_DISPATCH, "N")
 	_marker(Vector2(COMIN.BOARD_POS.x, COMIN.BOARD_POS.z), focus, s, c, Color(0.86, 0.36, 0.72), "C")
+	_marker(Vector2(-110.0, -77.0), focus, s, c, Color(0.91, 0.88, 0.44), "$")   # D-068: Boone Trucks
 	for n: Node in get_tree().get_nodes_in_group("mission_target"):
 		if n is Node3D and is_instance_valid(n) and (n as Node3D).is_inside_tree():
 			var mp := _to_map(_flat((n as Node3D).global_position), focus, s, c)

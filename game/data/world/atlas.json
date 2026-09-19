@@ -129,6 +129,38 @@
         -856
       ],
       "note": "A Pioneer Vision Development. Framing lumber, mud roads, five model homes, a billboard bigger than any house. The map's visibly growing edge."
+    },
+    {
+      "id": "boone",
+      "name": "BOONE TRUCKS",
+      "rect": [
+        -180,
+        -110,
+        140,
+        66
+      ],
+      "fill": "3f3a2e",
+      "label": [
+        -178,
+        -112
+      ],
+      "note": "Wade Boone's lot on the north frontage: 96-month notes, $0 down, your signature is your credit. Buy here; LONGHORN recovers here."
+    },
+    {
+      "id": "cedar_cliff",
+      "name": "CEDAR CLIFF",
+      "rect": [
+        -500,
+        640,
+        600,
+        300
+      ],
+      "fill": "4a3f33",
+      "label": [
+        -498,
+        638
+      ],
+      "note": "The Cliff. Craftsman blocks off Juárez Boulevard, the Deacon Arts storefronts and Teatro Estrella at its heart, Gilead Bottoms' horse lots where the boulevard dead-ends at the floodway. The Cliff Lofts hoarding on the fenced lot at the east end is the frontier."
     }
   ],
   "roads": [
@@ -334,6 +366,80 @@
           930
         ]
       ]
+    },
+    {
+      "class": "street",
+      "name": "Boone Trucks drive",
+      "pts": [
+        [
+          -110,
+          -44
+        ],
+        [
+          -110,
+          -36
+        ]
+      ]
+    },
+    {
+      "class": "street",
+      "name": "Juárez Boulevard",
+      "pts": [
+        [
+          279,
+          566
+        ],
+        [
+          279,
+          800
+        ],
+        [
+          -480,
+          800
+        ]
+      ]
+    },
+    {
+      "class": "street",
+      "name": "Cliff side street (west)",
+      "pts": [
+        [
+          -300,
+          700
+        ],
+        [
+          -300,
+          940
+        ]
+      ]
+    },
+    {
+      "class": "street",
+      "name": "Cliff side street (east)",
+      "pts": [
+        [
+          -80,
+          700
+        ],
+        [
+          -80,
+          940
+        ]
+      ]
+    },
+    {
+      "class": "street",
+      "name": "Cliff back street",
+      "pts": [
+        [
+          -480,
+          900
+        ],
+        [
+          100,
+          900
+        ]
+      ]
     }
   ],
   "places": [
@@ -427,6 +533,58 @@
       "pos": [
         -830,
         -470
+      ],
+      "kind": "sales"
+    },
+    {
+      "name": "Boone Trucks",
+      "aka": "Appreciate You!",
+      "pos": [
+        -110,
+        -77
+      ],
+      "kind": "dealer"
+    },
+    {
+      "name": "Gilead Bottoms",
+      "aka": "Earlene's",
+      "pos": [
+        -450,
+        800
+      ],
+      "kind": "ranch"
+    },
+    {
+      "name": "Cliff park",
+      "pos": [
+        -190,
+        870
+      ],
+      "kind": "park"
+    },
+    {
+      "name": "Teatro Estrella",
+      "aka": "HOY · CINE · LUCHA",
+      "pos": [
+        -100,
+        783
+      ],
+      "kind": "theatre"
+    },
+    {
+      "name": "Iglesia Bautista del Cliff",
+      "pos": [
+        -347,
+        770
+      ],
+      "kind": "church"
+    },
+    {
+      "name": "The Cliff Lofts site",
+      "aka": "COMING SOON",
+      "pos": [
+        80,
+        835
       ],
       "kind": "sales"
     }

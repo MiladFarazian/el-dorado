@@ -36,6 +36,8 @@ var activities: Array[Dictionary] = [
 	 "text": "LONGHORN IMPOUND\nBring repossessed vehicles here. Stop inside the pad and press F to release your tow."},
 	{"name": "County General", "pos": Vector2(365, 612),
 	 "text": "COUNTY GENERAL\nThe city puts you back on your feet here when a night goes wrong."},
+	{"name": "Boone Trucks", "pos": Vector2(-110, -40),
+	 "text": "BOONE TRUCKS  /  APPRECIATE YOU!\nWade Boone's lot on the north frontage. Walk up to a truck: G signs a 96-month note, $0 down; hold G to pay cash. Miss two drafts and LONGHORN recovers it. We own that too."},
 ]
 
 func setup(main: Node) -> void:

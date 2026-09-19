@@ -146,6 +146,8 @@ func _physics_process(delta: float) -> void:
 		8: _stage_melee()
 		9: _stage_mission()
 		10: _stage_comin()
+		11: _stage_orders()
+		12: _stage_dealer()
 		_: _finish()
 
 
@@ -636,6 +638,161 @@ func _stage_comin() -> void:
 				var dm := int(repo.get("money")) - _money0; var dr := int(repo.get("respect")) - _respect0
 				_say(dm == 250 and dr >= 4, "stage10 COMPLETE: +$%d, respect +%d (want 250, >= 4)" % [dm, dr])
 				_say(kit.call("card_visible") == true, "stage10 the Candyland card is up")
-				_finish()
+				_stage = 11; _sub = 0; _t = 0.0; _cycles = 0
 			elif _t > 4.0:
 				_say(false, "stage10 slide-out never completed (state=%s heat=%s)" % [m.get("state"), pol.get("heat")]); _finish()
+
+
+## Stage 11 (D-068): THE HOOK, ENDLESS. The app pushes an order; the target is
+## towable and on the radar; the debtor comes out; hook, haul to the pad, get
+## paid and ranked. Then a bad-paper order: go to the debtor and walk away —
+## respect, and the paper burned.
+func _stage_orders() -> void:
+	var o := _sys("repo_orders"); var repo := _sys("repo_board"); var pol := _sys("police"); var kit := _sys("mission_kit")
+	var pv := _pv()
+	if o == null or repo == null or pol == null or pv == null:
+		_say(false, "stage11 repo_orders / peers missing"); _finish(); return
+	match _sub:
+		0:   # back into the wrecker (the dev fleet cycles every profile)
+			if int(o.get("state")) == 1 and _t > 0.2:
+				# The loop is live on its own: twelve quiet seconds of the early
+				# stages was enough for the app to push. Clear it, then force ours.
+				o.call("walk_away"); _t = 0.0
+			elif pv.has_method("has_boom") and bool(pv.call("has_boom")) and int(o.get("state")) == 0 and _t > 0.3:
+				pol.call("add_heat", -10)
+				_money0 = int(repo.get("money")); _respect0 = int(repo.get("respect"))
+				var ok := bool(o.call("push_now", false))
+				_say(ok, "stage11 the app pushed an order (push_now)")
+				if not ok:
+					_finish(); return
+				_sub = 1; _t = 0.0
+			elif _cycles >= 6:
+				_say(false, "stage11 could not cycle into the wrecker (%s)" % pv.get("display_name")); _finish()
+			elif _t > 0.4 and main_ref.has_method("_cycle_vehicle"):
+				main_ref.call("_cycle_vehicle"); _cycles += 1; _t = 0.0
+		1:   # the target exists; drive up behind it
+			var tgt: Variant = o.call("target")
+			if tgt is Node3D and is_instance_valid(tgt):
+				_say(int(o.get("state")) == 1, "stage11 PUSHED (state=%s): '%s'" % [o.get("state"), o.call("objective_text")])
+				_say((tgt as Node).is_in_group("towable") and (tgt as Node).is_in_group("mission_target"),
+					"stage11 the target is towable and rings on the radar")
+				var tp := (tgt as Node3D).global_position
+				pv.global_transform = Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), tp + Vector3(0, 1.2, -8.0))
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				_sub = 2; _t = 0.0
+			elif _t > 3.0:
+				_say(false, "stage11 no target after the push (state=%s)" % o.get("state")); _finish()
+		2:   # the debtor comes out at 25 m; then the hook
+			if _t > 1.5 and _press == "":
+				var db: Variant = o.call("debtor")
+				_say(db is Node3D and is_instance_valid(db), "stage11 the debtor came out to meet him")
+				_press = "hook"; _sub = 3; _t = 0.0
+		3:
+			if int(o.get("state")) == 2:
+				_say(true, "stage11 hooked: HOOKED (state=2): '%s'" % o.call("objective_text"))
+				var tgt: Variant = o.call("target")
+				if tgt is RigidBody3D:
+					_rel = pv.global_transform.affine_inverse() * (tgt as Node3D).global_transform
+					var tx := Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), REPO.PAD_CENTER + Vector3(0, 1.2, -6.0))
+					pv.global_transform = tx; (tgt as RigidBody3D).global_transform = tx * _rel
+					pv.linear_velocity = Vector3.ZERO; (tgt as RigidBody3D).linear_velocity = Vector3.ZERO
+				_sub = 4; _t = 0.0
+			elif _t > 3.0 and _press == "":
+				_press = "hook"; _t = 0.0   # one retry
+			elif _t > 9.0:
+				_say(false, "stage11 the hook never took (state=%s)" % o.get("state")); _finish()
+		4:   # release on the pad
+			if int(o.get("state")) == 0:
+				var dm := int(repo.get("money")) - _money0
+				_say(dm >= 300, "stage11 DELIVERED: +$%d (want >= 300), deliveries %s, rank %s" % [dm, o.get("deliveries"), o.get("rank")])
+				_say(kit == null or kit.call("card_visible") == true, "stage11 the RECOVERED card is up")
+				_sub = 5; _t = 0.0
+			elif _t > 0.5 and _press == "" and int(o.get("state")) == 2:
+				_press = "hook"; _t = -2.0
+			elif _t > 9.0:
+				_say(false, "stage11 the release on the pad did not deliver (state=%s)" % o.get("state")); _finish()
+		5:   # bad paper: push, meet the debtor, walk away
+			if _t > 1.0:
+				pol.call("add_heat", -10)
+				_respect0 = int(repo.get("respect"))
+				var ok2 := bool(o.call("push_now", true))
+				_say(ok2, "stage11 the app pushed a bad-paper order")
+				if not ok2:
+					_finish(); return
+				_sub = 6; _t = 0.0
+		6:
+			var tgt2: Variant = o.call("target")
+			if tgt2 is Node3D and is_instance_valid(tgt2):
+				var tp2 := (tgt2 as Node3D).global_position
+				pv.global_transform = Transform3D(Basis.looking_at(Vector3.FORWARD, Vector3.UP), tp2 + Vector3(0, 1.2, -8.0))
+				pv.linear_velocity = Vector3.ZERO; pv.angular_velocity = Vector3.ZERO
+				_sub = 7; _t = 0.0
+			elif _t > 3.0:
+				_say(false, "stage11 no bad-paper target"); _finish()
+		7:   # the debtor comes out; leave the paper from where the wrecker stands
+			# (a teleport onto the debtor knocked them down and cost 2 respect: the
+			# probe's doing, not the system's)
+			var db2: Variant = o.call("debtor")
+			if db2 is Node3D and is_instance_valid(db2) and _t > 1.0:
+				_sub = 8; _t = 0.0
+			elif _t > 5.0:
+				_say(false, "stage11 the bad-paper debtor never came out"); _finish()
+		8:
+			if _t > 0.6:
+				var walked := bool(o.call("walk_away"))
+				_say(walked, "stage11 walked away from the bad paper (walk_away)")
+				_sub = 9; _t = 0.0
+		9:
+			if _t > 0.5:
+				var dr := int(repo.get("respect")) - _respect0
+				_say(int(o.get("state")) == 0 and dr >= 3, "stage11 VOIDED: respect +%d (want >= 3), paper burned %s" % [dr, o.get("paper_burned")])
+				_stage = 12; _sub = 0; _t = 0.0
+
+
+## Stage 12 (D-068): BOONE TRUCKS. Sign a 96-month note on the Brisket ($0
+## down), take the first draft, go broke, miss two — LONGHORN recovers it and
+## leaves the wrecker; then buy the sedan for cash.
+func _stage_dealer() -> void:
+	var d := _sys("dealer"); var repo := _sys("repo_board"); var pv := _pv()
+	if d == null or repo == null or pv == null:
+		_say(false, "stage12 dealer / peers missing"); _finish(); return
+	const BRISKET := "res://data/vehicles/brisket.json"
+	const SEDAN := "res://data/vehicles/sedan.json"
+	match _sub:
+		0:
+			var inv: Variant = d.call("inventory")
+			var n := (inv as Array).size() if inv is Array else 0
+			_say(n >= 3, "stage12 Boone Trucks stocks %d rigs" % n)
+			_money0 = int(repo.get("money"))
+			var owned0 := (main_ref.get("owned_paths") as Array).size()
+			var ok := bool(d.call("sign_note", BRISKET))
+			_say(ok, "stage12 signed a 96-month note on the Brisket, $0 down")
+			var owned1 := (main_ref.get("owned_paths") as Array).size()
+			_say(owned1 == owned0 + 1, "stage12 the Brisket is his now (%d -> %d rigs)" % [owned0, owned1])
+			_say(int(repo.get("money")) == _money0, "stage12 nothing drafted at signing")
+			_sub = 1; _t = 0.0; _cycles = 0
+		1:   # step out of the Brisket (back to the wrecker) so a recovery can take it
+			var cur := _pv()
+			if cur != null and cur.has_method("has_boom") and bool(cur.call("has_boom")):
+				_sub = 2; _t = 0.0
+			elif _cycles >= 6:
+				_say(false, "stage12 could not cycle back to the wrecker"); _finish()
+			elif _t > 0.4:
+				main_ref.call("_cycle_vehicle"); _cycles += 1; _t = 0.0
+		2:
+			if _t > 0.5:
+				d.call("note_tick_now")
+				var dm := _money0 - int(repo.get("money"))
+				_say(dm > 0, "stage12 the first draft came out: -$%d" % dm)
+				repo.call("add_money", -int(repo.get("money")), "PROBE: BROKE")
+				d.call("note_tick_now"); d.call("note_tick_now")
+				_sub = 3; _t = 0.0
+		3:
+			if _t > 0.6:
+				var owned2: Array = main_ref.get("owned_paths")
+				_say(not owned2.has(BRISKET), "stage12 two missed drafts: LONGHORN recovered the Brisket (%d rigs)" % owned2.size())
+				_say(owned2.size() >= 1 and str(owned2[0]).contains("wrecker"), "stage12 the wrecker is still his")
+				repo.call("add_money", 20000, "PROBE: FUNDED")
+				var ok2 := bool(d.call("buy_cash", SEDAN))
+				_say(ok2 and int(repo.get("money")) == 20000 - 14900, "stage12 bought the sedan for cash ($%s left, want 5100)" % repo.get("money"))
+				_finish()

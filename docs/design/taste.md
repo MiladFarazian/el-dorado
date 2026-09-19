@@ -212,3 +212,13 @@ a vest; the three wrong passes cost more than the right one, and each left a law
 (three cells across a sheet; one piece per garment; never a full-field shell at wrist height).
 Principle: when a review keeps naming the same fault, the fix is usually structural and usually
 already half-built. Next for people: a lighter fabric (finer cells), a curved armhole, the face.
+
+**Round 13 — 2026-09-18 (D-068).** Milad: "I need more progress and a faster rate … something
+people actually would want to play." The answer to "would want to play" is a loop, not a polish
+pass: orders without end, a person at every one, a choice with a counter behind it, money that
+buys something you can lose. Three builders in parallel, one owner per file, the producer on the
+integration and the probe — ~3,100 lines in a round. Principle: the rate comes from the
+contract, not the model — brief the API exactly and the integration is written before the build
+lands. The scorecard's "systemic loop" row (§8, row 1) moves for the first time since the card
+was drawn. Next: traffic on the new roads, people in the Cliff, the phone (the paper you can
+read), the debtor who runs.
